@@ -25,12 +25,12 @@ def sfCoordsToNormalCoords(lat: str, lon: str):
 
 def parseFixes(path=None):
     if path is None:
-        fixesPath = r"SF\Navaids\FIXES_UK.txt"
+        fixesPath = r"data\Navaids\FIXES_UK.txt"
 
         with open(fixesPath, "r") as f:
             lines = f.read().split("\n")
 
-        vorPath = r"SF\Navaids\VOR_UK.txt"
+        vorPath = r"data\Navaids\VOR_UK.txt"
 
         with open(vorPath, "r") as f:
             vorLines = f.read().split("\n")
@@ -55,7 +55,7 @@ def parseFixes(path=None):
 
 
 def loadStarAndFixData(icao) -> (dict[str, dict[str, str]], list[str]):
-    with open(rf"SF\Airports\{icao}\Stars.txt", "r") as f:
+    with open(rf"data\Airports\{icao}\Stars.txt", "r") as f:
         lines = f.read().split("\n")
     
     starData = {}
@@ -69,12 +69,12 @@ def loadStarAndFixData(icao) -> (dict[str, dict[str, str]], list[str]):
             except KeyError:
                 starData[starName] = {runway: currentStarData[4]}
 
-    fixes = parseFixes(rf"SF\Airports\{icao}\Fixes.txt")
+    fixes = parseFixes(rf"data\Airports\{icao}\Fixes.txt")
 
     return starData, fixes
 
 def loadRunwayData(icao) -> dict[str, list[str, tuple[float, float]]]:
-    with open(rf"SF\uksf2\Airports\{icao}\Runway.txt", "r") as f:
+    with open(rf"data\uksf2\Airports\{icao}\Runway.txt", "r") as f:
         lines = f.read().split("\n")
 
     runwayData = {}

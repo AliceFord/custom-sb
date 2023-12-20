@@ -1,0 +1,2 @@
+;EGVL Little Rissington ATZ
+@ARC(region EGVL Little Rissington ATZ centre N051.52.02.000 W001.41.39.000 radius 2)

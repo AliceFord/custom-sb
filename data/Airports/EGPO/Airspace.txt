@@ -1,0 +1,2 @@
+;EGPO Stornoway ATZ
+@ARC(region EGPO Stornoway ATZ centre N058.12.56.000 W006.19.52.000 radius 2.5)

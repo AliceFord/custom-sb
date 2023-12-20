@@ -1,0 +1,2 @@
+;CTA
+N051.02.50.672:W000.03.44.058:EGKK Airspace Bases:1500'
