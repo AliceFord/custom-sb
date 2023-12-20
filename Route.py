@@ -10,31 +10,11 @@ class Route:
 
     def initialiseFixesFromRoute(self):
         fixAirways = self.route.split(" ")
-
-        if len(fixAirways) == 2:  # TODO: BUILD A BETTER PARSER!
-            if fixAirways[1] == "AMDUT1G":
-                self.fixes = ["AMDUT", "SFD", "WILLO"]
-                return
-            elif fixAirways[1] == "VASUX1G":
-                self.fixes = ["VASUX", "TELTU", "HOLLY", "WILLO"]
-                return
-            elif fixAirways[1] == "SIRIC1G":
-                self.fixes = ["SIRIC", "NIGIT", "MID", "TUFOZ", "HOLLY", "WILLO"]
-                return
-            elif fixAirways[1] == "TELTU1G":
-                self.fixes = ["TELTU", "SFD", "TIMBA"]
-                return
-            elif fixAirways[1] == "ABSAV1G":
-                self.fixes = ["ABSAV", "AVANT", "GWC", "HOLLY", "WILLO"]
-                return
-            elif fixAirways[1] == "KIDLI1G":
-                self.fixes = ["KIDLI", "MID", "TUFOZ", "HOLLY", "WILLO"]
-                return
             
-        if fixAirways[0].endswith("/26L"):  # TODO: choose runway
-            data = loadSidAndFixData("EGKK")  # TODO: choose airport
+        if fixAirways[0].endswith("/" + ACTIVE_RUNWAY):
+            data = loadSidAndFixData(ACTIVE_AERODROME)
             sidName = fixAirways[0].split("/")[0]
-            self.fixes = data[0][sidName]["26L"].split(" ")  # TODO: choose runway
+            self.fixes = data[0][sidName][ACTIVE_RUNWAY].split(" ")
             FIXES.update(data[1])
             fixAirways.pop(0)
         

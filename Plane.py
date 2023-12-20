@@ -70,10 +70,20 @@ class Plane:
 
         activateHoldMode = False
 
-        if self.mode == "ILS":
-            deltaLat = (self.speed * math.cos(math.radians(self.heading)) * (deltaT / 3600)) / 60 # (nautical miles travelled) / 60
-            deltaLon = (1/math.cos(math.radians(self.lat))) * (self.speed * math.sin(math.radians(self.heading)) * (deltaT / 3600)) / 60  # (1/math.cos(math.radians(self.lat))) for longitude stretching
+        tas = self.speed * (1 + (self.altitude / 1000) * 0.02)  # true airspeed
 
+        if self.mode == "ILS":
+            deltaLat = (tas * math.cos(math.radians(self.heading)) * (deltaT / 3600)) / 60 # (nautical miles travelled) / 60
+            deltaLon = (1/math.cos(math.radians(self.lat))) * (tas * math.sin(math.radians(self.heading)) * (deltaT / 3600)) / 60  # (1/math.cos(math.radians(self.lat))) for longitude stretching
+
+            distanceOut = util.haversine(self.lat, self.lon, self.clearedILS[1][0], self.clearedILS[1][1]) / 1.852  # nautical miles
+            requiredAltitude = math.tan(math.radians(3)) * distanceOut * 6076  # feet
+
+            if self.altitude > requiredAltitude:
+                if self.altitude - requiredAltitude > 1000:
+                    print("GOAROUND")
+                self.altitude = requiredAltitude
+                
             self.lat += deltaLat
             self.lat = round(self.lat, 5)
             self.lon += deltaLon
@@ -96,8 +106,8 @@ class Plane:
                 
                 self.heading = (self.heading + 360) % 360
 
-            deltaLat = (self.speed * math.cos(math.radians(self.heading)) * (deltaT / 3600)) / 60 # (nautical miles travelled) / 60
-            deltaLon = (1/math.cos(math.radians(self.lat))) * (self.speed * math.sin(math.radians(self.heading)) * (deltaT / 3600)) / 60
+            deltaLat = (tas * math.cos(math.radians(self.heading)) * (deltaT / 3600)) / 60 # (nautical miles travelled) / 60
+            deltaLon = (1/math.cos(math.radians(self.lat))) * (tas * math.sin(math.radians(self.heading)) * (deltaT / 3600)) / 60
 
             if self.clearedILS is not None:
                 hdgToRunway = util.headingFromTo((self.lat, self.lon), self.clearedILS[1])
@@ -105,14 +115,13 @@ class Plane:
                 if (hdgToRunway < self.clearedILS[0] < newHdgToRunway) or (hdgToRunway > self.clearedILS[0] > newHdgToRunway):
                     self.mode = "ILS"
                     self.heading = self.clearedILS[0]
-                    self.clearedILS = None
 
             self.lat += deltaLat
             self.lat = round(self.lat, 5)
             self.lon += deltaLon
             self.lon = round(self.lon, 5)
         elif self.mode == "FPL":
-            distanceToTravel = self.speed * (deltaT / 3600)
+            distanceToTravel = tas * (deltaT / 3600)
             nextFixCoords = FIXES[self.flightPlan.route.fixes[0]]
             distanceToFix = util.haversine(self.lat, self.lon, nextFixCoords[0], nextFixCoords[1]) / 1.852  # nautical miles
 
@@ -126,9 +135,10 @@ class Plane:
                     self.lon = nextFixCoords[1]
                     self.flightPlan.route.removeFirstFix()
 
-                    if self.currentlyWithData is not None:  # if we're on route to the release point, hand em off
+                    if self.currentlyWithData is not None:  # if we're on route to the release point, hand em off with some delay
                         if self.currentlyWithData[1] == self.flightPlan.route.fixes[0]:
-                            self.masterSocketHandleData[0].sendall(b'$HO' + self.masterSocketHandleData[1].encode("UTF-8") + b':EGKK_APP:' + self.callsign.encode("UTF-8") + b'\r\n')  # TODO: choose correct controller
+                            # self.masterSocketHandleData[0].sendall(b'$HO' + self.masterSocketHandleData[1].encode("UTF-8") + b':' + ACTIVE_CONTROLLER.encode("UTF-8") + b':' + self.callsign.encode("UTF-8") + b'\r\n')
+                            util.DaemonTimer(11, self.masterSocketHandleData[0].sendall, args=[b'$HO' + self.masterSocketHandleData[1].encode("UTF-8") + b':' + ACTIVE_CONTROLLER.encode("UTF-8") + b':' + self.callsign.encode("UTF-8") + b'\r\n']).start()
 
                     nextFixCoords = FIXES[self.flightPlan.route.fixes[0]]
                     self.heading = util.headingFromTo((self.lat, self.lon), nextFixCoords)
@@ -137,14 +147,14 @@ class Plane:
                     self.flightPlan.route.initial = False
                     self.heading = util.headingFromTo((self.lat, self.lon), nextFixCoords)
 
-                self.lat += (self.speed * math.cos(math.radians(self.heading)) * (deltaT / 3600)) / 60  # (nautical miles travelled) / 60
+                self.lat += (tas * math.cos(math.radians(self.heading)) * (deltaT / 3600)) / 60  # (nautical miles travelled) / 60
                 self.lat = round(self.lat, 5)
-                self.lon += (1/math.cos(math.radians(self.lat))) * (self.speed * math.sin(math.radians(self.heading)) * (deltaT / 3600)) / 60
+                self.lon += (1/math.cos(math.radians(self.lat))) * (tas * math.sin(math.radians(self.heading)) * (deltaT / 3600)) / 60
                 self.lon = round(self.lon, 5)
 
         if activateHoldMode:
             self.holdStartTime = time.time()
-            self.targetHeading = 279
+            self.targetHeading = 270
             self.mode = "HDG"
             self.turnDir = "L"
 
@@ -159,7 +169,7 @@ class Plane:
 
 
     @staticmethod
-    def requestFromFix(callsign: str, fix: str, squawk: int = 1234, altitude: int = 10000, heading: int = 0, speed: float = 0, vertSpeed: float = 0, flightPlan: FlightPlan = FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 36000, "EDDF", Route("MIMFO Y312 DVR L9 KONAN L607 KOK UL607 SPI T180 UNOKO")), currentlyWithData: str = None):
+    def requestFromFix(callsign: str, fix: str, squawk: int = 1234, altitude: int = 10000, heading: int = 0, speed: float = 0, vertSpeed: float = 0, flightPlan: FlightPlan = FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 36000, "EDDF", Route("MIMFO Y312 DVR L9 KONAN L607 KOK UL607 SPI T180 UNOKO")), currentlyWithData: str = None):
         try:
             coords = FIXES[fix]
         except KeyError:
@@ -168,6 +178,6 @@ class Plane:
         return Plane(callsign, squawk, altitude, heading, speed, coords[0], coords[1], vertSpeed, "FPL", flightPlan, currentlyWithData)
     
     @staticmethod
-    def requestDeparture(callsign: str, airport: str, squawk: int = 1234, altitude: int = 600, heading: int = 0, speed: float = 150, vertSpeed: float = 2000, flightPlan: FlightPlan = FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 36000, "EDDF", Route("MIMFO Y312 DVR L9 KONAN L607 KOK UL607 SPI T180 UNOKO"))):
-        coords = loadRunwayData(airport)["26L"]  # TODO: choose runway
+    def requestDeparture(callsign: str, airport: str, squawk: int = 1234, altitude: int = 600, heading: int = 0, speed: float = 150, vertSpeed: float = 2000, flightPlan: FlightPlan = FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 36000, "EDDF", Route("MIMFO Y312 DVR L9 KONAN L607 KOK UL607 SPI T180 UNOKO"))):
+        coords = loadRunwayData(airport)[ACTIVE_RUNWAY]
         return Plane(callsign, squawk, altitude, heading, speed, coords[1][0], coords[1][1], vertSpeed, "FPL", flightPlan, None)

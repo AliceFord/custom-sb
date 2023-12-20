@@ -39,6 +39,20 @@ def parseFixes(path=None):
                     lines.append(" ".join([line.split(" ")[0], line.split(" ")[2], line.split(" ")[3]]))
                 except IndexError:
                     pass
+
+        ndbPath = r"data\Navaids\NDB_All.txt"
+
+        with open(ndbPath, "r") as f:
+            ndbPath = f.read().split("\n")
+            for line in ndbPath:
+                if line.startswith(";") or line == "":
+                    continue
+
+                line = line.replace("  ", " ")
+                try:
+                    lines.append(" ".join([line.split(" ")[0], line.split(" ")[2], line.split(" ")[3]]))
+                except IndexError:
+                    pass
     else:
         with open(path, "r") as f:
             lines = f.read().split("\n")
@@ -117,4 +131,4 @@ def loadRunwayData(icao) -> dict[str, list[str, tuple[float, float]]]:
     
 
 if __name__ == "__main__":
-    print(loadSidAndFixData("EGKK"))
+    print(parseFixes())

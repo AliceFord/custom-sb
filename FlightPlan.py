@@ -1,5 +1,6 @@
 from __future__ import annotations
 from Route import Route
+from globals import *
 
 class FlightPlan:
     def __init__(self, flightRules: str, aircraftType: str, enrouteSpeed: int, departure: str, offBlockTime: int, 
@@ -20,3 +21,7 @@ class FlightPlan:
     @staticmethod
     def duplicate(flightPlan: FlightPlan):
         return FlightPlan(flightPlan.flightRules, flightPlan.aircraftType, flightPlan.enrouteSpeed, flightPlan.departure, flightPlan.offBlockTime, flightPlan.enrouteTime, flightPlan.cruiseAltitude, flightPlan.destination, Route.duplicate(flightPlan.route))
+
+    @staticmethod
+    def arrivalPlan(route: Route):
+        return FlightPlan("I", "A20N", 250, "EDDF", 1130, 1130, 36000, ACTIVE_AERODROME, Route(route))
