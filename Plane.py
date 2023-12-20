@@ -100,8 +100,8 @@ class Plane:
             deltaLon = (1/math.cos(math.radians(self.lat))) * (self.speed * math.sin(math.radians(self.heading)) * (deltaT / 3600)) / 60
 
             if self.clearedILS is not None:
-                hdgToRunway = (math.degrees(math.atan2(self.clearedILS[1][1] - self.lon, (1/math.cos(math.radians(self.lat))) * (self.clearedILS[1][0] - self.lat))) + 360) % 360
-                newHdgToRunway = (math.degrees(math.atan2(self.clearedILS[1][1] - (self.lon + deltaLon), (1/math.cos(math.radians(self.lat))) * (self.clearedILS[1][0] - (self.lat + deltaLat)))) + 360) % 360
+                hdgToRunway = util.headingFromTo((self.lat, self.lon), self.clearedILS[1])
+                newHdgToRunway = util.headingFromTo((self.lat + deltaLat, self.lon + deltaLon), self.clearedILS[1])
                 if (hdgToRunway < self.clearedILS[0] < newHdgToRunway) or (hdgToRunway > self.clearedILS[0] > newHdgToRunway):
                     self.mode = "ILS"
                     self.heading = self.clearedILS[0]
@@ -131,12 +131,11 @@ class Plane:
                             self.masterSocketHandleData[0].sendall(b'$HO' + self.masterSocketHandleData[1].encode("UTF-8") + b':EGKK_APP:' + self.callsign.encode("UTF-8") + b'\r\n')  # TODO: choose correct controller
 
                     nextFixCoords = FIXES[self.flightPlan.route.fixes[0]]
-                    # self.heading = util.headingFromTo((self.lat, self.lon), nextFixCoords)
-                    self.heading = (math.degrees(math.atan2(nextFixCoords[1] - self.lon, (1/math.cos(math.radians(self.lat))) * (nextFixCoords[0] - self.lat))) + 360) % 360
+                    self.heading = util.headingFromTo((self.lat, self.lon), nextFixCoords)
 
                 if self.flightPlan.route.initial:
                     self.flightPlan.route.initial = False
-                    self.heading = (math.degrees(math.atan2(nextFixCoords[1] - self.lon, (1/math.cos(math.radians(self.lat))) * (nextFixCoords[0] - self.lat))) + 360) % 360
+                    self.heading = util.headingFromTo((self.lat, self.lon), nextFixCoords)
 
                 self.lat += (self.speed * math.cos(math.radians(self.heading)) * (deltaT / 3600)) / 60  # (nautical miles travelled) / 60
                 self.lat = round(self.lat, 5)
