@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>922</width>
+    <height>299</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>CustomSB</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QTableWidget" name="aircraftTable">
+      <property name="minimumSize">
+       <size>
+        <width>811</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <property name="rowCount">
+       <number>0</number>
+      </property>
+      <property name="columnCount">
+       <number>9</number>
+      </property>
+      <column>
+       <property name="text">
+        <string>Callsign</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Squawk</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Altitude</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Heading</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Speed</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Vertical Speed</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Latitude</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Longitude</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Next WPT</string>
+       </property>
+      </column>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="errorLabel">
+      <property name="styleSheet">
+       <string notr="true">QLabel { color : red; }</string>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLineEdit" name="commandEntry">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>922</width>
+     <height>22</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

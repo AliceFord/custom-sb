@@ -1,0 +1,20 @@
+[Callsign] [Command]
+
+[Command]:
+d [FL] - descend 
+c [FL] - climb
+tl [heading] - turn left heading 
+tr [heading] - turn right heading
+sp [speed] - speed
+rond [fix in route] - resume own navigation direct 
+pd [fix in route] - proceed direct
+sq [squawk] - squawk
+hold [fix] - hold at 
+
+star [STAR] [Aerodrome ICAO] - [STAR] arrival for [Aerodrome]
+ils [runway] - cleared ILS
+
+ho [ID] - handoff
+
+Other:
+tm [multiplier] - time multiplier
