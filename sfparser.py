@@ -73,8 +73,27 @@ def loadStarAndFixData(icao) -> (dict[str, dict[str, str]], list[str]):
 
     return starData, fixes
 
+def loadSidAndFixData(icao) -> (dict[str, dict[str, str]], list[str]):
+    with open(rf"data\Airports\{icao}\Sids.txt", "r") as f:
+        lines = f.read().split("\n")
+    
+    starData = {}
+    for line in lines:
+        if line.startswith("SID"):
+            currentStarData = line.split(":")
+            runway = currentStarData[2]
+            starName = currentStarData[3]
+            try:
+                starData[starName][runway] = currentStarData[4]
+            except KeyError:
+                starData[starName] = {runway: currentStarData[4]}
+
+    fixes = parseFixes(rf"data\Airports\{icao}\Fixes.txt")
+
+    return starData, fixes
+
 def loadRunwayData(icao) -> dict[str, list[str, tuple[float, float]]]:
-    with open(rf"data\uksf2\Airports\{icao}\Runway.txt", "r") as f:
+    with open(rf"data\Airports\{icao}\Runway.txt", "r") as f:
         lines = f.read().split("\n")
 
     runwayData = {}
@@ -98,4 +117,4 @@ def loadRunwayData(icao) -> dict[str, list[str, tuple[float, float]]]:
     
 
 if __name__ == "__main__":
-    print(loadRunwayData("EGKK"))
+    print(loadSidAndFixData("EGKK"))
