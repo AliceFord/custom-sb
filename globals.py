@@ -10,6 +10,7 @@ timeMultiplier: float = 1
 TURN_RATE = 2  # deg / sec
 
 allocatedSquawks = []
+allocatedCallsigns = []
 
 CCAMS_SQUAWKS = list(range(1410,1478)) + list(range(2001,2078)) + list(range(2201,2278)) + list(range(2701,2738))  # realistically way way more
 

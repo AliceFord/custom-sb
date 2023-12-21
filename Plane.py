@@ -137,7 +137,6 @@ class Plane:
 
                     if self.currentlyWithData is not None:  # if we're on route to the release point, hand em off with some delay
                         if self.currentlyWithData[1] == self.flightPlan.route.fixes[0]:
-                            # self.masterSocketHandleData[0].sendall(b'$HO' + self.masterSocketHandleData[1].encode("UTF-8") + b':' + ACTIVE_CONTROLLER.encode("UTF-8") + b':' + self.callsign.encode("UTF-8") + b'\r\n')
                             util.DaemonTimer(11, self.masterSocketHandleData[0].sendall, args=[b'$HO' + self.masterSocketHandleData[1].encode("UTF-8") + b':' + ACTIVE_CONTROLLER.encode("UTF-8") + b':' + self.callsign.encode("UTF-8") + b'\r\n']).start()
 
                     nextFixCoords = FIXES[self.flightPlan.route.fixes[0]]

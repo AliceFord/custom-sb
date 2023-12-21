@@ -185,15 +185,15 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
     global planes, planeSocks, window
 
     timeWiggle = 0
-    if method == "FIX":
+    if method == "ARR":
         timeWiggle = random.randint(-10, 15)
 
     util.DaemonTimer(nSeconds + timeWiggle, spawnEveryNSeconds, args=(nSeconds, masterCallsign, controllerSock, method, *args), kwargs=kwargs).start()
 
-    fp = kwargs["flightPlan"]
+    fp: FlightPlan = kwargs["flightPlan"]
     kwargs.pop("flightPlan")
 
-    if method == "FIX":
+    if method == "ARR":
         plane = Plane.requestFromFix(util.callsignGen(), *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
     elif method == "DEP":
         plane = Plane.requestDeparture(util.callsignGen(), *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
@@ -202,20 +202,29 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
         plane.vertSpeed = 2000
     kwargs["flightPlan"] = fp
     planes.append(plane)
-    planeSocks.append(startPlane(plane, masterCallsign, controllerSock))
+    sock = startPlane(plane, masterCallsign, controllerSock)
 
-    window.aircraftTable.setRowCount(len(planes))
+    # if method == "ARR":
+    #     util.DaemonTimer(11, sock.sendall, args=[b'$CQLON_S_CTR:@94835:SC:' + plane.callsign.encode("UTF-8") + b':' + fp.route.fixes[-1].encode("UTF-8") + b'\r\n'])
 
+    planeSocks.append(sock)
+
+    
+    window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
+
+    dc = 0
     for i, plane in enumerate(planes):
-        window.aircraftTable.setItem(i, 0, QTableWidgetItem(plane.callsign))
-        window.aircraftTable.setItem(i, 1, QTableWidgetItem(str(plane.squawk)))
-        window.aircraftTable.setItem(i, 2, QTableWidgetItem(str(plane.altitude)))
-        window.aircraftTable.setItem(i, 3, QTableWidgetItem(str(int(round(plane.heading, 0)))))
-        window.aircraftTable.setItem(i, 4, QTableWidgetItem(str(plane.speed)))
-        window.aircraftTable.setItem(i, 5, QTableWidgetItem(str(plane.vertSpeed)))
-        window.aircraftTable.setItem(i, 6, QTableWidgetItem(str(plane.lat)))
-        window.aircraftTable.setItem(i, 7, QTableWidgetItem(str(plane.lon)))
-        window.aircraftTable.setItem(i, 8, QTableWidgetItem(plane.flightPlan.route.fixes[0]))
+        if plane.currentlyWithData is None:
+            window.aircraftTable.setItem(dc, 0, QTableWidgetItem(plane.callsign))
+            window.aircraftTable.setItem(dc, 1, QTableWidgetItem(str(plane.squawk)))
+            window.aircraftTable.setItem(dc, 2, QTableWidgetItem(str(plane.altitude)))
+            window.aircraftTable.setItem(dc, 3, QTableWidgetItem(str(int(round(plane.heading, 0)))))
+            window.aircraftTable.setItem(dc, 4, QTableWidgetItem(str(plane.speed)))
+            window.aircraftTable.setItem(dc, 5, QTableWidgetItem(str(plane.vertSpeed)))
+            window.aircraftTable.setItem(dc, 6, QTableWidgetItem(str(plane.lat)))
+            window.aircraftTable.setItem(dc, 7, QTableWidgetItem(str(plane.lon)))
+            window.aircraftTable.setItem(dc, 8, QTableWidgetItem(plane.flightPlan.route.fixes[0]))
+            dc += 1
 
 # MAIN LOOP
 
@@ -225,18 +234,24 @@ def positionLoop(controllerSock):
 
     controllerSock.sendall(b'%' + b'LON_S_CTR' + b':29430:3:100:7:51.14806:-0.19028:0\r\n')  # TODO: choose correct controller
 
+    dc = 0  # display counter
     for i, plane in enumerate(planes):
         planeSocks[i].sendall(plane.positionUpdateText())  # position update
+
+        if plane.currentlyWithData is None:  # We only know who they are if they are with us
+            print(plane.callsign, end=", ")
+            window.aircraftTable.setItem(dc, 0, QTableWidgetItem(plane.callsign))
+            window.aircraftTable.setItem(dc, 1, QTableWidgetItem(str(plane.squawk)))
+            window.aircraftTable.setItem(dc, 2, QTableWidgetItem(str(plane.altitude)))
+            window.aircraftTable.setItem(dc, 3, QTableWidgetItem(str(int(round(plane.heading, 0)))))
+            window.aircraftTable.setItem(dc, 4, QTableWidgetItem(str(plane.speed)))
+            window.aircraftTable.setItem(dc, 5, QTableWidgetItem(str(plane.vertSpeed)))
+            window.aircraftTable.setItem(dc, 6, QTableWidgetItem(str(plane.lat)))
+            window.aircraftTable.setItem(dc, 7, QTableWidgetItem(str(plane.lon)))
+            window.aircraftTable.setItem(dc, 8, QTableWidgetItem(plane.flightPlan.route.fixes[0]))
+            dc += 1
         
-        window.aircraftTable.setItem(i, 0, QTableWidgetItem(plane.callsign))
-        window.aircraftTable.setItem(i, 1, QTableWidgetItem(str(plane.squawk)))
-        window.aircraftTable.setItem(i, 2, QTableWidgetItem(str(plane.altitude)))
-        window.aircraftTable.setItem(i, 3, QTableWidgetItem(str(int(round(plane.heading, 0)))))
-        window.aircraftTable.setItem(i, 4, QTableWidgetItem(str(plane.speed)))
-        window.aircraftTable.setItem(i, 5, QTableWidgetItem(str(plane.vertSpeed)))
-        window.aircraftTable.setItem(i, 6, QTableWidgetItem(str(plane.lat)))
-        window.aircraftTable.setItem(i, 7, QTableWidgetItem(str(plane.lon)))
-        window.aircraftTable.setItem(i, 8, QTableWidgetItem(plane.flightPlan.route.fixes[0]))
+    print()
 
 
 def messageMonitor(controllerSock: socket.socket):
@@ -252,11 +267,26 @@ def messageMonitor(controllerSock: socket.socket):
         for message in messages:
             if message.startswith("$HO"):
                 callsign = message.split(":")[2]
-                controllerSock.sendall(b'$CQLON_S_CTR:@94835:HT:' + callsign.encode("UTF-8") + b':' + ACTIVE_CONTROLLER.encode("UTF-8") + '\r\n')
+                controllerSock.sendall(b'$CQLON_S_CTR:@94835:HT:' + callsign.encode("UTF-8") + b':' + ACTIVE_CONTROLLER.encode("UTF-8") + b'\r\n')
+                for plane in planes:
+                    if plane.callsign == callsign:
+                        index = planes.index(plane)
+                        plane.currentlyWithData = ("LON_S_CTR", None)
+                        window.aircraftTable.removeRow(index)
+                        break
+            elif message.startswith("$HA"):
+                callsign = message.split(":")[2]
+                for plane in planes:
+                    if plane.callsign == callsign:
+                        index = planes.index(plane)
+                        plane.currentlyWithData = None
+                        window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
+                        break
             else:
-                print(message)
+                pass
+                # print(message)
 
-        print()
+        # print()
 
 
 def cellClicked(row, _col):
@@ -311,10 +341,10 @@ def main():
     # 10ph LAM
     # 10ph OCK
     # 10ph BIG
-    util.DaemonTimer(random.randint(1, 72), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "FIX", "WCO"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("WCO DCT BNN"), "currentlyWithData": (masterCallsign, "BNN")}).start()
-    util.DaemonTimer(random.randint(72, 144), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "FIX", "DET"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("DET DCT LAM"), "currentlyWithData": (masterCallsign, "LAM")}).start()
-    util.DaemonTimer(random.randint(144, 216), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "FIX", "HAZEL"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("HAZEL DCT OCK"), "currentlyWithData": (masterCallsign, "OCK")}).start()
-    util.DaemonTimer(random.randint(216, 288), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "FIX", "MAY"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("MAY DCT BIG"), "currentlyWithData": (masterCallsign, "BIG")}).start()
+    util.DaemonTimer(random.randint(1, 72), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "WCO"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("WCO DCT BNN"), "currentlyWithData": (masterCallsign, "BNN")}).start()
+    util.DaemonTimer(random.randint(72, 144), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "DET"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("DET DCT LAM"), "currentlyWithData": (masterCallsign, "LAM")}).start()
+    util.DaemonTimer(random.randint(144, 216), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "HAZEL"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("HAZEL DCT OCK"), "currentlyWithData": (masterCallsign, "OCK")}).start()
+    util.DaemonTimer(random.randint(216, 288), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "MAY"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("MAY DCT BIG"), "currentlyWithData": (masterCallsign, "BIG")}).start()
 
     # DEPARTURES
     util.DaemonTimer(1, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EHAM", Route("BPK7G/27L BPK Q295 BRAIN M197 REDFA"))}).start()
@@ -326,17 +356,17 @@ def main():
     util.DaemonTimer(5, messageMonitor, args=[controllerSock]).start()
 
     
-    window.aircraftTable.setRowCount(len(planes))
-    for i, plane in enumerate(planes):
-        window.aircraftTable.setItem(i, 0, QTableWidgetItem(plane.callsign))
-        window.aircraftTable.setItem(i, 1, QTableWidgetItem(str(plane.squawk)))
-        window.aircraftTable.setItem(i, 2, QTableWidgetItem(str(plane.altitude)))
-        window.aircraftTable.setItem(i, 3, QTableWidgetItem(str(int(round(plane.heading, 0)))))
-        window.aircraftTable.setItem(i, 4, QTableWidgetItem(str(plane.speed)))
-        window.aircraftTable.setItem(i, 5, QTableWidgetItem(str(plane.vertSpeed)))
-        window.aircraftTable.setItem(i, 6, QTableWidgetItem(str(plane.lat)))
-        window.aircraftTable.setItem(i, 7, QTableWidgetItem(str(plane.lon)))
-        window.aircraftTable.setItem(i, 8, QTableWidgetItem(plane.flightPlan.route.fixes[0]))
+    window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
+    # for i, plane in enumerate(planes):
+    #     window.aircraftTable.setItem(i, 0, QTableWidgetItem(plane.callsign))
+    #     window.aircraftTable.setItem(i, 1, QTableWidgetItem(str(plane.squawk)))
+    #     window.aircraftTable.setItem(i, 2, QTableWidgetItem(str(plane.altitude)))
+    #     window.aircraftTable.setItem(i, 3, QTableWidgetItem(str(int(round(plane.heading, 0)))))
+    #     window.aircraftTable.setItem(i, 4, QTableWidgetItem(str(plane.speed)))
+    #     window.aircraftTable.setItem(i, 5, QTableWidgetItem(str(plane.vertSpeed)))
+    #     window.aircraftTable.setItem(i, 6, QTableWidgetItem(str(plane.lat)))
+    #     window.aircraftTable.setItem(i, 7, QTableWidgetItem(str(plane.lon)))
+    #     window.aircraftTable.setItem(i, 8, QTableWidgetItem(plane.flightPlan.route.fixes[0]))
 
     window.commandEntry.returnPressed.connect(parseCommand)
     window.aircraftTable.cellClicked.connect(cellClicked)

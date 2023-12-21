@@ -10,6 +10,7 @@ rond [fix in route] - resume own navigation direct
 pd [fix in route] - proceed direct
 sq [squawk] - squawk
 hold [fix] - hold at 
+after [fix] fh [hdg] - 
 
 star [STAR] [Aerodrome ICAO] - [STAR] arrival for [Aerodrome]
 ils [runway] - cleared ILS

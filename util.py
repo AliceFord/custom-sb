@@ -19,7 +19,12 @@ def haversine(lat1, lon1, lat2, lon2):  # from https://rosettacode.org/wiki/Have
     return R * c
 
 def callsignGen():
-    return "G" + random.choice(string.ascii_uppercase) + random.choice(string.ascii_uppercase) + random.choice(string.ascii_uppercase) + random.choice(string.ascii_uppercase)
+    callsign = ""
+    callsign += random.choice(["EZY", "DLH", "BAW", "RYR"])
+    callsign += random.choice(string.digits) + random.choice(string.digits) + random.choice(string.ascii_uppercase) + random.choice(string.ascii_uppercase)
+
+    # TODO: ensure callsign is unique
+    return callsign
 
 def squawkGen():
     squawk = random.choice(CCAMS_SQUAWKS)
