@@ -122,7 +122,10 @@ class Plane:
             self.lon = round(self.lon, 5)
         elif self.mode == "FPL":
             distanceToTravel = tas * (deltaT / 3600)
-            nextFixCoords = FIXES[self.flightPlan.route.fixes[0]]
+            try:
+                nextFixCoords = FIXES[self.flightPlan.route.fixes[0]]
+            except IndexError:
+                self.mode = "HDG"
             distanceToFix = util.haversine(self.lat, self.lon, nextFixCoords[0], nextFixCoords[1]) / 1.852  # nautical miles
 
             if self.holdFix is not None and self.flightPlan.route.fixes[0] == self.holdFix and distanceToFix <= distanceToTravel:
@@ -139,8 +142,24 @@ class Plane:
                         if self.currentlyWithData[1] == self.flightPlan.route.fixes[0]:
                             util.DaemonTimer(11, self.masterSocketHandleData[0].sendall, args=[b'$HO' + self.masterSocketHandleData[1].encode("UTF-8") + b':' + ACTIVE_CONTROLLER.encode("UTF-8") + b':' + self.callsign.encode("UTF-8") + b'\r\n']).start()
 
-                    nextFixCoords = FIXES[self.flightPlan.route.fixes[0]]
-                    self.heading = util.headingFromTo((self.lat, self.lon), nextFixCoords)
+                    try:
+                        nextFixCoords = FIXES[self.flightPlan.route.fixes[0]]
+                    except IndexError:
+                        self.mode = "HDG"
+                
+                self.targetHeading = util.headingFromTo((self.lat, self.lon), nextFixCoords)  # always recalculate heading
+
+                if self.targetHeading != self.heading:  # HDG logic
+                    if TURN_RATE * deltaT > abs(self.targetHeading - self.heading):
+                        self.heading = self.targetHeading
+                        if self.holdStartTime is not None:
+                            self.holdStartTime = time.time()
+                    elif 360 - (self.heading - self.targetHeading) % 360 < 180:  # hopefully my sketchy maths works!
+                        self.heading += TURN_RATE * deltaT
+                    else:
+                        self.heading -= TURN_RATE * deltaT
+                    
+                    self.heading = (self.heading + 360) % 360
 
                 if self.flightPlan.route.initial:
                     self.flightPlan.route.initial = False

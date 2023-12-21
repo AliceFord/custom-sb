@@ -148,7 +148,7 @@ def parseCommand():
                     errorText = "Fix not found"
                     raise _MatchException()
 
-                plane.flightPlan.route.initial = True
+                # plane.flightPlan.route.initial = True
             case "sq":
                 plane.squawk = int(text.split(" ")[2])
             case "hold":
@@ -223,7 +223,10 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
             window.aircraftTable.setItem(dc, 5, QTableWidgetItem(str(plane.vertSpeed)))
             window.aircraftTable.setItem(dc, 6, QTableWidgetItem(str(plane.lat)))
             window.aircraftTable.setItem(dc, 7, QTableWidgetItem(str(plane.lon)))
-            window.aircraftTable.setItem(dc, 8, QTableWidgetItem(plane.flightPlan.route.fixes[0]))
+            try:
+                window.aircraftTable.setItem(dc, 8, QTableWidgetItem(plane.flightPlan.route.fixes[0]))
+            except IndexError:
+                window.aircraftTable.setItem(dc, 8, QTableWidgetItem(""))
             dc += 1
 
 # MAIN LOOP
@@ -248,7 +251,10 @@ def positionLoop(controllerSock):
             window.aircraftTable.setItem(dc, 5, QTableWidgetItem(str(plane.vertSpeed)))
             window.aircraftTable.setItem(dc, 6, QTableWidgetItem(str(plane.lat)))
             window.aircraftTable.setItem(dc, 7, QTableWidgetItem(str(plane.lon)))
-            window.aircraftTable.setItem(dc, 8, QTableWidgetItem(plane.flightPlan.route.fixes[0]))
+            try:
+                window.aircraftTable.setItem(dc, 8, QTableWidgetItem(plane.flightPlan.route.fixes[0]))
+            except IndexError:
+                window.aircraftTable.setItem(dc, 8, QTableWidgetItem(""))
             dc += 1
         
     print()
@@ -347,10 +353,10 @@ def main():
     util.DaemonTimer(random.randint(216, 288), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "MAY"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("MAY DCT BIG"), "currentlyWithData": (masterCallsign, "BIG")}).start()
 
     # DEPARTURES
-    util.DaemonTimer(1, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EHAM", Route("BPK7G/27L BPK Q295 BRAIN M197 REDFA"))}).start()
-    util.DaemonTimer(60, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EGGD", Route("CPT3G/27L CPT"))}).start()
-    util.DaemonTimer(120, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EGCC", Route("UMLAT1G/27L UMLAT T418 WELIN T420 ELVOS"))}).start()
-    util.DaemonTimer(180, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "LFPG", Route("MAXIT1G/27L MAXIT Y803 MID UL612 BOGNA HARDY UM605 BIBAX"))}).start()
+    # util.DaemonTimer(1, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EHAM", Route("BPK7G/27L BPK Q295 BRAIN M197 REDFA"))}).start()
+    # util.DaemonTimer(60, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EGGD", Route("CPT3G/27L CPT"))}).start()
+    # util.DaemonTimer(120, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EGCC", Route("UMLAT1G/27L UMLAT T418 WELIN T420 ELVOS"))}).start()
+    # util.DaemonTimer(180, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "LFPG", Route("MAXIT1G/27L MAXIT Y803 MID UL612 BOGNA HARDY UM605 BIBAX"))}).start()
 
     # Start message monitor
     util.DaemonTimer(5, messageMonitor, args=[controllerSock]).start()
