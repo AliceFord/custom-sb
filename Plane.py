@@ -29,7 +29,7 @@ class Plane:
         self.holdFix = None
         self.holdStartTime = None
 
-        self.masterSocketHandleData: tuple[socket.socket, str] = None
+        self.masterSocketHandleData: tuple[util.EsSocket, str] = None
         self.clearedILS = None
 
         self.lastTime = time.time()
@@ -73,8 +73,7 @@ class Plane:
         tas = self.speed * (1 + (self.altitude / 1000) * 0.02)  # true airspeed
 
         if self.mode == "ILS":
-            deltaLat = (tas * math.cos(math.radians(self.heading)) * (deltaT / 3600)) / 60 # (nautical miles travelled) / 60
-            deltaLon = (1/math.cos(math.radians(self.lat))) * (tas * math.sin(math.radians(self.heading)) * (deltaT / 3600)) / 60  # (1/math.cos(math.radians(self.lat))) for longitude stretching
+            deltaLat, deltaLon = util.deltaLatLonCalc(self.lat, tas, self.heading, deltaT)
 
             distanceOut = util.haversine(self.lat, self.lon, self.clearedILS[1][0], self.clearedILS[1][1]) / 1.852  # nautical miles
             requiredAltitude = math.tan(math.radians(3)) * distanceOut * 6076  # feet
@@ -106,8 +105,7 @@ class Plane:
                 
                 self.heading = (self.heading + 360) % 360
 
-            deltaLat = (tas * math.cos(math.radians(self.heading)) * (deltaT / 3600)) / 60 # (nautical miles travelled) / 60
-            deltaLon = (1/math.cos(math.radians(self.lat))) * (tas * math.sin(math.radians(self.heading)) * (deltaT / 3600)) / 60
+            deltaLat, deltaLon = util.deltaLatLonCalc(self.lat, tas, self.heading, deltaT)
 
             if self.clearedILS is not None:
                 hdgToRunway = util.headingFromTo((self.lat, self.lon), self.clearedILS[1])
@@ -128,6 +126,11 @@ class Plane:
                 self.mode = "HDG"
             distanceToFix = util.haversine(self.lat, self.lon, nextFixCoords[0], nextFixCoords[1]) / 1.852  # nautical miles
 
+            if self.currentlyWithData is not None:  # if we're on close to release point, hand off
+                if self.currentlyWithData[1] == self.flightPlan.route.fixes[0] and distanceToFix <= 5:
+                    self.currentlyWithData = None
+                    util.DaemonTimer(11, self.masterSocketHandleData[0].esSend, args=["$HO" + self.masterSocketHandleData[1], ACTIVE_CONTROLLER, self.callsign]).start()
+
             if self.holdFix is not None and self.flightPlan.route.fixes[0] == self.holdFix and distanceToFix <= distanceToTravel:
                 activateHoldMode = True
             else:
@@ -137,10 +140,6 @@ class Plane:
                     self.lat = nextFixCoords[0]
                     self.lon = nextFixCoords[1]
                     self.flightPlan.route.removeFirstFix()
-
-                    if self.currentlyWithData is not None:  # if we're on route to the release point, hand em off with some delay
-                        if self.currentlyWithData[1] == self.flightPlan.route.fixes[0]:
-                            util.DaemonTimer(11, self.masterSocketHandleData[0].sendall, args=[b'$HO' + self.masterSocketHandleData[1].encode("UTF-8") + b':' + ACTIVE_CONTROLLER.encode("UTF-8") + b':' + self.callsign.encode("UTF-8") + b'\r\n']).start()
 
                     try:
                         nextFixCoords = FIXES[self.flightPlan.route.fixes[0]]
@@ -165,9 +164,11 @@ class Plane:
                     self.flightPlan.route.initial = False
                     self.heading = util.headingFromTo((self.lat, self.lon), nextFixCoords)
 
-                self.lat += (tas * math.cos(math.radians(self.heading)) * (deltaT / 3600)) / 60  # (nautical miles travelled) / 60
+                deltaLat, deltaLon = util.deltaLatLonCalc(self.lat, tas, self.heading, deltaT)
+
+                self.lat += deltaLat
                 self.lat = round(self.lat, 5)
-                self.lon += (1/math.cos(math.radians(self.lat))) * (tas * math.sin(math.radians(self.heading)) * (deltaT / 3600)) / 60
+                self.lon += deltaLon
                 self.lon = round(self.lon, 5)
 
         if activateHoldMode:
@@ -175,10 +176,6 @@ class Plane:
             self.targetHeading = 270
             self.mode = "HDG"
             self.turnDir = "L"
-
-
-    def addPlaneText(self) -> bytes:
-        return b'#AP' + self.callsign.encode("UTF-8") + b':SERVER:1646235:pass:1:9:1:Alice Ford\r\n'
     
     def positionUpdateText(self, calculatePosition=True) -> bytes:
         if calculatePosition:

@@ -2,6 +2,7 @@ import math
 import random
 import string
 import threading
+import socket
 
 from globals import *
 
@@ -36,6 +37,16 @@ def squawkGen():
 
 def headingFromTo(fromCoord: tuple[float, float], toCoord: tuple[float, float]) -> int:
     return (math.degrees(math.atan2(toCoord[1] - fromCoord[1], (1/math.cos(math.radians(fromCoord[0]))) * (toCoord[0] - fromCoord[0]))) + 360) % 360
+
+
+def deltaLatLonCalc(lat: float, tas: float, heading: float, deltaT: float) -> tuple[float, float]:
+    return ((tas * math.cos(math.radians(heading)) * (deltaT / 3600)) / 60, (1/math.cos(math.radians(lat))) * (tas * math.sin(math.radians(heading)) * (deltaT / 3600)) / 60)
+
+
+class EsSocket(socket.socket):
+    def esSend(self, *args):
+        output = b':'.join([str(arg).encode("UTF-8") for arg in args]) + b'\r\n'
+        self.sendall(output)
 
 
 class DaemonTimer(threading.Timer):
