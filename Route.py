@@ -1,5 +1,5 @@
 from sfparser import loadSidAndFixData
-from globals import *
+from globalVars import *
 
 class Route:
     def __init__(self, route: str):

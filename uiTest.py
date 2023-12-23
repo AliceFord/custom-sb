@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import QTableWidgetItem
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
-        uic.loadUi("window.ui", self)
+        uic.loadUi("groundmentor.ui", self)
         self.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
 
 if __name__ == "__main__":

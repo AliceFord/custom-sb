@@ -1,6 +1,6 @@
 from __future__ import annotations
 from Route import Route
-from globals import *
+from globalVars import *
 
 class FlightPlan:
     def __init__(self, flightRules: str, aircraftType: str, enrouteSpeed: int, departure: str, offBlockTime: int, 

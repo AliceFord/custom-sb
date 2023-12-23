@@ -4,7 +4,7 @@ import string
 import threading
 import socket
 
-from globals import *
+from globalVars import *
 
 def haversine(lat1, lon1, lat2, lon2):  # from https://rosettacode.org/wiki/Haversine_formula#Python
     R = 6372.8  # Earth radius in kilometers
@@ -28,6 +28,7 @@ def callsignGen():
     return callsign
 
 def squawkGen():
+    from globalVars import CCAMS_SQUAWKS, allocatedSquawks
     squawk = random.choice(CCAMS_SQUAWKS)
     while squawk in allocatedSquawks:
         squawk = random.choice(CCAMS_SQUAWKS)
@@ -41,6 +42,19 @@ def headingFromTo(fromCoord: tuple[float, float], toCoord: tuple[float, float]) 
 
 def deltaLatLonCalc(lat: float, tas: float, heading: float, deltaT: float) -> tuple[float, float]:
     return ((tas * math.cos(math.radians(heading)) * (deltaT / 3600)) / 60, (1/math.cos(math.radians(lat))) * (tas * math.sin(math.radians(heading)) * (deltaT / 3600)) / 60)
+
+
+def modeConverter(mode: str) -> str:
+    if mode == "GNS":
+        return "Stationary"
+    elif mode == "GNT":
+        return "Taxiing"
+    elif mode == "GNP":
+        return "Pushing"
+    elif mode == "GNR":
+        return "Ready for Taxi"
+    else:
+        return mode
 
 
 class EsSocket(socket.socket):

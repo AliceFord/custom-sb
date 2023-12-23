@@ -11,8 +11,9 @@ from sfparser import loadRunwayData, loadStarAndFixData, parseFixes
 from Route import Route
 from FlightPlan import FlightPlan
 from Plane import Plane
-from globals import *
+from globalVars import *
 import util
+import taxiCoordGen
 
 
 # SOCKET STUFF
@@ -56,7 +57,7 @@ def startPlane(plane: Plane, masterCallsign: str, masterSock: util.EsSocket) -> 
         util.DaemonTimer(1, masterSock.esSend, args=["$CQ" + plane.currentlyWithData[0], "@94835", "TA", plane.callsign, plane.altitude]).start()  # Temp alt for arrivals
         # masterSock.sendall(b'$CQ' + plane.currentlyWithData[0].encode("UTF-8") + b':@94835:IT:' + plane.callsign.encode("UTF-8") + b'\r\n')
     
-    util.DaemonTimer(6, masterSock.esSend, args=["$CQ" + masterCallsign, "@94835", "BC", plane.callsign, plane.squawk]).start()  # Assign squawk
+    util.DaemonTimer(1, masterSock.esSend, args=["$CQ" + masterCallsign, "@94835", "BC", plane.callsign, plane.squawk]).start()  # Assign squawk
 
     return s
 
@@ -167,6 +168,51 @@ def parseCommand():
                     planes.remove(plane)
                     planeSocks.pop(index).close()
                     window.aircraftTable.removeRow(index)
+            case "taxi":
+                points = text.split(" ")
+                if points[2].startswith("/"):
+                    hp = points[2]
+                    points = " ".join(points[3:])
+                else:
+                    hp = "_" + points[-1][points[-1].find("/") + 1:]
+                    points[-1] = points[-1][:points[-1].find("/")]
+                    points = " ".join(points[2:])
+                if plane.mode == "GNR":
+                    closestPoint = plane.firstGroundPosition
+                elif plane.mode == "GNT":
+                    closestPoint = taxiCoordGen.nameOfPoint(plane.groundRoute[0])
+                else:
+                    closestPoint = taxiCoordGen.closestPoint(plane.lat, plane.lon)
+
+                route = taxiCoordGen.getTaxiRoute(closestPoint, points, points[-1] + hp)
+
+                plane.mode = "GNT"
+                plane.groundRoute = route
+                plane.speed = TAXI_SPEED
+            case "stand":
+                points = text.split(" ")
+                stand = points[2]
+                points = " ".join(points[3:])
+                if plane.mode == "GNT":
+                    closestPoint = taxiCoordGen.nameOfPoint(plane.groundRoute[0])
+                else:
+                    closestPoint = taxiCoordGen.closestPoint(plane.lat, plane.lon)
+
+                route = taxiCoordGen.getStandRoute(closestPoint, points, stand)
+                plane.mode = "GNT"
+                plane.groundRoute = route + ["STAND" + stand]
+                plane.speed = TAXI_SPEED
+            case "push":
+                if plane.mode != "GNS":
+                    errorText = "Currently moving"
+                    raise _MatchException()
+                if plane.stand is None:
+                    errorText = "Not on stand"
+                    raise _MatchException()
+                
+                plane.mode = "GNT"
+                plane.groundRoute = taxiCoordGen.getPushRoute(plane.stand) + ["PUSH" + plane.stand]
+                plane.speed = PUSH_SPEED
             case _:
                 errorText = "Unknown command"
     except _MatchException:
@@ -197,6 +243,10 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
         plane.targetAltitude = 4000
         plane.targetSpeed = 250
         plane.vertSpeed = 2000
+    elif method == "GPT":
+        plane = Plane.requestFromGroundPoint(util.callsignGen(), *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
+    elif method == "STD":
+        plane = Plane.requestFromStand(util.callsignGen(), *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
     kwargs["flightPlan"] = fp
     planes.append(plane)
     sock = startPlane(plane, masterCallsign, controllerSock)
@@ -213,17 +263,9 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
     for i, plane in enumerate(planes):
         if plane.currentlyWithData is None:
             window.aircraftTable.setItem(dc, 0, QTableWidgetItem(plane.callsign))
-            window.aircraftTable.setItem(dc, 1, QTableWidgetItem(str(plane.squawk)))
-            window.aircraftTable.setItem(dc, 2, QTableWidgetItem(str(plane.altitude)))
-            window.aircraftTable.setItem(dc, 3, QTableWidgetItem(str(int(round(plane.heading, 0)))))
-            window.aircraftTable.setItem(dc, 4, QTableWidgetItem(str(plane.speed)))
-            window.aircraftTable.setItem(dc, 5, QTableWidgetItem(str(plane.vertSpeed)))
-            window.aircraftTable.setItem(dc, 6, QTableWidgetItem(str(plane.lat)))
-            window.aircraftTable.setItem(dc, 7, QTableWidgetItem(str(plane.lon)))
-            try:
-                window.aircraftTable.setItem(dc, 8, QTableWidgetItem(plane.flightPlan.route.fixes[0]))
-            except IndexError:
-                window.aircraftTable.setItem(dc, 8, QTableWidgetItem(""))
+            window.aircraftTable.setItem(dc, 1, QTableWidgetItem(util.modeConverter(plane.mode)))
+            window.aircraftTable.setItem(dc, 2, QTableWidgetItem(str(plane.squawk)))
+            window.aircraftTable.setItem(dc, 3, QTableWidgetItem(str(plane.speed)))
             dc += 1
 
 # MAIN LOOP
@@ -241,17 +283,9 @@ def positionLoop(controllerSock: util.EsSocket):
         if plane.currentlyWithData is None:  # We only know who they are if they are with us
             print(plane.callsign, end=", ")
             window.aircraftTable.setItem(dc, 0, QTableWidgetItem(plane.callsign))
-            window.aircraftTable.setItem(dc, 1, QTableWidgetItem(str(plane.squawk)))
-            window.aircraftTable.setItem(dc, 2, QTableWidgetItem(str(plane.altitude)))
-            window.aircraftTable.setItem(dc, 3, QTableWidgetItem(str(int(round(plane.heading, 0)))))
-            window.aircraftTable.setItem(dc, 4, QTableWidgetItem(str(plane.speed)))
-            window.aircraftTable.setItem(dc, 5, QTableWidgetItem(str(plane.vertSpeed)))
-            window.aircraftTable.setItem(dc, 6, QTableWidgetItem(str(plane.lat)))
-            window.aircraftTable.setItem(dc, 7, QTableWidgetItem(str(plane.lon)))
-            try:
-                window.aircraftTable.setItem(dc, 8, QTableWidgetItem(plane.flightPlan.route.fixes[0]))
-            except IndexError:
-                window.aircraftTable.setItem(dc, 8, QTableWidgetItem(""))
+            window.aircraftTable.setItem(dc, 1, QTableWidgetItem(util.modeConverter(plane.mode)))
+            window.aircraftTable.setItem(dc, 2, QTableWidgetItem(str(plane.squawk)))
+            window.aircraftTable.setItem(dc, 3, QTableWidgetItem(str(plane.speed)))
             dc += 1
         
     print()
@@ -301,8 +335,15 @@ def main():
     # SETUP PLANES
 
     masterCallsign = MASTER_CONTROLLER
+
+    planes.append(Plane.requestFromStand("EZY45", "2", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 37000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
+    planes.append(Plane.requestFromStand("DLH20W", "23", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 37000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
+    planes.append(Plane.requestFromStand("BAW22E", "12", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 37000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
+    planes.append(Plane.requestFromStand("TRA90P", "14", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 37000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
     
-    # planes.append(Plane.requestFromFix("GASNE", "BIG", speed=250, altitude=7000, flightPlan=FlightPlan("I", "B738", 250, "LFPG", 1130, 1130, 36000, "EGLL", Route("BIG DCT LAM"))))
+    # planes.append(Plane.requestFromGroundPoint("GASNE", "L/L3", flightPlan=FlightPlan("I", "B738", 250, "EHAM", 1130, 1130, 36000, "EGSS", Route("CLN"))))
+    # planes.append(Plane.requestFromStand("GETCC", "2", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 36000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
+    # planes.append(Plane.requestFromGroundPoint("GBMIV", "V/V1", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 36000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
     
     controllerSock: util.EsSocket = startController(masterCallsign)
     controllerSock.setblocking(False)
@@ -316,27 +357,27 @@ def main():
 
     window = MainWindow()
 
-    # GATTERS: 
-    # ARRIVALS
-    # 10ph AMDUT1G
-    # 10ph VASUX1G
-    # 5ph SIRIC1G
-    # 10ph TELTU1G
-    # 5ph GWC1G
-    # 0ph KIDLI1G
-    util.DaemonTimer(random.randint(1, 60), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "SFD"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("SFD DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")}).start()
-    util.DaemonTimer(random.randint(60, 120), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "TELTU"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("TELTU DCT HOLLY DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")}).start()
-    util.DaemonTimer(random.randint(120, 180), spawnEveryNSeconds, args=(3600 // 5, masterCallsign, controllerSock, "ARR", "MID"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("MID DCT HOLLY DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")}).start()
-    util.DaemonTimer(random.randint(180, 240), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "TELTU"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("TELTU DCT SFD DCT TIMBA"), "currentlyWithData": (masterCallsign, "TIMBA")}).start()
-    util.DaemonTimer(random.randint(240, 300), spawnEveryNSeconds, args=(3600 // 5, masterCallsign, controllerSock, "ARR", "GWC"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("GWC DCT HOLLY DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")}).start()
+    # # GATTERS: 
+    # # ARRIVALS
+    # # 10ph AMDUT1G
+    # # 10ph VASUX1G
+    # # 5ph SIRIC1G
+    # # 10ph TELTU1G
+    # # 5ph GWC1G
+    # # 0ph KIDLI1G
+    # util.DaemonTimer(random.randint(1, 60), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "SFD"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("SFD DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")}).start()
+    # util.DaemonTimer(random.randint(60, 120), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "TELTU"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("TELTU DCT HOLLY DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")}).start()
+    # util.DaemonTimer(random.randint(120, 180), spawnEveryNSeconds, args=(3600 // 5, masterCallsign, controllerSock, "ARR", "MID"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("MID DCT HOLLY DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")}).start()
+    # util.DaemonTimer(random.randint(180, 240), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "TELTU"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("TELTU DCT SFD DCT TIMBA"), "currentlyWithData": (masterCallsign, "TIMBA")}).start()
+    # util.DaemonTimer(random.randint(240, 300), spawnEveryNSeconds, args=(3600 // 5, masterCallsign, controllerSock, "ARR", "GWC"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("GWC DCT HOLLY DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")}).start()
 
-    # DEPARTURES
-    util.DaemonTimer(1, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 25000, "LFPG", Route("HARDY1X/26L HARDY M605 XIDIL UM605 BIBAX"))}).start()
-    util.DaemonTimer(90, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 26000, "EGCC", Route("LAM6M/26L LAM N57 WELIN T420 ELVOS"))}).start()
-    util.DaemonTimer(180, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 18000, "EGGD", Route("NOVMA1X/26L NOVMA L620 NIBDA N14 HEKXA Q63 SAWPE"))}).start()
-    util.DaemonTimer(270, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 35000, "EDDF", Route("MIMFO1M/26L MIMFO Y312 DVR UL9 KONAN UL607 KOK SPI T180 UNOKO"))}).start()
-    util.DaemonTimer(360, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 27000, "LFAB", Route("BOGNA1X/26L BOGNA L612 BENBO UL612 XAMAB"))}).start()
-    util.DaemonTimer(450, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 27000, "EHAM", Route("FRANE1M/26L FRANE M604 GASBA M197 REDFA"))}).start()
+    # # DEPARTURES
+    # util.DaemonTimer(1, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 25000, "LFPG", Route("HARDY1X/26L HARDY M605 XIDIL UM605 BIBAX"))}).start()
+    # util.DaemonTimer(90, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 26000, "EGCC", Route("LAM6M/26L LAM N57 WELIN T420 ELVOS"))}).start()
+    # util.DaemonTimer(180, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 18000, "EGGD", Route("NOVMA1X/26L NOVMA L620 NIBDA N14 HEKXA Q63 SAWPE"))}).start()
+    # util.DaemonTimer(270, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 35000, "EDDF", Route("MIMFO1M/26L MIMFO Y312 DVR UL9 KONAN UL607 KOK SPI T180 UNOKO"))}).start()
+    # util.DaemonTimer(360, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 27000, "LFAB", Route("BOGNA1X/26L BOGNA L612 BENBO UL612 XAMAB"))}).start()
+    # util.DaemonTimer(450, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 27000, "EHAM", Route("FRANE1M/26L FRANE M604 GASBA M197 REDFA"))}).start()
 
     # # HEATHROW:
     # # ARRIVALS
@@ -355,21 +396,15 @@ def main():
     # util.DaemonTimer(120, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EGCC", Route("UMLAT1G/27L UMLAT T418 WELIN T420 ELVOS"))}).start()
     # util.DaemonTimer(180, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "LFPG", Route("MAXIT1G/27L MAXIT Y803 MID UL612 BOGNA HARDY UM605 BIBAX"))}).start()
 
+    # STANNERS
+
+    util.DaemonTimer(random.randint(1, 1), spawnEveryNSeconds, args=(180, masterCallsign, controllerSock, "GPT", "J(1)_Z"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EHAM", 1130, 1130, 36000, "EGSS", Route("CLN"))}).start()
+
     # Start message monitor
     util.DaemonTimer(5, messageMonitor, args=[controllerSock]).start()
 
     
     window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
-    # for i, plane in enumerate(planes):
-    #     window.aircraftTable.setItem(i, 0, QTableWidgetItem(plane.callsign))
-    #     window.aircraftTable.setItem(i, 1, QTableWidgetItem(str(plane.squawk)))
-    #     window.aircraftTable.setItem(i, 2, QTableWidgetItem(str(plane.altitude)))
-    #     window.aircraftTable.setItem(i, 3, QTableWidgetItem(str(int(round(plane.heading, 0)))))
-    #     window.aircraftTable.setItem(i, 4, QTableWidgetItem(str(plane.speed)))
-    #     window.aircraftTable.setItem(i, 5, QTableWidgetItem(str(plane.vertSpeed)))
-    #     window.aircraftTable.setItem(i, 6, QTableWidgetItem(str(plane.lat)))
-    #     window.aircraftTable.setItem(i, 7, QTableWidgetItem(str(plane.lon)))
-    #     window.aircraftTable.setItem(i, 8, QTableWidgetItem(plane.flightPlan.route.fixes[0]))
 
     window.commandEntry.returnPressed.connect(parseCommand)
     window.aircraftTable.cellClicked.connect(cellClicked)

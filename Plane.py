@@ -6,10 +6,11 @@ from FlightPlan import FlightPlan
 from Route import Route
 import util
 from sfparser import loadRunwayData
-from globals import *
+import taxiCoordGen
+from globalVars import *
 
 class Plane:
-    def __init__(self, callsign: str, squawk: int, altitude: int, heading: int, speed: float, lat: float, lon: float, vertSpeed: float, mode: str, flightPlan: FlightPlan, currentlyWithData: tuple[str, str]):  # onGround?
+    def __init__(self, callsign: str, squawk: int, altitude: int, heading: int, speed: float, lat: float, lon: float, vertSpeed: float, mode: str, flightPlan: FlightPlan, currentlyWithData: tuple[str, str], stand=None):  # onGround?
         self.callsign = callsign
         self.squawk = squawk
         self.altitude = altitude  # feet
@@ -21,6 +22,11 @@ class Plane:
         self.mode = mode  # HDG, FPL, ILS
         self.flightPlan = flightPlan  # fpln
         self.currentlyWithData = currentlyWithData  # (current controller, release point)
+
+        self.groundPosition = None
+        self.groundRoute = None
+        self.stand = stand
+        self.firstGroundPosition = None
 
         self.targetSpeed = speed
         self.targetAltitude = altitude
@@ -39,7 +45,7 @@ class Plane:
         deltaT = (time.time() - self.lastTime) * timeMultiplier
         self.lastTime = time.time()
 
-        if self.targetSpeed != self.speed:
+        if self.targetSpeed != self.speed and (self.mode == "HDG" or self.mode == "FPL"):
             if self.altitude < 2000 and self.vertSpeed > 0:  # below 2000ft, prioritise climbing over accelerating
                 self.altitude += self.vertSpeed * (deltaT / 60)
                 self.altitude = round(self.altitude, 0)
@@ -170,6 +176,68 @@ class Plane:
                 self.lat = round(self.lat, 5)
                 self.lon += deltaLon
                 self.lon = round(self.lon, 5)
+        elif self.mode == "GNS":
+            pass
+        elif self.mode == "GNT":
+            if self.groundRoute is None:
+                    self.mode = "GNS"
+                    return
+            
+            try:
+                if len(self.groundRoute) == 1 and self.groundRoute[0].startswith("STAND"):
+                    self.mode = "GNS"
+                    self.stand = self.groundRoute[0].replace("STAND", "")
+                    return
+                elif len(self.groundRoute) == 1 and self.groundRoute[0].startswith("PUSH"):
+                    self.mode = "GNR"
+                    self.stand = None
+                    self.firstGroundPosition = taxiCoordGen.standDataParser()[self.groundRoute[0].replace("PUSH", "")][0]
+                    return
+            except AttributeError:
+                pass
+            
+            distanceToTravel = self.speed * (deltaT / 3600)
+            while distanceToTravel > 0:
+                distanceToNext = util.haversine(self.lat, self.lon, self.groundRoute[0][0], self.groundRoute[0][1]) / 1.852
+                if distanceToNext <= distanceToTravel:
+                    deltaT *= 1 - (distanceToNext / distanceToTravel)  # so later lerp is still correct
+
+                    distanceToTravel -= distanceToNext
+                    self.lat = self.groundRoute[0][0]
+                    self.lon = self.groundRoute[0][1]
+                    self.groundRoute.pop(0)
+                    if len(self.groundRoute) == 0:
+                        self.mode = "GNS"
+                        return
+                    
+                    try:
+                        if self.groundRoute[0].startswith("STAND"):  # arrived at stand
+                            self.mode = "GNS"
+                            self.stand = self.groundRoute[0].replace("STAND", "")
+                            self.heading += 180
+                            self.heading %= 360  # for stand logic handler
+                            return
+                    except AttributeError:
+                        pass
+
+                    try:
+                        if self.groundRoute[0].startswith("PUSH"):  # departed from stand
+                            self.mode = "GNR"
+                            self.stand = None
+                            self.firstGroundPosition = taxiCoordGen.standDataParser()[self.groundRoute[0].replace("PUSH", "")][0]
+                            return
+                    except AttributeError:
+                        pass
+
+                else:
+                    self.heading = util.headingFromTo((self.lat, self.lon), self.groundRoute[0])
+                    deltaLat, deltaLon = util.deltaLatLonCalc(self.lat, self.speed, self.heading, deltaT)
+
+                    self.lat += deltaLat
+                    self.lat = round(self.lat, 5)
+                    self.lon += deltaLon
+                    self.lon = round(self.lon, 5)
+                    return
 
         if activateHoldMode:
             self.holdStartTime = time.time()
@@ -180,7 +248,11 @@ class Plane:
     def positionUpdateText(self, calculatePosition=True) -> bytes:
         if calculatePosition:
             self.calculatePosition()
-        return b'@N:' + self.callsign.encode("UTF-8") + b':' + str(self.squawk).encode("UTF-8") + b':1:' + str(self.lat).encode("UTF-8") + b':' + str(self.lon).encode("UTF-8") + b':' + str(self.altitude).encode("UTF-8") + b':' + str(self.speed).encode("UTF-8") + b':0:0\r\n'
+        displayHeading = self.heading
+        if self.stand is not None or self.mode == "GNR":  # if we're pushing, display heading is 180 degrees off
+            displayHeading += 180
+            displayHeading %= 360
+        return b'@N:' + self.callsign.encode("UTF-8") + b':' + str(self.squawk).encode("UTF-8") + b':1:' + str(self.lat).encode("UTF-8") + b':' + str(self.lon).encode("UTF-8") + b':' + str(self.altitude).encode("UTF-8") + b':' + str(self.speed).encode("UTF-8") + b':' + str(int((100 / 9) * displayHeading)).encode("UTF-8") + b':0\r\n'
 
 
     @staticmethod
@@ -191,6 +263,17 @@ class Plane:
             print("Fix not found")
             coords = (51.15487, -0.16454)
         return Plane(callsign, squawk, altitude, heading, speed, coords[0], coords[1], vertSpeed, "FPL", flightPlan, currentlyWithData)
+    
+    @staticmethod
+    def requestFromGroundPoint(callsign: str, groundPoint: str, squawk: int = 1234, flightPlan: FlightPlan = FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 36000, "EDDF", Route("MIMFO Y312 DVR L9 KONAN L607 KOK UL607 SPI T180 UNOKO"))):
+        coords = GROUND_POINTS[groundPoint]
+        return Plane(callsign, squawk, 0, 0, 0, coords[0], coords[1], 0, "GNS", flightPlan, None)
+    
+    @staticmethod
+    def requestFromStand(callsign: str, stand: str, squawk: int = 1234, flightPlan: FlightPlan = FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 36000, "EDDF", Route("MIMFO Y312 DVR L9 KONAN L607 KOK UL607 SPI T180 UNOKO"))):
+        coords = STANDS[stand][1]
+        heading = util.headingFromTo(coords[0], coords[1])  # will be flipped by stand logic
+        return Plane(callsign, squawk, 0, heading, 0, coords[0][0], coords[0][1], 0, "GNS", flightPlan, None, stand)
     
     @staticmethod
     def requestDeparture(callsign: str, airport: str, squawk: int = 1234, altitude: int = 600, heading: int = 0, speed: float = 150, vertSpeed: float = 2000, flightPlan: FlightPlan = FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 36000, "EDDF", Route("MIMFO Y312 DVR L9 KONAN L607 KOK UL607 SPI T180 UNOKO"))):
