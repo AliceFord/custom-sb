@@ -1,16 +1,18 @@
 import math
 import time
-import socket
 
 from FlightPlan import FlightPlan
 from Route import Route
 import util
 from sfparser import loadRunwayData
 import taxiCoordGen
+from PlaneMode import PlaneMode
 from globalVars import *
+from Constants import *
+
 
 class Plane:
-    def __init__(self, callsign: str, squawk: int, altitude: int, heading: int, speed: float, lat: float, lon: float, vertSpeed: float, mode: str, flightPlan: FlightPlan, currentlyWithData: tuple[str, str], stand=None):  # onGround?
+    def __init__(self, callsign: str, squawk: int, altitude: int, heading: int, speed: float, lat: float, lon: float, vertSpeed: float, mode: PlaneMode, flightPlan: FlightPlan, currentlyWithData: tuple[str, str], stand=None):  # onGround?
         self.callsign = callsign
         self.squawk = squawk
         self.altitude = altitude  # feet
@@ -19,7 +21,7 @@ class Plane:
         self.lat = lat  # decimal degrees
         self.lon = lon  # decimal degrees
         self.vertSpeed = vertSpeed  # feet per minute
-        self.mode = mode  # HDG, FPL, ILS
+        self.mode: PlaneMode = mode
         self.flightPlan = flightPlan  # fpln
         self.currentlyWithData = currentlyWithData  # (current controller, release point)
 
@@ -45,7 +47,7 @@ class Plane:
         deltaT = (time.time() - self.lastTime) * timeMultiplier
         self.lastTime = time.time()
 
-        if self.targetSpeed != self.speed and (self.mode == "HDG" or self.mode == "FPL"):
+        if self.targetSpeed != self.speed and (self.mode == PlaneMode.HEADING or self.mode == PlaneMode.FLIGHTPLAN):
             if self.altitude < 2000 and self.vertSpeed > 0:  # below 2000ft, prioritise climbing over accelerating
                 self.altitude += self.vertSpeed * (deltaT / 60)
                 self.altitude = round(self.altitude, 0)
@@ -78,7 +80,7 @@ class Plane:
 
         tas = self.speed * (1 + (self.altitude / 1000) * 0.02)  # true airspeed
 
-        if self.mode == "ILS":
+        if self.mode == PlaneMode.ILS:
             deltaLat, deltaLon = util.deltaLatLonCalc(self.lat, tas, self.heading, deltaT)
 
             distanceOut = util.haversine(self.lat, self.lon, self.clearedILS[1][0], self.clearedILS[1][1]) / 1.852  # nautical miles
@@ -93,7 +95,7 @@ class Plane:
             self.lat = round(self.lat, 5)
             self.lon += deltaLon
             self.lon = round(self.lon, 5)
-        elif self.mode == "HDG":
+        elif self.mode == PlaneMode.HEADING:
             if self.holdStartTime is not None:
                 if time.time() - self.holdStartTime >= 60:  # 30 sec holds
                     self.holdStartTime = time.time()
@@ -117,19 +119,19 @@ class Plane:
                 hdgToRunway = util.headingFromTo((self.lat, self.lon), self.clearedILS[1])
                 newHdgToRunway = util.headingFromTo((self.lat + deltaLat, self.lon + deltaLon), self.clearedILS[1])
                 if (hdgToRunway < self.clearedILS[0] < newHdgToRunway) or (hdgToRunway > self.clearedILS[0] > newHdgToRunway):
-                    self.mode = "ILS"
+                    self.mode = PlaneMode.ILS
                     self.heading = self.clearedILS[0]
 
             self.lat += deltaLat
             self.lat = round(self.lat, 5)
             self.lon += deltaLon
             self.lon = round(self.lon, 5)
-        elif self.mode == "FPL":
+        elif self.mode == PlaneMode.FLIGHTPLAN:
             distanceToTravel = tas * (deltaT / 3600)
             try:
                 nextFixCoords = FIXES[self.flightPlan.route.fixes[0]]
             except IndexError:
-                self.mode = "HDG"
+                self.mode = PlaneMode.HEADING
             distanceToFix = util.haversine(self.lat, self.lon, nextFixCoords[0], nextFixCoords[1]) / 1.852  # nautical miles
 
             if self.currentlyWithData is not None:  # if we're on close to release point, hand off
@@ -150,7 +152,7 @@ class Plane:
                     try:
                         nextFixCoords = FIXES[self.flightPlan.route.fixes[0]]
                     except IndexError:
-                        self.mode = "HDG"
+                        self.mode = PlaneMode.HEADING
                 
                 self.targetHeading = util.headingFromTo((self.lat, self.lon), nextFixCoords)  # always recalculate heading
 
@@ -176,20 +178,20 @@ class Plane:
                 self.lat = round(self.lat, 5)
                 self.lon += deltaLon
                 self.lon = round(self.lon, 5)
-        elif self.mode == "GNS":
+        elif self.mode == PlaneMode.GROUND_STATIONARY:
             pass
-        elif self.mode == "GNT":
+        elif self.mode == PlaneMode.GROUND_TAXI:
             if self.groundRoute is None:
-                    self.mode = "GNS"
+                    self.mode = PlaneMode.GROUND_STATIONARY
                     return
             
             try:
                 if len(self.groundRoute) == 1 and self.groundRoute[0].startswith("STAND"):
-                    self.mode = "GNS"
+                    self.mode = PlaneMode.GROUND_STATIONARY
                     self.stand = self.groundRoute[0].replace("STAND", "")
                     return
                 elif len(self.groundRoute) == 1 and self.groundRoute[0].startswith("PUSH"):
-                    self.mode = "GNR"
+                    self.mode = PlaneMode.GROUND_READY
                     self.stand = None
                     self.firstGroundPosition = taxiCoordGen.standDataParser()[self.groundRoute[0].replace("PUSH", "")][0]
                     return
@@ -207,12 +209,12 @@ class Plane:
                     self.lon = self.groundRoute[0][1]
                     self.groundRoute.pop(0)
                     if len(self.groundRoute) == 0:
-                        self.mode = "GNS"
+                        self.mode = PlaneMode.GROUND_STATIONARY
                         return
                     
                     try:
                         if self.groundRoute[0].startswith("STAND"):  # arrived at stand
-                            self.mode = "GNS"
+                            self.mode = PlaneMode.GROUND_STATIONARY
                             self.stand = self.groundRoute[0].replace("STAND", "")
                             self.heading += 180
                             self.heading %= 360  # for stand logic handler
@@ -222,7 +224,7 @@ class Plane:
 
                     try:
                         if self.groundRoute[0].startswith("PUSH"):  # departed from stand
-                            self.mode = "GNR"
+                            self.mode = PlaneMode.GROUND_READY
                             self.stand = None
                             self.firstGroundPosition = taxiCoordGen.standDataParser()[self.groundRoute[0].replace("PUSH", "")][0]
                             return
@@ -242,14 +244,14 @@ class Plane:
         if activateHoldMode:
             self.holdStartTime = time.time()
             self.targetHeading = 270
-            self.mode = "HDG"
+            self.mode = PlaneMode.HEADING
             self.turnDir = "L"
     
     def positionUpdateText(self, calculatePosition=True) -> bytes:
         if calculatePosition:
             self.calculatePosition()
         displayHeading = self.heading
-        if self.stand is not None or self.mode == "GNR":  # if we're pushing, display heading is 180 degrees off
+        if self.stand is not None or self.mode == PlaneMode.GROUND_READY:  # if we're pushing, display heading is 180 degrees off
             displayHeading += 180
             displayHeading %= 360
         return b'@N:' + self.callsign.encode("UTF-8") + b':' + str(self.squawk).encode("UTF-8") + b':1:' + str(self.lat).encode("UTF-8") + b':' + str(self.lon).encode("UTF-8") + b':' + str(self.altitude).encode("UTF-8") + b':' + str(self.speed).encode("UTF-8") + b':' + str(int((100 / 9) * displayHeading)).encode("UTF-8") + b':0\r\n'
@@ -262,20 +264,20 @@ class Plane:
         except KeyError:
             print("Fix not found")
             coords = (51.15487, -0.16454)
-        return Plane(callsign, squawk, altitude, heading, speed, coords[0], coords[1], vertSpeed, "FPL", flightPlan, currentlyWithData)
+        return Plane(callsign, squawk, altitude, heading, speed, coords[0], coords[1], vertSpeed, PlaneMode.FLIGHTPLAN, flightPlan, currentlyWithData)
     
     @staticmethod
     def requestFromGroundPoint(callsign: str, groundPoint: str, squawk: int = 1234, flightPlan: FlightPlan = FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 36000, "EDDF", Route("MIMFO Y312 DVR L9 KONAN L607 KOK UL607 SPI T180 UNOKO"))):
         coords = GROUND_POINTS[groundPoint]
-        return Plane(callsign, squawk, 0, 0, 0, coords[0], coords[1], 0, "GNS", flightPlan, None)
+        return Plane(callsign, squawk, 0, 0, 0, coords[0], coords[1], 0, PlaneMode.GROUND_STATIONARY, flightPlan, None)
     
     @staticmethod
     def requestFromStand(callsign: str, stand: str, squawk: int = 1234, flightPlan: FlightPlan = FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 36000, "EDDF", Route("MIMFO Y312 DVR L9 KONAN L607 KOK UL607 SPI T180 UNOKO"))):
         coords = STANDS[stand][1]
         heading = util.headingFromTo(coords[0], coords[1])  # will be flipped by stand logic
-        return Plane(callsign, squawk, 0, heading, 0, coords[0][0], coords[0][1], 0, "GNS", flightPlan, None, stand)
+        return Plane(callsign, squawk, 0, heading, 0, coords[0][0], coords[0][1], 0, PlaneMode.GROUND_STATIONARY, flightPlan, None, stand)
     
     @staticmethod
     def requestDeparture(callsign: str, airport: str, squawk: int = 1234, altitude: int = 600, heading: int = 0, speed: float = 150, vertSpeed: float = 2000, flightPlan: FlightPlan = FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 36000, "EDDF", Route("MIMFO Y312 DVR L9 KONAN L607 KOK UL607 SPI T180 UNOKO"))):
         coords = loadRunwayData(airport)[ACTIVE_RUNWAY]
-        return Plane(callsign, squawk, altitude, heading, speed, coords[1][0], coords[1][1], vertSpeed, "FPL", flightPlan, None)
+        return Plane(callsign, squawk, altitude, heading, speed, coords[1][0], coords[1][1], vertSpeed, PlaneMode.FLIGHTPLAN, flightPlan, None)

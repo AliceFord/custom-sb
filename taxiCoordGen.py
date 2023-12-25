@@ -14,7 +14,7 @@ def getAllGroundCoords() -> dict[str, tuple[float, float]]:
 
     return points
 
-def getTaxiRoute(start, route, end):
+def getTaxiRoute(start: str, rawRoute: str, end: str):
     with open("SSGroundLayout.txt", "r") as f:
         lines = f.read().split("\n")
 
@@ -23,7 +23,7 @@ def getTaxiRoute(start, route, end):
         line = line.split(":")
         taxiways[line[0]] = line[1:]
 
-    route = route.split(" ")
+    route: list[str] = rawRoute.split(" ")
     outRoute = []
     currentPos: str = start
 
