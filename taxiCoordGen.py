@@ -1,6 +1,7 @@
 import sfparser
 import util
 
+
 def getAllGroundCoords() -> dict[str, tuple[float, float]]:
     with open("SSGroundData.txt", "r") as f:
         lines = f.read().split("\n")
@@ -13,6 +14,7 @@ def getAllGroundCoords() -> dict[str, tuple[float, float]]:
         points[line[0]] = sfparser.sfCoordsToNormalCoords(line[1], line[2])
 
     return points
+
 
 def getTaxiRoute(start: str, rawRoute: str, end: str):
     with open("SSGroundLayout.txt", "r") as f:
@@ -35,7 +37,7 @@ def getTaxiRoute(start: str, rawRoute: str, end: str):
         if i != len(route) - 1:
             currentEnd = route[i + 1]
         currentData = taxiways[twy]
-    
+
         try:
             currentPosInData = currentData.index(currentPos)
         except ValueError:
@@ -94,6 +96,7 @@ def getTaxiRoute(start: str, rawRoute: str, end: str):
 
     return outRoute
 
+
 def closestPoint(lat, lon):
     data = getAllGroundCoords()
     closest = None
@@ -106,6 +109,7 @@ def closestPoint(lat, lon):
             closest = point
 
     return closest
+
 
 def standDataParser():
     with open("SSStandData.txt", "r") as f:
@@ -120,6 +124,7 @@ def standDataParser():
 
     return out
 
+
 def getStandRoute(start, route, stand):
     standData = standDataParser()[stand]
     print(standData[0])
@@ -129,11 +134,13 @@ def getStandRoute(start, route, stand):
 
     return route
 
+
 def getPushRoute(stand):
     standData = standDataParser()[stand]
     route = standData[1]
 
     return route
+
 
 def nameOfPoint(point):
     data = getAllGroundCoords()

@@ -1,10 +1,10 @@
 from __future__ import annotations
 from Route import Route
-from globalVars import *
-from Constants import *
+from Constants import ACTIVE_AERODROME
+
 
 class FlightPlan:
-    def __init__(self, flightRules: str, aircraftType: str, enrouteSpeed: int, departure: str, offBlockTime: int, 
+    def __init__(self, flightRules: str, aircraftType: str, enrouteSpeed: int, departure: str, offBlockTime: int,
                  enrouteTime: int, cruiseAltitude: int, destination: str, route: Route):
         self.flightRules = flightRules
         self.aircraftType = aircraftType

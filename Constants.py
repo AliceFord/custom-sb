@@ -4,7 +4,7 @@ PUSH_SPEED = 5  # knots
 CLIMB_RATE = 2000  # ft / min
 DESCENT_RATE = -2000  # ft / min
 
-CCAMS_SQUAWKS = list(range(1410,1478)) + list(range(2001,2078)) + list(range(2201,2278)) + list(range(2701,2738))  # realistically way way more
+CCAMS_SQUAWKS = list(range(1410, 1478)) + list(range(2001, 2078)) + list(range(2201, 2278)) + list(range(2701, 2738))  # realistically way way more
 
 ACTIVE_AERODROME = "EGLL"
 ACTIVE_RUNWAY = "27L"

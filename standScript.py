@@ -9,4 +9,3 @@ while True:
 
     print(":".join(out))
     k += 1
-    

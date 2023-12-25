@@ -9,6 +9,7 @@ class MainWindow(QtWidgets.QMainWindow):
         uic.loadUi("groundmentor.ui", self)
         self.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
 
+
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
 

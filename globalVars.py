@@ -1,9 +1,9 @@
 from sfparser import parseFixes
 from taxiCoordGen import getAllGroundCoords, standDataParser
 
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from main import Plane
+# from typing import TYPE_CHECKING
+# if TYPE_CHECKING:
+#     from main import Plane
 
 FIXES = parseFixes()
 GROUND_POINTS = getAllGroundCoords()

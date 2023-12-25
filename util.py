@@ -5,9 +5,7 @@ import threading
 import socket
 
 from PlaneMode import PlaneMode
-# from Plane import Plane
-from globalVars import *
-from Constants import *
+
 
 def haversine(lat1, lon1, lat2, lon2):  # from https://rosettacode.org/wiki/Haversine_formula#Python
     R = 6372.8  # Earth radius in kilometers
@@ -22,6 +20,7 @@ def haversine(lat1, lon1, lat2, lon2):  # from https://rosettacode.org/wiki/Have
 
     return R * c
 
+
 def callsignGen():
     callsign = ""
     callsign += random.choice(["EZY", "DLH", "BAW", "RYR"])
@@ -29,6 +28,7 @@ def callsignGen():
 
     # TODO: ensure callsign is unique
     return callsign
+
 
 def squawkGen():
     from Constants import CCAMS_SQUAWKS
@@ -40,12 +40,13 @@ def squawkGen():
     allocatedSquawks.append(squawk)
     return squawk
 
+
 def headingFromTo(fromCoord: tuple[float, float], toCoord: tuple[float, float]) -> int:
-    return (math.degrees(math.atan2(toCoord[1] - fromCoord[1], (1/math.cos(math.radians(fromCoord[0]))) * (toCoord[0] - fromCoord[0]))) + 360) % 360
+    return (math.degrees(math.atan2(toCoord[1] - fromCoord[1], (1 / math.cos(math.radians(fromCoord[0]))) * (toCoord[0] - fromCoord[0]))) + 360) % 360
 
 
 def deltaLatLonCalc(lat: float, tas: float, heading: float, deltaT: float) -> tuple[float, float]:
-    return ((tas * math.cos(math.radians(heading)) * (deltaT / 3600)) / 60, (1/math.cos(math.radians(lat))) * (tas * math.sin(math.radians(heading)) * (deltaT / 3600)) / 60)
+    return ((tas * math.cos(math.radians(heading)) * (deltaT / 3600)) / 60, (1 / math.cos(math.radians(lat))) * (tas * math.sin(math.radians(heading)) * (deltaT / 3600)) / 60)
 
 
 def modeConverter(mode: PlaneMode) -> str:
@@ -107,8 +108,8 @@ class PlaneSocket(EsSocket):
         s.connect(("127.0.0.1", 6809))
         s.esSend("#AP" + plane.callsign, "SERVER", "1646235", "pass", "1", "9", "1", "Alice Ford")
         s.sendall(plane.positionUpdateText(calculatePosition=False))
-        s.sendall(b'$FP' + plane.callsign.encode("UTF-8") + str(plane.flightPlan).encode("UTF-8") + b'\r\n') #TODO
-        
+        s.sendall(b'$FP' + plane.callsign.encode("UTF-8") + str(plane.flightPlan).encode("UTF-8") + b'\r\n')  # TODO
+
         masterSock.esSend(f"$CQ{masterCallsign}", "SERVER", "FP", plane.callsign)
         masterSock.esSend(f"$CQ{masterCallsign}", "@94835", "WH", plane.callsign)
         masterSock.esSend(f"$CQ{masterCallsign}", plane.callsign, "CAPS")
@@ -117,7 +118,7 @@ class PlaneSocket(EsSocket):
             DaemonTimer(1, masterSock.esSend, args=["$CQ" + plane.currentlyWithData[0], "@94835", "IT", plane.callsign]).start()  # Controller takes plane
             DaemonTimer(1, masterSock.esSend, args=["$CQ" + plane.currentlyWithData[0], "@94835", "TA", plane.callsign, plane.altitude]).start()  # Temp alt for arrivals
             # masterSock.sendall(b'$CQ' + plane.currentlyWithData[0].encode("UTF-8") + b':@94835:IT:' + plane.callsign.encode("UTF-8") + b'\r\n')
-        
+
         DaemonTimer(1, masterSock.esSend, args=["$CQ" + masterCallsign, "@94835", "BC", plane.callsign, plane.squawk]).start()  # Assign squawk
 
         return s

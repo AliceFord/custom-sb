@@ -1,19 +1,18 @@
 import random
 import select
-import socket
 import threading
 import sys
 from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import QTableWidgetItem
 
 from uiTest import MainWindow
-from sfparser import loadRunwayData, loadStarAndFixData, parseFixes
+from sfparser import loadRunwayData, loadStarAndFixData
 from Route import Route
 from FlightPlan import FlightPlan
 from Plane import Plane
 from PlaneMode import PlaneMode
-from globalVars import *
-from Constants import *
+from globalVars import FIXES
+from Constants import ACTIVE_CONTROLLER, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, ACTIVE_AERODROME, ACTIVE_RUNWAY, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE
 import util
 import taxiCoordGen
 
@@ -87,7 +86,7 @@ def parseCommand():
                     raise CommandErrorException("Already following a flightplan")
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Cannot proceed to fix while on the ground")
-                
+
                 found = False
                 for i, fix in enumerate(plane.flightPlan.route.fixes):
                     if fix == text.split(" ")[2]:
@@ -97,7 +96,7 @@ def parseCommand():
 
                 if not found:
                     raise CommandErrorException("Fix not found")
-                
+
                 plane.mode = PlaneMode.FLIGHTPLAN
                 plane.flightPlan.route.initial = True
             case "pd":
@@ -112,7 +111,7 @@ def parseCommand():
                         plane.flightPlan.route.fixes = plane.flightPlan.route.fixes[i:]
                         found = True
                         break
-                
+
                 if not found:
                     raise CommandErrorException("Fix not found")
 
@@ -134,7 +133,7 @@ def parseCommand():
                     raise CommandErrorException("Cannot assign ILS approach while on the ground")
                 if plane.mode == PlaneMode.FLIGHTPLAN:
                     raise CommandErrorException("Need headings to intercept")
-                
+
                 runwayData = loadRunwayData(ACTIVE_AERODROME)[text.split(" ")[2]]
                 plane.clearedILS = runwayData
             case "ho":
@@ -144,7 +143,7 @@ def parseCommand():
                     planeSocks.pop(index).close()
                     window.aircraftTable.removeRow(index)
             case "taxi":
-                if not (plane.mode in PlaneMode.GROUND_MODES):
+                if plane.mode not in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Plane is not currently in a state to taxi")
                 points = text.split(" ")
                 if points[2].startswith("/"):
@@ -186,7 +185,7 @@ def parseCommand():
                     raise CommandErrorException("Currently moving")
                 if plane.stand is None:
                     raise CommandErrorException("Not on stand")
-                
+
                 plane.mode = PlaneMode.GROUND_TAXI
                 plane.groundRoute = taxiCoordGen.getPushRoute(plane.stand) + ["PUSH" + plane.stand]
                 plane.speed = PUSH_SPEED
@@ -230,11 +229,10 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
 
     planeSocks.append(sock)
 
-    
     window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
 
     dc = 0
-    for i, plane in enumerate(planes):
+    for plane in planes:
         if plane.currentlyWithData is None:
             window.aircraftTable.setItem(dc, 0, QTableWidgetItem(plane.callsign))
             window.aircraftTable.setItem(dc, 1, QTableWidgetItem(util.modeConverter(plane.mode)))
@@ -243,6 +241,7 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
             dc += 1
 
 # MAIN LOOP
+
 
 def positionLoop(controllerSock: util.ControllerSocket):
     global planes, planeSocks, window
@@ -261,16 +260,16 @@ def positionLoop(controllerSock: util.ControllerSocket):
             window.aircraftTable.setItem(dc, 2, QTableWidgetItem(str(plane.squawk)))
             window.aircraftTable.setItem(dc, 3, QTableWidgetItem(str(plane.speed)))
             dc += 1
-        
+
     print()
 
 
-def messageMonitor(controllerSock: util.ControllerSocket):
+def messageMonitor(controllerSock: util.ControllerSocket) -> None:
     t = threading.Timer(5, messageMonitor, args=[controllerSock])
     t.daemon = True
     t.start()
 
-    socketReady = select.select([controllerSock], [], [], 1)
+    socketReady = select.select([controllerSock], [], [], 1)  # 1 second timeout
     if socketReady[0]:
         messages = controllerSock.recv(1024)
         messages = messages.decode("UTF-8").split("\r\n")
@@ -304,6 +303,7 @@ def cellClicked(row, _col):
     window.commandEntry.setText(window.aircraftTable.item(row, 0).text() + " ")
     window.commandEntry.setFocus()
 
+
 def main():
     global planes, planeSocks, window, ACTIVE_AERODROME, ACTIVE_RUNWAY, ACTIVE_CONTROLLER
     # SETUP PLANES
@@ -314,24 +314,24 @@ def main():
     # planes.append(Plane.requestFromStand("DLH20W", "23", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 37000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
     # planes.append(Plane.requestFromStand("BAW22E", "12", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 37000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
     # planes.append(Plane.requestFromStand("TRA90P", "14", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 37000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
-    
+
     # planes.append(Plane.requestFromGroundPoint("GASNE", "L/L3", flightPlan=FlightPlan("I", "B738", 250, "EHAM", 1130, 1130, 36000, "EGSS", Route("CLN"))))
     # planes.append(Plane.requestFromStand("GETCC", "2", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 36000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
     # planes.append(Plane.requestFromGroundPoint("GBMIV", "V/V1", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 36000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
-    
+
     controllerSock: util.ControllerSocket = util.ControllerSocket.StartController(masterCallsign)
     controllerSock.setblocking(False)
 
     for plane in planes:
         planeSocks.append(util.PlaneSocket.StartPlane(plane, masterCallsign, controllerSock))
-    
+
     # SETUP UI
 
     app = QtWidgets.QApplication(sys.argv)
 
     window = MainWindow()
 
-    # # GATTERS: 
+    # # GATTERS:
     # # ARRIVALS
     # # 10ph AMDUT1G
     # # 10ph VASUX1G
@@ -377,7 +377,6 @@ def main():
     # Start message monitor
     util.DaemonTimer(5, messageMonitor, args=[controllerSock]).start()
 
-    
     window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
 
     window.commandEntry.returnPressed.connect(parseCommand)
@@ -395,6 +394,7 @@ def main():
         planeSock.close()
 
     controllerSock.close()
+
 
 if __name__ == "__main__":
     main()
