@@ -2,16 +2,17 @@ import random
 import select
 import threading
 import sys
+import time
 from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import QTableWidgetItem
+from Route import Route
 
 from uiTest import MainWindow
 from sfparser import loadRunwayData, loadStarAndFixData
-from Route import Route
 from FlightPlan import FlightPlan
 from Plane import Plane
 from PlaneMode import PlaneMode
-from globalVars import FIXES
+from globalVars import FIXES, planes, planeSocks, window
 from Constants import ACTIVE_CONTROLLER, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, ACTIVE_AERODROME, ACTIVE_RUNWAY, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE
 import util
 import taxiCoordGen
@@ -26,6 +27,7 @@ class CommandErrorException(Exception):
 
 
 def parseCommand():
+    global planes
     # See command spec
     text: str = window.commandEntry.text()
 
@@ -36,6 +38,17 @@ def parseCommand():
     if callsign == "tm":  # time multiplier
         global timeMultiplier
         timeMultiplier = float(text.split(" ")[1])
+        return
+    elif callsign == "pause":
+        for timer in util.PausableTimer.timers:
+            timer.pause()
+        return
+    elif callsign == "resume":
+        for timer in util.PausableTimer.timers:
+            timer.restart()
+
+        for plane in planes:
+            plane.lastTime = time.time()
         return
 
     for plane in planes:
@@ -76,7 +89,24 @@ def parseCommand():
                 plane.mode = PlaneMode.HEADING
                 plane.targetHeading = int(text.split(" ")[2]) % 360
                 plane.turnDir = "R"
-                # plane.heading = int(text.split(" ")[2])
+            case "r":
+                if plane.mode in PlaneMode.GROUND_MODES:
+                    raise CommandErrorException("Cannot change heading while on the ground")
+                if plane.holdStartTime is not None:  # end holding
+                    plane.holdStartTime = None
+                plane.mode = PlaneMode.HEADING
+                plane.targetHeading = plane.heading + int(text.split(" ")[2]) % 360
+                plane.targetHeading = plane.targetHeading % 360
+                plane.turnDir = "R"
+            case "l":
+                if plane.mode in PlaneMode.GROUND_MODES:
+                    raise CommandErrorException("Cannot change heading while on the ground")
+                if plane.holdStartTime is not None:  # end holding
+                    plane.holdStartTime = None
+                plane.mode = PlaneMode.HEADING
+                plane.targetHeading = plane.heading - int(text.split(" ")[2]) % 360
+                plane.targetHeading = plane.targetHeading % 360
+                plane.turnDir = "L"
             case "sp":
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Ground speed is fixed")
@@ -198,13 +228,13 @@ def parseCommand():
 # PLANE SPAWNING
 
 def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, **kwargs):
-    global planes, planeSocks, window
+    global planes, planeSocks
 
     timeWiggle = 0
     if method == "ARR":
         timeWiggle = random.randint(-10, 15)
 
-    util.DaemonTimer(nSeconds + timeWiggle, spawnEveryNSeconds, args=(nSeconds, masterCallsign, controllerSock, method, *args), kwargs=kwargs).start()
+    util.PausableTimer(nSeconds + timeWiggle, spawnEveryNSeconds, args=(nSeconds, masterCallsign, controllerSock, method, *args), kwargs=kwargs)
 
     fp: FlightPlan = kwargs["flightPlan"]
     kwargs.pop("flightPlan")
@@ -225,7 +255,7 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
     sock = util.PlaneSocket.StartPlane(plane, masterCallsign, controllerSock)
 
     # if method == "ARR":
-    #     util.DaemonTimer(11, sock.sendall, args=[b'$CQLON_S_CTR:@94835:SC:' + plane.callsign.encode("UTF-8") + b':' + fp.route.fixes[-1].encode("UTF-8") + b'\r\n'])
+    #     util.PausableTimer(11, sock.sendall, args=[b'$CQLON_S_CTR:@94835:SC:' + plane.callsign.encode("UTF-8") + b':' + fp.route.fixes[-1].encode("UTF-8") + b'\r\n'])
 
     planeSocks.append(sock)
 
@@ -244,8 +274,7 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
 
 
 def positionLoop(controllerSock: util.ControllerSocket):
-    global planes, planeSocks, window
-    util.DaemonTimer(5, positionLoop, args=[controllerSock]).start()
+    util.PausableTimer(5, positionLoop, args=[controllerSock])
 
     controllerSock.esSend("%" + MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, "3", "100", "7", "51.14806", "-0.19028", "0")
 
@@ -265,7 +294,7 @@ def positionLoop(controllerSock: util.ControllerSocket):
 
 
 def messageMonitor(controllerSock: util.ControllerSocket) -> None:
-    t = threading.Timer(5, messageMonitor, args=[controllerSock])
+    t = threading.Timer(5, messageMonitor, args=[controllerSock])  # regular timer as should never be paused
     t.daemon = True
     t.start()
 
@@ -310,6 +339,8 @@ def main():
 
     masterCallsign = MASTER_CONTROLLER
 
+    planes.append(Plane.requestFromFix("EZY1", "OLNEY", squawk=util.squawkGen(), speed=250, altitude=5000, flightPlan=FlightPlan("I", "B738", 250, "EGGW", 1130, 1130, 37000, "EHAM", Route("MATCH Q295 BRAIN P44 DAGGA M85 ITVIP"))))
+
     # planes.append(Plane.requestFromStand("EZY45", "2", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 37000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
     # planes.append(Plane.requestFromStand("DLH20W", "23", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 37000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
     # planes.append(Plane.requestFromStand("BAW22E", "12", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 37000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
@@ -318,6 +349,13 @@ def main():
     # planes.append(Plane.requestFromGroundPoint("GASNE", "L/L3", flightPlan=FlightPlan("I", "B738", 250, "EHAM", 1130, 1130, 36000, "EGSS", Route("CLN"))))
     # planes.append(Plane.requestFromStand("GETCC", "2", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 36000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
     # planes.append(Plane.requestFromGroundPoint("GBMIV", "V/V1", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 36000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
+
+    # HEATHROW 2 (start in hold)
+
+    # for alt in range(8000, 8000 + 6 * 1000, 1000):
+    #     plane = Plane.requestFromFix(util.callsignGen(), "BNN", squawk=util.squawkGen(), speed=250, altitude=alt, flightPlan=FlightPlan.arrivalPlan("BNN"), currentlyWithData=(masterCallsign, "BNN"))
+    #     plane.holdFix = "BNN"
+    #     planes.append(plane)
 
     controllerSock: util.ControllerSocket = util.ControllerSocket.StartController(masterCallsign)
     controllerSock.setblocking(False)
@@ -339,43 +377,43 @@ def main():
     # # 10ph TELTU1G
     # # 5ph GWC1G
     # # 0ph KIDLI1G
-    # util.DaemonTimer(random.randint(1, 60), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "SFD"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("SFD DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")}).start()
-    # util.DaemonTimer(random.randint(60, 120), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "TELTU"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("TELTU DCT HOLLY DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")}).start()
-    # util.DaemonTimer(random.randint(120, 180), spawnEveryNSeconds, args=(3600 // 5, masterCallsign, controllerSock, "ARR", "MID"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("MID DCT HOLLY DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")}).start()
-    # util.DaemonTimer(random.randint(180, 240), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "TELTU"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("TELTU DCT SFD DCT TIMBA"), "currentlyWithData": (masterCallsign, "TIMBA")}).start()
-    # util.DaemonTimer(random.randint(240, 300), spawnEveryNSeconds, args=(3600 // 5, masterCallsign, controllerSock, "ARR", "GWC"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("GWC DCT HOLLY DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")}).start()
+    # util.PausableTimer(random.randint(1, 60), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "SFD"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("SFD DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")})
+    # util.PausableTimer(random.randint(60, 120), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "TELTU"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("TELTU DCT HOLLY DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")})
+    # util.PausableTimer(random.randint(120, 180), spawnEveryNSeconds, args=(3600 // 5, masterCallsign, controllerSock, "ARR", "MID"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("MID DCT HOLLY DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")})
+    # util.PausableTimer(random.randint(180, 240), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "TELTU"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("TELTU DCT SFD DCT TIMBA"), "currentlyWithData": (masterCallsign, "TIMBA")})
+    # util.PausableTimer(random.randint(240, 300), spawnEveryNSeconds, args=(3600 // 5, masterCallsign, controllerSock, "ARR", "GWC"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("GWC DCT HOLLY DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")})
 
     # # DEPARTURES
-    # util.DaemonTimer(1, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 25000, "LFPG", Route("HARDY1X/26L HARDY M605 XIDIL UM605 BIBAX"))}).start()
-    # util.DaemonTimer(90, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 26000, "EGCC", Route("LAM6M/26L LAM N57 WELIN T420 ELVOS"))}).start()
-    # util.DaemonTimer(180, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 18000, "EGGD", Route("NOVMA1X/26L NOVMA L620 NIBDA N14 HEKXA Q63 SAWPE"))}).start()
-    # util.DaemonTimer(270, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 35000, "EDDF", Route("MIMFO1M/26L MIMFO Y312 DVR UL9 KONAN UL607 KOK SPI T180 UNOKO"))}).start()
-    # util.DaemonTimer(360, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 27000, "LFAB", Route("BOGNA1X/26L BOGNA L612 BENBO UL612 XAMAB"))}).start()
-    # util.DaemonTimer(450, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 27000, "EHAM", Route("FRANE1M/26L FRANE M604 GASBA M197 REDFA"))}).start()
+    # util.PausableTimer(1, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 25000, "LFPG", Route("HARDY1X/26L HARDY M605 XIDIL UM605 BIBAX"))})
+    # util.PausableTimer(90, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 26000, "EGCC", Route("LAM6M/26L LAM N57 WELIN T420 ELVOS"))})
+    # util.PausableTimer(180, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 18000, "EGGD", Route("NOVMA1X/26L NOVMA L620 NIBDA N14 HEKXA Q63 SAWPE"))})
+    # util.PausableTimer(270, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 35000, "EDDF", Route("MIMFO1M/26L MIMFO Y312 DVR UL9 KONAN UL607 KOK SPI T180 UNOKO"))})
+    # util.PausableTimer(360, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 27000, "LFAB", Route("BOGNA1X/26L BOGNA L612 BENBO UL612 XAMAB"))})
+    # util.PausableTimer(450, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 27000, "EHAM", Route("FRANE1M/26L FRANE M604 GASBA M197 REDFA"))})
 
-    # HEATHROW:
+    # HEATHROW 1
     # ARRIVALS
     # 10ph BNN
     # 10ph LAM
     # 10ph OCK
     # 10ph BIG
-    util.DaemonTimer(random.randint(1, 72), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "WCO"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("WCO DCT BNN"), "currentlyWithData": (masterCallsign, "BNN")}).start()
-    util.DaemonTimer(random.randint(72, 144), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "DET"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("DET DCT LAM"), "currentlyWithData": (masterCallsign, "LAM")}).start()
-    util.DaemonTimer(random.randint(144, 216), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "HAZEL"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("HAZEL DCT OCK"), "currentlyWithData": (masterCallsign, "OCK")}).start()
-    util.DaemonTimer(random.randint(216, 288), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "MAY"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("MAY DCT BIG"), "currentlyWithData": (masterCallsign, "BIG")}).start()
+    # util.PausableTimer(random.randint(1, 1), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "WCO"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("WCO DCT BNN"), "currentlyWithData": (masterCallsign, "BNN")})
+    # util.PausableTimer(random.randint(72, 144), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "DET"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("DET DCT LAM"), "currentlyWithData": (masterCallsign, "LAM")})
+    # util.PausableTimer(random.randint(144, 216), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "HAZEL"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("HAZEL DCT OCK"), "currentlyWithData": (masterCallsign, "OCK")})
+    # util.PausableTimer(random.randint(216, 288), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "MAY"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("MAY DCT BIG"), "currentlyWithData": (masterCallsign, "BIG")})
 
     # DEPARTURES
-    util.DaemonTimer(1, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EHAM", Route("BPK7G/27L BPK Q295 BRAIN M197 REDFA"))}).start()
-    util.DaemonTimer(60, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EGGD", Route("CPT3G/27L CPT"))}).start()
-    util.DaemonTimer(120, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EGCC", Route("UMLAT1G/27L UMLAT T418 WELIN T420 ELVOS"))}).start()
-    util.DaemonTimer(180, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "LFPG", Route("MAXIT1G/27L MAXIT Y803 MID UL612 BOGNA HARDY UM605 BIBAX"))}).start()
+    # util.PausableTimer(1, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EHAM", Route("BPK7G/27L BPK Q295 BRAIN M197 REDFA"))})
+    # util.PausableTimer(60, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EGGD", Route("CPT3G/27L CPT"))})
+    # util.PausableTimer(120, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EGCC", Route("UMLAT1G/27L UMLAT T418 WELIN T420 ELVOS"))})
+    # util.PausableTimer(180, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "LFPG", Route("MAXIT1G/27L MAXIT Y803 MID UL612 BOGNA HARDY UM605 BIBAX"))})
 
     # STANNERS
 
-    # util.DaemonTimer(random.randint(1, 1), spawnEveryNSeconds, args=(180, masterCallsign, controllerSock, "GPT", "J(1)_Z"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EHAM", 1130, 1130, 36000, "EGSS", Route("CLN"))}).start()
+    # util.PausableTimer(random.randint(1, 1), spawnEveryNSeconds, args=(180, masterCallsign, controllerSock, "GPT", "J(1)_Z"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EHAM", 1130, 1130, 36000, "EGSS", Route("CLN"))})
 
     # Start message monitor
-    util.DaemonTimer(5, messageMonitor, args=[controllerSock]).start()
+    util.PausableTimer(5, messageMonitor, args=[controllerSock])
 
     window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
 

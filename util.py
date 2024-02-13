@@ -3,6 +3,7 @@ import random
 import string
 import threading
 import socket
+import time
 
 from PlaneMode import PlaneMode
 
@@ -115,16 +116,57 @@ class PlaneSocket(EsSocket):
         masterSock.esSend(f"$CQ{masterCallsign}", plane.callsign, "CAPS")
 
         if plane.currentlyWithData is not None:
-            DaemonTimer(1, masterSock.esSend, args=["$CQ" + plane.currentlyWithData[0], "@94835", "IT", plane.callsign]).start()  # Controller takes plane
-            DaemonTimer(1, masterSock.esSend, args=["$CQ" + plane.currentlyWithData[0], "@94835", "TA", plane.callsign, plane.altitude]).start()  # Temp alt for arrivals
+            PausableTimer(1, masterSock.esSend, args=["$CQ" + plane.currentlyWithData[0], "@94835", "IT", plane.callsign])  # Controller takes plane
+            PausableTimer(1, masterSock.esSend, args=["$CQ" + plane.currentlyWithData[0], "@94835", "TA", plane.callsign, plane.altitude])  # Temp alt for arrivals
             # masterSock.sendall(b'$CQ' + plane.currentlyWithData[0].encode("UTF-8") + b':@94835:IT:' + plane.callsign.encode("UTF-8") + b'\r\n')
 
-        DaemonTimer(1, masterSock.esSend, args=["$CQ" + masterCallsign, "@94835", "BC", plane.callsign, plane.squawk]).start()  # Assign squawk
+        PausableTimer(1, masterSock.esSend, args=["$CQ" + masterCallsign, "@94835", "BC", plane.callsign, plane.squawk])  # Assign squawk
 
         return s
 
 
-class DaemonTimer(threading.Timer):
+class PausableTimer(threading.Thread):
+    timers: list['PausableTimer'] = []
+
     def __init__(self, interval, function, args=[], kwargs={}):
         threading.Timer.__init__(self, interval, function, args, kwargs)
+        self.delay = interval
+        self.function = function
+        self.args = args
+        self.kwargs = kwargs
+
+        self.timeElapsed = 0
+        self.cancel = False
         self.daemon = True
+        self.startTime = time.time()
+
+        PausableTimer.timers.append(self)
+        self.start()
+
+    def pause(self):
+        self.cancel = True
+        self.delay -= time.time() - self.startTime
+
+    def restart(self):
+        PausableTimer.timers.remove(self)
+        self.__init__(self.delay, self.function, self.args, self.kwargs)
+
+    def run(self) -> None:
+        while self.timeElapsed < self.delay:
+            if self.cancel:
+                return
+            self.timeElapsed = time.time() - self.startTime
+            time.sleep(0.5)
+
+        PausableTimer.timers.remove(self)
+        self.function(*self.args, **self.kwargs)
+
+
+if __name__ == "__main__":
+    t = PausableTimer(5, print, args=["hi"])
+    time.sleep(1)
+    t.pause()
+    time.sleep(5)
+    print(1)
+    t.restart()
+    time.sleep(5)

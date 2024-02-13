@@ -7,7 +7,7 @@ import util
 from sfparser import loadRunwayData
 import taxiCoordGen
 from PlaneMode import PlaneMode
-from globalVars import FIXES, GROUND_POINTS, STANDS
+from globalVars import FIXES, GROUND_POINTS, STANDS, timeMultiplier
 from Constants import TURN_RATE, ACTIVE_RUNWAY, ACTIVE_AERODROME, ACTIVE_CONTROLLER
 
 
@@ -43,7 +43,6 @@ class Plane:
         self.lastTime = time.time()
 
     def calculatePosition(self):
-        global timeMultiplier
         deltaT = (time.time() - self.lastTime) * timeMultiplier
         self.lastTime = time.time()
 
@@ -137,7 +136,7 @@ class Plane:
             if self.currentlyWithData is not None:  # if we're on close to release point, hand off
                 if self.currentlyWithData[1] == self.flightPlan.route.fixes[0] and distanceToFix <= 5:
                     self.currentlyWithData = None
-                    util.DaemonTimer(11, self.masterSocketHandleData[0].esSend, args=["$HO" + self.masterSocketHandleData[1], ACTIVE_CONTROLLER, self.callsign]).start()
+                    util.PausableTimer(11, self.masterSocketHandleData[0].esSend, args=["$HO" + self.masterSocketHandleData[1], ACTIVE_CONTROLLER, self.callsign])
 
             if self.holdFix is not None and self.flightPlan.route.fixes[0] == self.holdFix and distanceToFix <= distanceToTravel:
                 activateHoldMode = True
