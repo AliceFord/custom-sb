@@ -277,5 +277,6 @@ class Plane:
 
     @classmethod
     def requestDeparture(cls, callsign: str, airport: str, squawk: int = 1234, altitude: int = 600, heading: int = 0, speed: float = 150, vertSpeed: float = 2000, flightPlan: FlightPlan = FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 36000, "EDDF", Route("MIMFO Y312 DVR L9 KONAN L607 KOK UL607 SPI T180 UNOKO"))):
-        coords = loadRunwayData(airport)[ACTIVE_RUNWAY]
+        # coords = loadRunwayData(airport)[ACTIVE_RUNWAY]   # TODO: Dynamic
+        coords = list(loadRunwayData(airport).values())[0]
         return cls(callsign, squawk, altitude, heading, speed, coords[1][0], coords[1][1], vertSpeed, PlaneMode.FLIGHTPLAN, flightPlan, None)

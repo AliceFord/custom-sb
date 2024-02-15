@@ -1,3 +1,4 @@
+import json
 import random
 import select
 import threading
@@ -12,8 +13,8 @@ from sfparser import loadRunwayData, loadStarAndFixData
 from FlightPlan import FlightPlan
 from Plane import Plane
 from PlaneMode import PlaneMode
-from globalVars import FIXES, planes, planeSocks, window
-from Constants import ACTIVE_CONTROLLER, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, ACTIVE_AERODROME, ACTIVE_RUNWAY, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE
+from globalVars import FIXES, planes, planeSocks, window, otherControllerSocks
+from Constants import ACTIVE_CONTROLLER, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, ACTIVE_AERODROME, ACTIVE_RUNWAY, OTHER_CONTROLLERS, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE
 import util
 import taxiCoordGen
 
@@ -227,8 +228,11 @@ def parseCommand():
 
 # PLANE SPAWNING
 
-def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, **kwargs):
+def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, callsign=None, **kwargs):
     global planes, planeSocks
+
+    if callsign is None:
+        callsign = util.callsignGen()
 
     timeWiggle = 0
     if method == "ARR":
@@ -240,16 +244,16 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
     kwargs.pop("flightPlan")
 
     if method == "ARR":
-        plane = Plane.requestFromFix(util.callsignGen(), *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
+        plane = Plane.requestFromFix(callsign, *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
     elif method == "DEP":
-        plane = Plane.requestDeparture(util.callsignGen(), *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
+        plane = Plane.requestDeparture(callsign, *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
         plane.targetAltitude = 4000
         plane.targetSpeed = 250
         plane.vertSpeed = CLIMB_RATE
     elif method == "GPT":
-        plane = Plane.requestFromGroundPoint(util.callsignGen(), *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
+        plane = Plane.requestFromGroundPoint(callsign, *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
     elif method == "STD":
-        plane = Plane.requestFromStand(util.callsignGen(), *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
+        plane = Plane.requestFromStand(callsign, *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
     kwargs["flightPlan"] = fp
     planes.append(plane)
     sock = util.PlaneSocket.StartPlane(plane, masterCallsign, controllerSock)
@@ -277,6 +281,9 @@ def positionLoop(controllerSock: util.ControllerSocket):
     util.PausableTimer(5, positionLoop, args=[controllerSock])
 
     controllerSock.esSend("%" + MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, "3", "100", "7", "51.14806", "-0.19028", "0")
+
+    for i, otherControllerSock in enumerate(otherControllerSocks):
+        otherControllerSock.esSend("%" + OTHER_CONTROLLERS[i][0], OTHER_CONTROLLERS[i][1], "3", "100", "7", "51.14806", "-0.19028", "0")
 
     dc = 0  # display counter
     for i, plane in enumerate(planes):
@@ -339,7 +346,7 @@ def main():
 
     masterCallsign = MASTER_CONTROLLER
 
-    planes.append(Plane.requestFromFix("EZY1", "OLNEY", squawk=util.squawkGen(), speed=250, altitude=5000, flightPlan=FlightPlan("I", "B738", 250, "EGGW", 1130, 1130, 37000, "EHAM", Route("MATCH Q295 BRAIN P44 DAGGA M85 ITVIP"))))
+    # planes.append(Plane.requestFromFix("EZY1", "OLNEY", squawk=util.squawkGen(), speed=250, altitude=5000, flightPlan=FlightPlan("I", "B738", 250, "EGGW", 1130, 1130, 37000, "EHAM", Route("MATCH Q295 BRAIN P44 DAGGA M85 ITVIP"))))
 
     # planes.append(Plane.requestFromStand("EZY45", "2", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 37000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
     # planes.append(Plane.requestFromStand("DLH20W", "23", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 37000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
@@ -359,6 +366,10 @@ def main():
 
     controllerSock: util.ControllerSocket = util.ControllerSocket.StartController(masterCallsign)
     controllerSock.setblocking(False)
+
+    for controller in OTHER_CONTROLLERS:
+        otherControllerSocks.append(util.ControllerSocket.StartController(controller[0]))
+        otherControllerSocks[-1].setblocking(False)
 
     for plane in planes:
         planeSocks.append(util.PlaneSocket.StartPlane(plane, masterCallsign, controllerSock))
@@ -411,6 +422,50 @@ def main():
     # STANNERS
 
     # util.PausableTimer(random.randint(1, 1), spawnEveryNSeconds, args=(180, masterCallsign, controllerSock, "GPT", "J(1)_Z"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EHAM", 1130, 1130, 36000, "EGSS", Route("CLN"))})
+
+    # From acData
+
+    depAdsDelay = {}
+    arrAdsDelay = {}
+
+    with open("flightdata/acData.txt", "r") as f:
+        acs = f.read().split("\n")
+        # k = 0
+        random.shuffle(acs)
+        for ac in acs:
+            acData = json.loads(ac.replace("'", '"'))
+            if acData[2].startswith("EG") and acData[2] in ["EGKK", "EGLL", "EGSS", "EGPH", "EGGP", "EGNM", "EGPF", "EGAA", "EGNX"]:
+                if acData[2] not in depAdsDelay:
+                    depAdsDelay[acData[2]] = 300 * random.random()
+                else:
+                    depAdsDelay[acData[2]] += 120 + 720 * random.random()
+                util.PausableTimer(depAdsDelay[acData[2]], spawnEveryNSeconds, args=(10000, masterCallsign, controllerSock, "DEP", acData[2]), kwargs={"callsign": acData[0], "flightPlan": FlightPlan("I", acData[1], 250, acData[2], 1130, 1130, acData[4], acData[3], Route(acData[5]))})
+            elif acData[3] in ["EGKK", "EGLL", "EGSS", "EGPH", "EGGP", "EGNM", "EGPF", "EGAA"]:
+                if acData[3] not in arrAdsDelay:
+                    arrAdsDelay[acData[3]] = 300 * random.random()
+                else:
+                    arrAdsDelay[acData[3]] += 120 + 720 * random.random()
+
+                tmpRoute = Route(acData[5])
+                if len(tmpRoute.fixes) == 0:
+                    continue
+
+                alt = 25000
+                if acData[4].startswith("FL"):
+                    alt = int(acData[4][2:]) * 100
+                else:
+                    try:
+                        alt = int(acData[4])
+                    except ValueError:
+                        pass
+                util.PausableTimer(arrAdsDelay[acData[3]], spawnEveryNSeconds, args=(10000, masterCallsign, controllerSock, "ARR", tmpRoute.fixes[0]), kwargs={"callsign": acData[0], "speed": 250, "altitude": alt, "flightPlan": FlightPlan("I", acData[1], 250, acData[2], 1130, 1130, acData[4], acData[3], Route(acData[5] + " " + acData[3]))})
+
+            # if acData[2] == "EGKK":
+
+            #     util.PausableTimer(1, spawnEveryNSeconds, args=(1000, masterCallsign, controllerSock, "DEP", acData[2]), kwargs={"flightPlan": FlightPlan("I", acData[1], 250, acData[2], 1130, 1130, acData[4], acData[3], Route(acData[5]))})
+            #     k += 1
+            #     if k == 5:
+            #         break
 
     # Start message monitor
     util.PausableTimer(5, messageMonitor, args=[controllerSock])

@@ -14,20 +14,28 @@ class Route:
         fixAirways = self.route.split(" ")
 
         if fixAirways[0].endswith("/" + ACTIVE_RUNWAY):
-            data = loadSidAndFixData(ACTIVE_AERODROME)
-            sidName = fixAirways[0].split("/")[0]
-            self.fixes = data[0][sidName][ACTIVE_RUNWAY].split(" ")
-            FIXES.update(data[1])
+            try:
+                data = loadSidAndFixData(ACTIVE_AERODROME)
+                sidName = fixAirways[0].split("/")[0]
+                self.fixes = data[0][sidName][ACTIVE_RUNWAY].split(" ")
+                FIXES.update(data[1])
+            except KeyError:
+                pass
             fixAirways.pop(0)
 
-        for i in range(0, len(fixAirways), 2):
-            initialFix = fixAirways[i]
-            # airway = fixAirways[i + 1]
-            # finalFix = fixAirways[i + 2]
+        for fix in fixAirways:
+            try:
+                FIXES[fix]
+                self.fixes.append(fix)
+            except KeyError:
+                pass
 
-            self.fixes.append(initialFix)
+        # for i in range(0, len(fixAirways), 2):
+        #     initialFix = fixAirways[i]
 
-            # TODO: add airway fixes for usable directs
+        #     self.fixes.append(initialFix)
+
+        #     # TODO: add airway fixes for usable directs
 
     def removeFirstFix(self):
         self.fixes.pop(0)

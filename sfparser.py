@@ -1,4 +1,5 @@
 import math
+import os
 
 
 def sfCoordsToNormalCoords(lat: str, lon: str):
@@ -68,6 +69,23 @@ def parseFixes(path=None):
     return fixes
 
 
+def parseADs():
+    # get all foklders in Airports
+
+    ads = {}
+
+    for ad in os.listdir(r"data\Airports"):
+        adPath = rf"data\Airports\{ad}\Basic.txt"
+
+        with open(adPath, "r") as f:
+            lines = f.read().split("\n")
+            coordLine = lines[1].split(" ")
+
+            ads[ad] = sfCoordsToNormalCoords(coordLine[0], coordLine[1])
+
+    return ads
+
+
 def loadStarAndFixData(icao) -> (dict[str, dict[str, str]], list[str]):
     with open(rf"data\Airports\{icao}\Stars.txt", "r") as f:
         lines = f.read().split("\n")
@@ -90,7 +108,7 @@ def loadStarAndFixData(icao) -> (dict[str, dict[str, str]], list[str]):
 def loadSidAndFixData(icao) -> (dict[str, dict[str, str]], list[str]):
     with open(rf"data\Airports\{icao}\Sids.txt", "r") as f:
         lines = f.read().split("\n")
-    
+
     starData = {}
     for line in lines:
         if line.startswith("SID"):
@@ -105,6 +123,7 @@ def loadSidAndFixData(icao) -> (dict[str, dict[str, str]], list[str]):
     fixes = parseFixes(rf"data\Airports\{icao}\Fixes.txt")
 
     return starData, fixes
+
 
 def loadRunwayData(icao) -> dict[str, list[str, tuple[float, float]]]:
     with open(rf"data\Airports\{icao}\Runway.txt", "r") as f:
@@ -128,7 +147,7 @@ def loadRunwayData(icao) -> dict[str, list[str, tuple[float, float]]]:
         runwayData[runwayBIdentifier] = [runwayBHeading, runwayBCoords]
 
     return runwayData
-    
+
 
 if __name__ == "__main__":
     print(parseFixes())
