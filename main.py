@@ -7,6 +7,7 @@ import time
 from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import QTableWidgetItem
 from Route import Route
+import re
 
 from uiTest import MainWindow
 from sfparser import loadRunwayData, loadStarAndFixData
@@ -247,7 +248,7 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
         plane = Plane.requestFromFix(callsign, *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
     elif method == "DEP":
         plane = Plane.requestDeparture(callsign, *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
-        plane.targetAltitude = 4000
+        plane.targetAltitude = fp.cruiseAltitude  # climb it!
         plane.targetSpeed = 250
         plane.vertSpeed = CLIMB_RATE
     elif method == "GPT":
@@ -328,6 +329,77 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                         plane.currentlyWithData = None
                         window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
                         break
+            elif (m := re.match(r'^\$CQLON_C_CTR:@94835:.*?:(.*?):H([0-9]+)$', message)):
+                cs = m.group(1)
+                tgtHdg = int(m.group(2))
+
+                currentHdg = 0
+
+                for plane in planes:
+                    if plane.callsign == cs:
+                        currentHdg = plane.heading
+                        break
+
+                if tgtHdg - currentHdg > 0 or tgtHdg - currentHdg < -180:
+                    turnDir = "r"
+                else:
+                    turnDir = "l"
+                
+                window.commandEntry.setText(f"{cs} t{turnDir} {tgtHdg}")  # TODO: hacky!
+                parseCommand()
+            elif (m := re.match(r'^\$CQLON_C_CTR:@94835:SC:(.*?):S([0-9]+)$', message)):
+                cs = m.group(1)
+                sp = int(m.group(2))
+
+                window.commandEntry.setText(f"{cs} sp {sp}")  # TODO: hacky!
+                parseCommand()
+            elif (m := re.match(r'^\$CQLON_C_CTR:@94835:.*?:(.*?):([A-Z]+)$', message)):
+                cs = m.group(1)
+                pd = m.group(2)
+
+                mode = "pd"
+                for plane in planes:
+                    if plane.callsign == cs:
+                        if plane.mode == PlaneMode.HEADING:
+                            mode = "rond"
+                        else:
+                            mode = "pd"
+                    
+                        break
+                
+                window.commandEntry.setText(f"{cs} {mode} {pd}")  # TODO: hacky!
+                parseCommand()
+            elif (m := re.match(r'^\$CQLON_C_CTR:@94835:TA:(.*?):([0-9]+)$', message)):
+                print(message)
+                cs = m.group(1)
+                tgtAlt = int(m.group(2))
+
+                currentAlt = 0
+
+                for plane in planes:
+                    if plane.callsign == cs:
+                        currentAlt = plane.altitude
+                        if tgtAlt == 0:
+                            tgtAlt = int(plane.flightPlan.cruiseAltitude)
+                        break
+
+                if currentAlt == tgtAlt:
+                    continue
+                elif tgtAlt > currentAlt:
+                    cd = "c"
+                else:
+                    cd = "d"
+
+                window.commandEntry.setText(f"{cs} {cd} {tgtAlt // 100}")  # TODO: hacky!
+                parseCommand()
+            elif (m := re.match(r'^\$CQLON_C_CTR:@94835:BC:(.*?):([0-9]{4})$', message)):
+                cs = m.group(1)
+                sq = m.group(2)
+
+                if sq == "7000":
+                    continue
+
+                window.commandEntry.setText(f"{cs} sq {sq}")
             else:
                 pass
                 # print(message)
@@ -425,47 +497,51 @@ def main():
 
     # From acData
 
-    depAdsDelay = {}
-    arrAdsDelay = {}
+    FROM_ACDATA = True
 
-    with open("flightdata/acData.txt", "r") as f:
-        acs = f.read().split("\n")
-        # k = 0
-        random.shuffle(acs)
-        for ac in acs:
-            acData = json.loads(ac.replace("'", '"'))
-            if acData[2].startswith("EG") and acData[2] in ["EGKK", "EGLL", "EGSS", "EGPH", "EGGP", "EGNM", "EGPF", "EGAA", "EGNX"]:
-                if acData[2] not in depAdsDelay:
-                    depAdsDelay[acData[2]] = 300 * random.random()
-                else:
-                    depAdsDelay[acData[2]] += 120 + 720 * random.random()
-                util.PausableTimer(depAdsDelay[acData[2]], spawnEveryNSeconds, args=(10000, masterCallsign, controllerSock, "DEP", acData[2]), kwargs={"callsign": acData[0], "flightPlan": FlightPlan("I", acData[1], 250, acData[2], 1130, 1130, acData[4], acData[3], Route(acData[5]))})
-            elif acData[3] in ["EGKK", "EGLL", "EGSS", "EGPH", "EGGP", "EGNM", "EGPF", "EGAA"]:
-                if acData[3] not in arrAdsDelay:
-                    arrAdsDelay[acData[3]] = 300 * random.random()
-                else:
-                    arrAdsDelay[acData[3]] += 120 + 720 * random.random()
+    if FROM_ACDATA:
 
-                tmpRoute = Route(acData[5])
-                if len(tmpRoute.fixes) == 0:
-                    continue
+        depAdsDelay = {}
+        arrAdsDelay = {}
 
-                alt = 25000
-                if acData[4].startswith("FL"):
-                    alt = int(acData[4][2:]) * 100
-                else:
-                    try:
-                        alt = int(acData[4])
-                    except ValueError:
-                        pass
-                util.PausableTimer(arrAdsDelay[acData[3]], spawnEveryNSeconds, args=(10000, masterCallsign, controllerSock, "ARR", tmpRoute.fixes[0]), kwargs={"callsign": acData[0], "speed": 250, "altitude": alt, "flightPlan": FlightPlan("I", acData[1], 250, acData[2], 1130, 1130, acData[4], acData[3], Route(acData[5] + " " + acData[3]))})
+        with open("flightdata/acData.txt", "r") as f:
+            acs = f.read().split("\n")
+            # k = 0
+            random.shuffle(acs)
+            for ac in acs:
+                acData = json.loads(ac.replace("'", '"'))
+                if (acData[2] in ["EGKK", "EGLL", "EGSS"] and acData[3] in ["EGPH", "EGNX", "EGNM", "EGCC"]) or (acData[2] in ["EGCC", "EGNX", "EGGP"] and acData[3] in ["EGKK", "EGLL", "EGSS"]):
+                    if acData[2] not in depAdsDelay:
+                        depAdsDelay[acData[2]] = 100 * random.random()
+                    else:
+                        depAdsDelay[acData[2]] += 120 + 300 * random.random()
+                    util.PausableTimer(depAdsDelay[acData[2]], spawnEveryNSeconds, args=(10000, masterCallsign, controllerSock, "DEP", acData[2]), kwargs={"callsign": acData[0], "flightPlan": FlightPlan("I", acData[1], 250, acData[2], 1130, 1130, acData[4], acData[3], Route(acData[5]))})
+                # elif acData[3] in ["EGKK", "EGLL", "EGSS", "EGPH", "EGGP", "EGNM", "EGPF", "EGAA"]:
+                #     if acData[3] not in arrAdsDelay:
+                #         arrAdsDelay[acData[3]] = 300 * random.random()
+                #     else:
+                #         arrAdsDelay[acData[3]] += 120 + 720 * random.random()
 
-            # if acData[2] == "EGKK":
+                #     tmpRoute = Route(acData[5])
+                #     if len(tmpRoute.fixes) == 0:
+                #         continue
 
-            #     util.PausableTimer(1, spawnEveryNSeconds, args=(1000, masterCallsign, controllerSock, "DEP", acData[2]), kwargs={"flightPlan": FlightPlan("I", acData[1], 250, acData[2], 1130, 1130, acData[4], acData[3], Route(acData[5]))})
-            #     k += 1
-            #     if k == 5:
-            #         break
+                #     alt = 25000
+                #     if acData[4].startswith("FL"):
+                #         alt = int(acData[4][2:]) * 100
+                #     else:
+                #         try:
+                #             alt = int(acData[4])
+                #         except ValueError:
+                #             pass
+                #     util.PausableTimer(arrAdsDelay[acData[3]], spawnEveryNSeconds, args=(10000, masterCallsign, controllerSock, "ARR", tmpRoute.fixes[0]), kwargs={"callsign": acData[0], "speed": 250, "altitude": alt, "flightPlan": FlightPlan("I", acData[1], 250, acData[2], 1130, 1130, acData[4], acData[3], Route(acData[5] + " " + acData[3]))})
+
+                # if acData[2] == "EGKK":
+
+                #     util.PausableTimer(1, spawnEveryNSeconds, args=(1000, masterCallsign, controllerSock, "DEP", acData[2]), kwargs={"flightPlan": FlightPlan("I", acData[1], 250, acData[2], 1130, 1130, acData[4], acData[3], Route(acData[5]))})
+                #     k += 1
+                #     if k == 5:
+                #         break
 
     # Start message monitor
     util.PausableTimer(5, messageMonitor, args=[controllerSock])

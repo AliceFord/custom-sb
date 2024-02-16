@@ -1,4 +1,4 @@
-from sfparser import parseFixes, parseADs
+from sfparser import parseFixes, parseADs, parseATS
 from taxiCoordGen import getAllGroundCoords, standDataParser
 
 # from typing import TYPE_CHECKING
@@ -8,6 +8,7 @@ from taxiCoordGen import getAllGroundCoords, standDataParser
 FIXES = parseFixes() | parseADs()
 GROUND_POINTS = getAllGroundCoords()
 STANDS = standDataParser()
+ATS_DATA = parseATS()
 
 otherControllerSocks = []
 

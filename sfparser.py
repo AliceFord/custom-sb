@@ -1,5 +1,7 @@
 import math
 import os
+import json
+import re
 
 
 def sfCoordsToNormalCoords(lat: str, lon: str):
@@ -86,10 +88,26 @@ def parseADs():
     return ads
 
 
+def parseATS():
+    with open("data/ATS Routes/ats.json") as f:
+        raw = f.read().replace("'", '"')
+        data = json.loads(raw)
+
+    outData = {}
+
+    for route, routeData in data.items():
+        outData[route] = []
+        for wpt in routeData["waypoints"]:
+            outData[route].append(wpt["name"])
+
+    return outData
+
+
+
 def loadStarAndFixData(icao) -> (dict[str, dict[str, str]], list[str]):
     with open(rf"data\Airports\{icao}\Stars.txt", "r") as f:
         lines = f.read().split("\n")
-    
+
     starData = {}
     for line in lines:
         if line.startswith("STAR"):
@@ -149,5 +167,72 @@ def loadRunwayData(icao) -> dict[str, list[str, tuple[float, float]]]:
     return runwayData
 
 
+SECTOR_NAME_MAP = {
+    "AC West": "LON_W_CTR",
+    "Clacton": "LON_E_CTR",
+    "Daventry": "LON_M_CTR",
+    "Dover": "LON_D_CTR",
+    "Lakes": "LON_NW_CTR",
+    "North Sea": "LON_NE_CTR",
+    "Worthing": "LON_S_CTR",
+
+    "East": "LTC_E_CTR",
+    "Midlands": "LTC_M_CTR",
+    "North East": "LTC_NE_CTR",
+    "North West": "LTC_NW_CTR",
+    "South East": "LTC_SE_CTR",
+    "South West": "LTC_SW_CTR",
+
+    "PC NE": "MAN_NE_CTR",
+    "PC SE": "MAN_SE_CTR",
+    "PC W": "MAN_W_CTR",
+
+    "Deancross": "SCO_D_CTR",
+    "North": "SCO_N_CTR",
+    "Rathlin": "SCO_R_CTR",
+    "South": "SCO_S_CTR",
+    "West": "SCO_W_CTR",
+
+    "Antrim": "STC_A_CTR",
+    "Galloway": "STC_W_CTR",
+    "Talla": "STC_E_CTR"
+}
+
+IGNORE_SECTORS = ["Berry Head", "Brecon", "LUS", "Sector 23", "Maastricht UAC Delta", "Maastricht UAC Jever", "East"]
+
+
+def loadSectorData():
+    folders = ["LON", "LTC", "MPC", "SCO", "STC"]
+
+    sectorData = {}
+
+    for folder in folders:
+        files = os.listdir(f"data/Static/{folder}")
+        for file in files:
+            if file.replace(".txt", "") in IGNORE_SECTORS:
+                continue
+            currentSectorData = []
+            with open(f"data/Static/{folder}/{file}", "r") as f:
+                data = f.read().split("\n")
+
+                prevCoords = None
+
+                for i, line in enumerate(data):
+                    if i == 0:
+                        continue
+                        
+                    coordData = re.match(r"^[ \t]*(N.*? [EW].*?) (N.*? [EW]\d{3}\.\d{2}\.\d{2}\.\d{3})", line)
+                    if coordData is not None:
+                        if prevCoords != coordData.group(1) and prevCoords is not None:  # smaller sector
+                            currentSectorData.append(sfCoordsToNormalCoords(*prevCoords.split(" ")))
+                            break
+                        currentSectorData.append(sfCoordsToNormalCoords(*coordData.group(1).split(" ")))
+                        prevCoords = coordData.group(2)
+            
+            sectorData[SECTOR_NAME_MAP[file.replace(".txt", "")]] = currentSectorData
+    
+    return sectorData
+
+
 if __name__ == "__main__":
-    print(parseFixes())
+    print(loadSectorData())

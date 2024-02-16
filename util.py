@@ -4,8 +4,11 @@ import string
 import threading
 import socket
 import time
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
 
 from PlaneMode import PlaneMode
+from sfparser import loadSectorData
 
 
 def haversine(lat1, lon1, lat2, lon2):  # from https://rosettacode.org/wiki/Haversine_formula#Python
@@ -68,6 +71,32 @@ def modeConverter(mode: PlaneMode) -> str:
             return "Error"
         case _:
             return str(mode)
+
+
+def whichSector(lat: float, lon: float, fl: int) -> str:
+    sectorData = loadSectorData()
+
+    pos = Point(lat, lon)
+
+    possibilities = []
+    sectorOut = None
+
+    for sectorName, sector in sectorData.items():
+        polygon = Polygon(sector)
+        if polygon.contains(pos):
+            possibilities.append(sectorName)
+            if "LTC" in sectorName and fl < 165:  # TODO: WTF!
+                sectorOut = sectorName
+                break
+            elif "LON" in sectorName and fl >= 165:
+                sectorOut = sectorName
+                break
+
+    if sectorOut is None:
+        if len(possibilities) >= 1:
+            sectorOut = possibilities[0]  # TODO: :(
+        
+    return sectorOut
 
 
 class EsSocket(socket.socket):
@@ -163,10 +192,4 @@ class PausableTimer(threading.Thread):
 
 
 if __name__ == "__main__":
-    t = PausableTimer(5, print, args=["hi"])
-    time.sleep(1)
-    t.pause()
-    time.sleep(5)
-    print(1)
-    t.restart()
-    time.sleep(5)
+    print(whichSector(52.57309, -1.00362, 80))
