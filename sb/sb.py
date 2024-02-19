@@ -1,7 +1,6 @@
 import socket
 import threading
 
-HEADER = 64
 PORT = 6809
 
 SERVER = "127.0.0.1"
@@ -130,7 +129,7 @@ def handle_client(conn: socket.socket, addr):
     controllerPilotType = None
     while connected:
         try:
-            messages = conn.recv(1024).decode("UTF-8")
+            messages = conn.recv(262144).decode("UTF-8")
             for message in messages.split("\r\n"):
                 if message == "":
                     continue

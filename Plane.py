@@ -7,8 +7,8 @@ import util
 from sfparser import loadRunwayData
 import taxiCoordGen
 from PlaneMode import PlaneMode
-from globalVars import FIXES, GROUND_POINTS, STANDS, timeMultiplier
-from Constants import TURN_RATE, ACTIVE_RUNWAY, ACTIVE_AERODROME, ACTIVE_CONTROLLER
+from globalVars import FIXES, GROUND_POINTS, STANDS, timeMultiplier, otherControllerSocks
+from Constants import OTHER_CONTROLLERS, TURN_RATE, ACTIVE_RUNWAY, ACTIVE_AERODROME, ACTIVE_CONTROLLER
 
 
 class Plane:
@@ -40,11 +40,28 @@ class Plane:
         self.masterSocketHandleData: tuple[util.EsSocket, str] = None
         self.clearedILS = None
 
+        self.currentSector = util.whichSector(self.lat, self.lon, self.altitude)
+
         self.lastTime = time.time()
+
+        if self.mode == PlaneMode.FLIGHTPLAN or self.mode == PlaneMode.HEADING:  # take aircraft
+            index = util.otherControllerIndex(self.currentSector)
+            if index is None:
+                return
+            controllerSock = otherControllerSocks[index]
+            # 10 second delay 
+
+            util.PausableTimer(11, controllerSock.esSend, args=["$CQ" + self.currentSector, "@94835", "IT", callsign])
 
     def calculatePosition(self):
         deltaT = (time.time() - self.lastTime) * timeMultiplier
         self.lastTime = time.time()
+
+        if self.altitude > 10000 and self.targetSpeed != 350:  # send it
+            self.targetSpeed = 350
+        
+        if self.altitude < 10000 and self.targetSpeed > 250:
+            self.targetSpeed = 250
 
         if self.targetSpeed != self.speed and (self.mode == PlaneMode.HEADING or self.mode == PlaneMode.FLIGHTPLAN):
             if self.altitude < 2000 and self.vertSpeed > 0:  # below 2000ft, prioritise climbing over accelerating
@@ -124,6 +141,18 @@ class Plane:
             self.lat = round(self.lat, 5)
             self.lon += deltaLon
             self.lon = round(self.lon, 5)
+
+            nextSector = util.whichSector(self.lat, self.lon, self.altitude)
+            if nextSector != self.currentSector and nextSector is not None:
+                index = util.otherControllerIndex(self.currentSector)
+                if index is not None:
+                    controllerSock = otherControllerSocks[index]
+                    if nextSector != ACTIVE_CONTROLLER:
+                        util.PausableTimer(11, controllerSock.esSend, args=["$CQ" + nextSector, "@94835", "IT", self.callsign])
+                    else:  # pass em over
+                        util.PausableTimer(5, controllerSock.esSend, args=["$HO" + self.currentSector, ACTIVE_CONTROLLER, self.callsign])
+                    
+                    self.currentSector = nextSector
         elif self.mode == PlaneMode.FLIGHTPLAN:
             distanceToTravel = tas * (deltaT / 3600)
             try:
@@ -176,6 +205,18 @@ class Plane:
                 self.lat = round(self.lat, 5)
                 self.lon += deltaLon
                 self.lon = round(self.lon, 5)
+
+                nextSector = util.whichSector(self.lat, self.lon, self.altitude)
+                if nextSector != self.currentSector and nextSector is not None:
+                    index = util.otherControllerIndex(self.currentSector)
+                    if index is not None:
+                        controllerSock = otherControllerSocks[index]
+                        if nextSector != ACTIVE_CONTROLLER:
+                            util.PausableTimer(11, controllerSock.esSend, args=["$CQ" + nextSector, "@94835", "IT", self.callsign])
+                        else:
+                            util.PausableTimer(5, controllerSock.esSend, args=["$HO" + self.currentSector, ACTIVE_CONTROLLER, self.callsign])
+                        
+                        self.currentSector = nextSector
         elif self.mode == PlaneMode.GROUND_STATIONARY:
             pass
         elif self.mode == PlaneMode.GROUND_TAXI:

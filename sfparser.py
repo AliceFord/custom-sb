@@ -104,7 +104,7 @@ def parseATS():
 
 
 
-def loadStarAndFixData(icao) -> (dict[str, dict[str, str]], list[str]):
+def loadStarAndFixData(icao) -> tuple[dict[str, dict[str, str]], list[str]]:
     with open(rf"data\Airports\{icao}\Stars.txt", "r") as f:
         lines = f.read().split("\n")
 
@@ -123,7 +123,7 @@ def loadStarAndFixData(icao) -> (dict[str, dict[str, str]], list[str]):
 
     return starData, fixes
 
-def loadSidAndFixData(icao) -> (dict[str, dict[str, str]], list[str]):
+def loadSidAndFixData(icao) -> tuple[dict[str, dict[str, str]], list[str]]:
     with open(rf"data\Airports\{icao}\Sids.txt", "r") as f:
         lines = f.read().split("\n")
 

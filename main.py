@@ -168,12 +168,12 @@ def parseCommand():
 
                 runwayData = loadRunwayData(ACTIVE_AERODROME)[text.split(" ")[2]]
                 plane.clearedILS = runwayData
-            case "ho":
-                if text.split(" ")[2] == "KKT":  # TODO: choose airport
-                    index = planes.index(plane)
-                    planes.remove(plane)
-                    planeSocks.pop(index).close()
-                    window.aircraftTable.removeRow(index)
+            case "ho":  # BIN EM
+                # if text.split(" ")[2] == "KKT":  # TODO: choose airport
+                index = planes.index(plane)
+                planes.remove(plane)
+                planeSocks.pop(index).close()
+                window.aircraftTable.removeRow(index)
             case "taxi":
                 if plane.mode not in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Plane is not currently in a state to taxi")
@@ -234,6 +234,10 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
 
     if callsign is None:
         callsign = util.callsignGen()
+    else:
+        for plane in planes:
+            if plane.callsign == callsign:
+                return  # nonono bug
 
     timeWiggle = 0
     if method == "ARR":
@@ -248,7 +252,7 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
         plane = Plane.requestFromFix(callsign, *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
     elif method == "DEP":
         plane = Plane.requestDeparture(callsign, *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
-        plane.targetAltitude = fp.cruiseAltitude  # climb it!
+        plane.targetAltitude = int(fp.cruiseAltitude)  # climb it!
         plane.targetSpeed = 250
         plane.vertSpeed = CLIMB_RATE
     elif method == "GPT":
@@ -273,6 +277,7 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
             window.aircraftTable.setItem(dc, 1, QTableWidgetItem(util.modeConverter(plane.mode)))
             window.aircraftTable.setItem(dc, 2, QTableWidgetItem(str(plane.squawk)))
             window.aircraftTable.setItem(dc, 3, QTableWidgetItem(str(plane.speed)))
+            window.aircraftTable.setItem(dc, 4, QTableWidgetItem(str(plane.currentSector)))
             dc += 1
 
 # MAIN LOOP
@@ -296,6 +301,7 @@ def positionLoop(controllerSock: util.ControllerSocket):
             window.aircraftTable.setItem(dc, 1, QTableWidgetItem(util.modeConverter(plane.mode)))
             window.aircraftTable.setItem(dc, 2, QTableWidgetItem(str(plane.squawk)))
             window.aircraftTable.setItem(dc, 3, QTableWidgetItem(str(plane.speed)))
+            window.aircraftTable.setItem(dc, 4, QTableWidgetItem(str(plane.currentSector)))
             dc += 1
 
     print()
@@ -308,12 +314,15 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
 
     socketReady = select.select([controllerSock], [], [], 1)  # 1 second timeout
     if socketReady[0]:
-        messages = controllerSock.recv(1024)
+        messages = controllerSock.recv(262144)  # 1024
         messages = messages.decode("UTF-8").split("\r\n")
         messages.pop()
         for message in messages:
             if message.startswith("$HO"):
+                fromController = message.split(":")[0][3:]
                 callsign = message.split(":")[2]
+                if fromController != ACTIVE_CONTROLLER:  # this caused pain
+                    continue
                 controllerSock.esSend("$CQ" + MASTER_CONTROLLER, "@94835", "HT", callsign, ACTIVE_CONTROLLER)
                 for plane in planes:
                     if plane.callsign == callsign:
@@ -329,7 +338,7 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                         plane.currentlyWithData = None
                         window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
                         break
-            elif (m := re.match(r'^\$CQLON_C_CTR:@94835:.*?:(.*?):H([0-9]+)$', message)):
+            elif (m := re.match(r'^\$CQ' + ACTIVE_CONTROLLER + r':@94835:SC:(.*?):H([0-9]+)$', message)):
                 cs = m.group(1)
                 tgtHdg = int(m.group(2))
 
@@ -340,20 +349,24 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                         currentHdg = plane.heading
                         break
 
-                if tgtHdg - currentHdg > 0 or tgtHdg - currentHdg < -180:
+                if 0 < tgtHdg - currentHdg < 180 or tgtHdg - currentHdg < -180:
                     turnDir = "r"
                 else:
                     turnDir = "l"
                 
                 window.commandEntry.setText(f"{cs} t{turnDir} {tgtHdg}")  # TODO: hacky!
                 parseCommand()
-            elif (m := re.match(r'^\$CQLON_C_CTR:@94835:SC:(.*?):S([0-9]+)$', message)):
+            elif (m := re.match(r'^\$CQ' + ACTIVE_CONTROLLER + r':@94835:SC:(.*?):S([0-9]+)$', message)):
                 cs = m.group(1)
                 sp = int(m.group(2))
 
                 window.commandEntry.setText(f"{cs} sp {sp}")  # TODO: hacky!
                 parseCommand()
-            elif (m := re.match(r'^\$CQLON_C_CTR:@94835:.*?:(.*?):([A-Z]+)$', message)):
+            elif (m := re.match(r'^\$CQ' + ACTIVE_CONTROLLER + r':@94835:DR:(.*?)$', message)):
+                cs = m.group(1)
+                window.commandEntry.setText(f"{cs} ho")  # TODO: hacky!
+                parseCommand()
+            elif (m := re.match(r'^\$CQ' + ACTIVE_CONTROLLER + r':@94835:.*?:(.*?):([A-Z]+)$', message)):
                 cs = m.group(1)
                 pd = m.group(2)
 
@@ -369,7 +382,7 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                 
                 window.commandEntry.setText(f"{cs} {mode} {pd}")  # TODO: hacky!
                 parseCommand()
-            elif (m := re.match(r'^\$CQLON_C_CTR:@94835:TA:(.*?):([0-9]+)$', message)):
+            elif (m := re.match(r'^\$CQ' + ACTIVE_CONTROLLER + r':@94835:TA:(.*?):([0-9]+)$', message)):
                 print(message)
                 cs = m.group(1)
                 tgtAlt = int(m.group(2))
@@ -392,7 +405,7 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
 
                 window.commandEntry.setText(f"{cs} {cd} {tgtAlt // 100}")  # TODO: hacky!
                 parseCommand()
-            elif (m := re.match(r'^\$CQLON_C_CTR:@94835:BC:(.*?):([0-9]{4})$', message)):
+            elif (m := re.match(r'^\$CQ' + ACTIVE_CONTROLLER + r':@94835:BC:(.*?):([0-9]{4})$', message)):
                 cs = m.group(1)
                 sq = m.group(2)
 
@@ -504,21 +517,22 @@ def main():
         depAdsDelay = {}
         arrAdsDelay = {}
 
-        with open("flightdata/acData.txt", "r") as f:
+        with open("flightdata/acData2.txt", "r") as f:
             acs = f.read().split("\n")
             # k = 0
             random.shuffle(acs)
             for ac in acs:
                 acData = json.loads(ac.replace("'", '"'))
-                if (acData[2] in ["EGKK", "EGLL", "EGSS"] and acData[3] in ["EGPH", "EGNX", "EGNM", "EGCC"]) or (acData[2] in ["EGCC", "EGNX", "EGGP"] and acData[3] in ["EGKK", "EGLL", "EGSS"]):
+                if (acData[2] in ["EGKK", "EGLL", "EGSS"] and acData[3] in ["EGPH", "EGNX", "EGNM", "EGCC", "EGBB", "EGNR"]) or (acData[2] in ["EGCC", "EGNX", "EGGP", "EGBB", "EGNR"] and (acData[3] in ["EGKK", "EGLL", "EGSS", "EGBB", "EGNX"] or (not acData[3].startswith("EG") and not acData[3].startswith("EI")))):
                     if acData[2] not in depAdsDelay:
-                        depAdsDelay[acData[2]] = 100 * random.random()
+                        depAdsDelay[acData[2]] = 180 * random.random()
                     else:
-                        depAdsDelay[acData[2]] += 120 + 300 * random.random()
+                        depAdsDelay[acData[2]] += 120 + 360 * random.random()
+                    
                     util.PausableTimer(depAdsDelay[acData[2]], spawnEveryNSeconds, args=(10000, masterCallsign, controllerSock, "DEP", acData[2]), kwargs={"callsign": acData[0], "flightPlan": FlightPlan("I", acData[1], 250, acData[2], 1130, 1130, acData[4], acData[3], Route(acData[5]))})
-                # elif acData[3] in ["EGKK", "EGLL", "EGSS", "EGPH", "EGGP", "EGNM", "EGPF", "EGAA"]:
+                # elif (acData[3] in ["EGCC", "EGPH", "EGGP", "EGNR"]) or (acData[3] in ["EGNX", "EGBB"] and (not acData[2].startswith("EG"))):
                 #     if acData[3] not in arrAdsDelay:
-                #         arrAdsDelay[acData[3]] = 300 * random.random()
+                #         arrAdsDelay[acData[3]] = 360 * random.random()
                 #     else:
                 #         arrAdsDelay[acData[3]] += 120 + 720 * random.random()
 
@@ -534,7 +548,12 @@ def main():
                 #             alt = int(acData[4])
                 #         except ValueError:
                 #             pass
-                #     util.PausableTimer(arrAdsDelay[acData[3]], spawnEveryNSeconds, args=(10000, masterCallsign, controllerSock, "ARR", tmpRoute.fixes[0]), kwargs={"callsign": acData[0], "speed": 250, "altitude": alt, "flightPlan": FlightPlan("I", acData[1], 250, acData[2], 1130, 1130, acData[4], acData[3], Route(acData[5] + " " + acData[3]))})
+
+                #     if alt > 10000:
+                #         sp = 350
+                #     else:
+                #         sp = 250
+                #     util.PausableTimer(arrAdsDelay[acData[3]], spawnEveryNSeconds, args=(10000, masterCallsign, controllerSock, "ARR", tmpRoute.fixes[0]), kwargs={"callsign": acData[0], "speed": sp, "altitude": alt, "flightPlan": FlightPlan("I", acData[1], 250, acData[2], 1130, 1130, acData[4], acData[3], Route(acData[5] + " " + acData[3]))})
 
                 # if acData[2] == "EGKK":
 

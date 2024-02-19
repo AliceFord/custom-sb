@@ -6,9 +6,10 @@ import socket
 import time
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
+from Constants import OTHER_CONTROLLERS, INACTIVE_SECTORS
 
 from PlaneMode import PlaneMode
-from sfparser import loadSectorData
+from sfparser import loadSectorData, sfCoordsToNormalCoords
 
 
 def haversine(lat1, lon1, lat2, lon2):  # from https://rosettacode.org/wiki/Haversine_formula#Python
@@ -73,7 +74,7 @@ def modeConverter(mode: PlaneMode) -> str:
             return str(mode)
 
 
-def whichSector(lat: float, lon: float, fl: int) -> str:
+def whichSector(lat: float, lon: float, alt: int) -> str:
     sectorData = loadSectorData()
 
     pos = Point(lat, lon)
@@ -84,19 +85,26 @@ def whichSector(lat: float, lon: float, fl: int) -> str:
     for sectorName, sector in sectorData.items():
         polygon = Polygon(sector)
         if polygon.contains(pos):
+            if sectorName in INACTIVE_SECTORS:
+                continue
             possibilities.append(sectorName)
-            if "LTC" in sectorName and fl < 165:  # TODO: WTF!
+            if ("LTC" in sectorName or "STC" in sectorName or "MAN" in sectorName) and alt < 19500:  # TODO: WTF!
                 sectorOut = sectorName
                 break
-            elif "LON" in sectorName and fl >= 165:
+            elif "LON" in sectorName:
                 sectorOut = sectorName
-                break
-
+    
     if sectorOut is None:
         if len(possibilities) >= 1:
             sectorOut = possibilities[0]  # TODO: :(
         
     return sectorOut
+
+
+def otherControllerIndex(callsign: str) -> int:
+    for i, controller in enumerate(OTHER_CONTROLLERS):
+        if controller[0] == callsign:
+            return i
 
 
 class EsSocket(socket.socket):
@@ -192,4 +200,4 @@ class PausableTimer(threading.Thread):
 
 
 if __name__ == "__main__":
-    print(whichSector(52.57309, -1.00362, 80))
+    print(whichSector(*sfCoordsToNormalCoords(*"N052.24.50.722:W001.15.26.594".split(":")), 5000))
