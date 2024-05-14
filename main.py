@@ -14,10 +14,11 @@ from sfparser import loadRunwayData, loadStarAndFixData
 from FlightPlan import FlightPlan
 from Plane import Plane
 from PlaneMode import PlaneMode
-from globalVars import FIXES, planes, planeSocks, window, otherControllerSocks
-from Constants import ACTIVE_CONTROLLER, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, ACTIVE_AERODROME, ACTIVE_RUNWAY, OTHER_CONTROLLERS, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE
+from globalVars import FIXES, STANDS, planes, planeSocks, window, otherControllerSocks
+from Constants import ACTIVE_CONTROLLERS, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, ACTIVE_AERODROME, ACTIVE_RUNWAY, OTHER_CONTROLLERS, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE
 import util
 import taxiCoordGen
+import sessionparser
 
 
 # COMMAND PARSING
@@ -166,7 +167,7 @@ def parseCommand():
                 if plane.mode == PlaneMode.FLIGHTPLAN:
                     raise CommandErrorException("Need headings to intercept")
 
-                runwayData = loadRunwayData(ACTIVE_AERODROME)[text.split(" ")[2]]
+                runwayData = loadRunwayData(ACTIVE_AERODROME)[ACTIVE_RUNWAY]
                 plane.clearedILS = runwayData
             case "ho":  # BIN EM
                 # if text.split(" ")[2] == "KKT":  # TODO: choose airport
@@ -318,104 +319,118 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
         messages = messages.decode("UTF-8").split("\r\n")
         messages.pop()
         for message in messages:
-            if message.startswith("$HO"):
-                fromController = message.split(":")[0][3:]
-                callsign = message.split(":")[2]
-                if fromController != ACTIVE_CONTROLLER:  # this caused pain
+            for contr in ACTIVE_CONTROLLERS:
+                if message.startswith("$HO"):
                     continue
-                controllerSock.esSend("$CQ" + MASTER_CONTROLLER, "@94835", "HT", callsign, ACTIVE_CONTROLLER)
-                for plane in planes:
-                    if plane.callsign == callsign:
-                        index = planes.index(plane)
-                        plane.currentlyWithData = (MASTER_CONTROLLER, None)
-                        window.aircraftTable.removeRow(index)
-                        break
-            elif message.startswith("$HA"):
-                callsign = message.split(":")[2]
-                for plane in planes:
-                    if plane.callsign == callsign:
-                        index = planes.index(plane)
-                        plane.currentlyWithData = None
-                        window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
-                        break
-            elif (m := re.match(r'^\$CQ' + ACTIVE_CONTROLLER + r':@94835:SC:(.*?):H([0-9]+)$', message)):
-                cs = m.group(1)
-                tgtHdg = int(m.group(2))
+                    fromController = message.split(":")[0][3:]
+                    callsign = message.split(":")[2]
+                    if fromController not in ACTIVE_CONTROLLERS:  # this caused pain
+                        continue
+                    controllerSock.esSend("$CQ" + MASTER_CONTROLLER, "@94835", "HT", callsign, ACTIVE_CONTROLLERS[0])
+                    for plane in planes:
+                        if plane.callsign == callsign:
+                            index = planes.index(plane)
+                            plane.currentlyWithData = (MASTER_CONTROLLER, None)
+                            window.aircraftTable.removeRow(index)
+                            break
+                elif message.startswith("$HA"):
+                    callsign = message.split(":")[2]
+                    for plane in planes:
+                        if plane.callsign == callsign:
+                            index = planes.index(plane)
+                            plane.currentlyWithData = None
+                            window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
+                            break
+                elif (m := re.match(r'^\$CQ' + contr + r':@94835:SC:(.*?):H([0-9]+)$', message)):
+                    cs = m.group(1)
+                    tgtHdg = int(m.group(2))
 
-                currentHdg = 0
+                    currentHdg = 0
 
-                for plane in planes:
-                    if plane.callsign == cs:
-                        currentHdg = plane.heading
-                        break
+                    for plane in planes:
+                        if plane.callsign == cs:
+                            currentHdg = plane.heading
+                            break
 
-                if 0 < tgtHdg - currentHdg < 180 or tgtHdg - currentHdg < -180:
-                    turnDir = "r"
-                else:
-                    turnDir = "l"
-                
-                window.commandEntry.setText(f"{cs} t{turnDir} {tgtHdg}")  # TODO: hacky!
-                parseCommand()
-            elif (m := re.match(r'^\$CQ' + ACTIVE_CONTROLLER + r':@94835:SC:(.*?):S([0-9]+)$', message)):
-                cs = m.group(1)
-                sp = int(m.group(2))
-
-                window.commandEntry.setText(f"{cs} sp {sp}")  # TODO: hacky!
-                parseCommand()
-            elif (m := re.match(r'^\$CQ' + ACTIVE_CONTROLLER + r':@94835:DR:(.*?)$', message)):
-                cs = m.group(1)
-                window.commandEntry.setText(f"{cs} ho")  # TODO: hacky!
-                parseCommand()
-            elif (m := re.match(r'^\$CQ' + ACTIVE_CONTROLLER + r':@94835:.*?:(.*?):([A-Z]+)$', message)):
-                cs = m.group(1)
-                pd = m.group(2)
-
-                mode = "pd"
-                for plane in planes:
-                    if plane.callsign == cs:
-                        if plane.mode == PlaneMode.HEADING:
-                            mode = "rond"
-                        else:
-                            mode = "pd"
+                    if 0 < tgtHdg - currentHdg < 180 or tgtHdg - currentHdg < -180:
+                        turnDir = "r"
+                    else:
+                        turnDir = "l"
                     
-                        break
-                
-                window.commandEntry.setText(f"{cs} {mode} {pd}")  # TODO: hacky!
-                parseCommand()
-            elif (m := re.match(r'^\$CQ' + ACTIVE_CONTROLLER + r':@94835:TA:(.*?):([0-9]+)$', message)):
-                print(message)
-                cs = m.group(1)
-                tgtAlt = int(m.group(2))
+                    window.commandEntry.setText(f"{cs} t{turnDir} {tgtHdg}")  # TODO: hacky!
+                    parseCommand()
+                elif (m := re.match(r'^\$CQ' + contr + r':@94835:SC:(.*?):S([0-9]+)$', message)):
+                    cs = m.group(1)
+                    sp = int(m.group(2))
 
-                currentAlt = 0
+                    window.commandEntry.setText(f"{cs} sp {sp}")  # TODO: hacky!
+                    parseCommand()
+                elif (m := re.match(r'^\$CQ' + contr + r':@94835:DR:(.*?)$', message)):
+                    cs = m.group(1)
+                    window.commandEntry.setText(f"{cs} ho")  # TODO: hacky!
+                    parseCommand()
+                elif (m := re.match(r'^\$CQ' + contr + r':@94835:.*?:(.*?):([A-Z]+)$', message)):
+                    cs = m.group(1)
+                    pd = m.group(2)
 
-                for plane in planes:
-                    if plane.callsign == cs:
-                        currentAlt = plane.altitude
-                        if tgtAlt == 0:
-                            tgtAlt = int(plane.flightPlan.cruiseAltitude)
-                        break
+                    if pd == "ILS":
+                        window.commandEntry.setText(f"{cs} ils")  # TODO: hacky!
+                        parseCommand()
+                        continue
 
-                if currentAlt == tgtAlt:
-                    continue
-                elif tgtAlt > currentAlt:
-                    cd = "c"
+                    if pd == "HOLD":
+                        for plane in planes:
+                            if plane.callsign == cs:
+                                window.commandEntry.setText(f"{cs} hold {plane.flightPlan.route.fixes[-1]}")  # TODO: hacky!
+                                parseCommand()
+                                continue
+
+                    mode = "pd"
+                    for plane in planes:
+                        if plane.callsign == cs:
+                            if plane.mode == PlaneMode.HEADING:
+                                mode = "rond"
+                            else:
+                                mode = "pd"
+                        
+                            break
+                    
+                    window.commandEntry.setText(f"{cs} {mode} {pd}")  # TODO: hacky!
+                    parseCommand()
+                elif (m := re.match(r'^\$CQ' + contr + r':@94835:TA:(.*?):([0-9]+)$', message)):
+                    print(message)
+                    cs = m.group(1)
+                    tgtAlt = int(m.group(2))
+
+                    currentAlt = 0
+
+                    for plane in planes:
+                        if plane.callsign == cs:
+                            currentAlt = plane.altitude
+                            if tgtAlt == 0:
+                                tgtAlt = int(plane.flightPlan.cruiseAltitude)
+                            break
+
+                    if currentAlt == tgtAlt:
+                        continue
+                    elif tgtAlt > currentAlt:
+                        cd = "c"
+                    else:
+                        cd = "d"
+
+                    window.commandEntry.setText(f"{cs} {cd} {tgtAlt // 100}")  # TODO: hacky!
+                    parseCommand()
+                elif (m := re.match(r'^\$CQ' + contr + r':@94835:BC:(.*?):([0-9]{4})$', message)):
+                    cs = m.group(1)
+                    sq = m.group(2)
+
+                    if sq == "7000":
+                        continue
+
+                    window.commandEntry.setText(f"{cs} sq {sq}")
                 else:
-                    cd = "d"
-
-                window.commandEntry.setText(f"{cs} {cd} {tgtAlt // 100}")  # TODO: hacky!
-                parseCommand()
-            elif (m := re.match(r'^\$CQ' + ACTIVE_CONTROLLER + r':@94835:BC:(.*?):([0-9]{4})$', message)):
-                cs = m.group(1)
-                sq = m.group(2)
-
-                if sq == "7000":
-                    continue
-
-                window.commandEntry.setText(f"{cs} sq {sq}")
-            else:
-                pass
-                # print(message)
+                    pass
+                    # print(message)
 
         # print()
 
@@ -426,12 +441,12 @@ def cellClicked(row, _col):
 
 
 def main():
-    global planes, planeSocks, window, ACTIVE_AERODROME, ACTIVE_RUNWAY, ACTIVE_CONTROLLER
+    global planes, planeSocks, window, ACTIVE_AERODROME, ACTIVE_RUNWAY, ACTIVE_CONTROLLERS
     # SETUP PLANES
 
     masterCallsign = MASTER_CONTROLLER
 
-    # planes.append(Plane.requestFromFix("EZY1", "OLNEY", squawk=util.squawkGen(), speed=250, altitude=5000, flightPlan=FlightPlan("I", "B738", 250, "EGGW", 1130, 1130, 37000, "EHAM", Route("MATCH Q295 BRAIN P44 DAGGA M85 ITVIP"))))
+    # planes.append(Plane.requestFromFix("EZY1", "SAM", squawk=util.squawkGen(), speed=250, altitude=5000, flightPlan=FlightPlan("I", "B738", 250, "EGHI", 1130, 1130, 37000, "EGBB", Route("SAM DCT NORRY Q41 SILVA"))))
 
     # planes.append(Plane.requestFromStand("EZY45", "2", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 37000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
     # planes.append(Plane.requestFromStand("DLH20W", "23", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 37000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
@@ -440,14 +455,46 @@ def main():
 
     # planes.append(Plane.requestFromGroundPoint("GASNE", "L/L3", flightPlan=FlightPlan("I", "B738", 250, "EHAM", 1130, 1130, 36000, "EGSS", Route("CLN"))))
     # planes.append(Plane.requestFromStand("GETCC", "2", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 36000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
-    # planes.append(Plane.requestFromGroundPoint("GBMIV", "V/V1", flightPlan=FlightPlan("I", "B738", 250, "EGSS", 1130, 1130, 36000, "EHAM", Route("CLN P44 RATLO M197 REDFA"))))
+    # planes.append(Plane.requestFromGroundPoint("GBMIV", "V/V1", flightPlan=FlightPlan("I", "B738", 250, "EGLL", 1130, 1130, 36000, "EIDW", Route("CPT L9 NICXI M17 VATRY"))))
 
-    # HEATHROW 2 (start in hold)
+    ## STANNERS !!!!!
 
-    # for alt in range(8000, 8000 + 6 * 1000, 1000):
-    #     plane = Plane.requestFromFix(util.callsignGen(), "BNN", squawk=util.squawkGen(), speed=250, altitude=alt, flightPlan=FlightPlan.arrivalPlan("BNN"), currentlyWithData=(masterCallsign, "BNN"))
-    #     plane.holdFix = "BNN"
+    # for planeDef in sessionparser.parseFile("sessions/OBS_SS_PT2_Lesson2.txt"):  # TODO: move somewhere better
+    #     pos = (planeDef[2], planeDef[3])
+    #     closest = -1
+    #     closestDist = 100000000
+    #     for standNum, standPush in STANDS.items():
+    #         coords = standPush[1][0]
+    #         dist = util.haversine(float(pos[0]), float(pos[1]), coords[0], coords[1])
+    #         if dist < closestDist:
+    #             closestDist = dist
+    #             closest = standNum
+
+    #     plane = Plane.requestFromStand(planeDef[0], str(closest), flightPlan=FlightPlan(planeDef[5], planeDef[6], 420, planeDef[7], 1130, 1130, int(planeDef[8]), planeDef[9], Route(planeDef[10])))
+    #     plane.heading = (int(int(planeDef[4]) * 9 / 100) + 180) % 360
     #     planes.append(plane)
+
+
+    # GATTERS IN THE HOLD
+    # for alt in range(8000, 9000 + 1000, 1000):
+    #     plane = Plane.requestFromFix(util.callsignGen(), "TIMBA", squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("TIMBA"), currentlyWithData=(masterCallsign, "TIMBA"))
+    #     plane.holdFix = "TIMBA"
+    #     planes.append(plane)
+
+    # for alt in range(8000, 9000 + 1000, 1000):
+    #     plane = Plane.requestFromFix(util.callsignGen(), "WILLO", squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("WILLO"), currentlyWithData=(masterCallsign, "WILLO"))
+    #     plane.holdFix = "WILLO"
+    #     planes.append(plane)
+
+    # HEATHROW IN THE HOLD
+
+    llHoldFixes = ["BIG", "OCK", "BNN", "LAM"]
+
+    for holdFix in llHoldFixes:
+        for alt in range(8000, 8000 + 1 * 1000, 1000):
+            plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan(holdFix), currentlyWithData=(masterCallsign, holdFix))
+            plane.holdFix = holdFix
+            planes.append(plane)
 
     controllerSock: util.ControllerSocket = util.ControllerSocket.StartController(masterCallsign)
     controllerSock.setblocking(False)
@@ -464,6 +511,8 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
 
     window = MainWindow()
+
+    # util.PausableTimer(1, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGGW"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGGW", 1130, 1130, 27000, "EHAM", Route("MATCH Q295 BRAIN P44 DAGGA M85 ITVIP"))})
 
     # # GATTERS:
     # # ARRIVALS
@@ -486,6 +535,17 @@ def main():
     # util.PausableTimer(270, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 35000, "EDDF", Route("MIMFO1M/26L MIMFO Y312 DVR UL9 KONAN UL607 KOK SPI T180 UNOKO"))})
     # util.PausableTimer(360, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 27000, "LFAB", Route("BOGNA1X/26L BOGNA L612 BENBO UL612 XAMAB"))})
     # util.PausableTimer(450, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 27000, "EHAM", Route("FRANE1M/26L FRANE M604 GASBA M197 REDFA"))})
+
+    # GATTERS INT
+    # util.PausableTimer(random.randint(1, 5), spawnEveryNSeconds, args=(60 * 5, masterCallsign, controllerSock, "ARR", "BOGNA"), kwargs={"speed": 250, "altitude": 8000, "flightPlan": FlightPlan.arrivalPlan("BOGNA DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")})
+    # util.PausableTimer(random.randint(120, 168), spawnEveryNSeconds, args=(60 * 5, masterCallsign, controllerSock, "ARR", "LYD"), kwargs={"speed": 250, "altitude": 8000, "flightPlan": FlightPlan.arrivalPlan("LYD DCT TIMBA"), "currentlyWithData": (masterCallsign, "TIMBA")})
+
+    # HEATHROW INT
+    util.PausableTimer(random.randint(1, 5), spawnEveryNSeconds, args=(60 * 8, masterCallsign, controllerSock, "ARR", "NOVMA"), kwargs={"speed": 220, "altitude": 11000, "flightPlan": FlightPlan.arrivalPlan("NOVMA DCT OCK"), "currentlyWithData": (masterCallsign, "OCK")})
+    util.PausableTimer(random.randint(100, 140), spawnEveryNSeconds, args=(60 * 8, masterCallsign, controllerSock, "ARR", "ODVIK"), kwargs={"speed": 220, "altitude": 11000, "flightPlan": FlightPlan.arrivalPlan("ODVIK DCT BIG"), "currentlyWithData": (masterCallsign, "BIG")})
+    util.PausableTimer(random.randint(220, 260), spawnEveryNSeconds, args=(60 * 8, masterCallsign, controllerSock, "ARR", "BRAIN"), kwargs={"speed": 220, "altitude": 11000, "flightPlan": FlightPlan.arrivalPlan("BRAIN DCT LAM"), "currentlyWithData": (masterCallsign, "LAM")})
+    util.PausableTimer(random.randint(340, 380), spawnEveryNSeconds, args=(60 * 8, masterCallsign, controllerSock, "ARR", "COWLY"), kwargs={"speed": 220, "altitude": 11000, "flightPlan": FlightPlan.arrivalPlan("COWLY DCT BNN"), "currentlyWithData": (masterCallsign, "BNN")})
+
 
     # HEATHROW 1
     # ARRIVALS
@@ -510,7 +570,7 @@ def main():
 
     # From acData
 
-    FROM_ACDATA = True
+    FROM_ACDATA = False
 
     if FROM_ACDATA:
 

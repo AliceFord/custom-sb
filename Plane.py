@@ -8,7 +8,7 @@ from sfparser import loadRunwayData
 import taxiCoordGen
 from PlaneMode import PlaneMode
 from globalVars import FIXES, GROUND_POINTS, STANDS, timeMultiplier, otherControllerSocks
-from Constants import OTHER_CONTROLLERS, TURN_RATE, ACTIVE_RUNWAY, ACTIVE_AERODROME, ACTIVE_CONTROLLER
+from Constants import AUTO_ASSUME, OTHER_CONTROLLERS, TURN_RATE, ACTIVE_RUNWAY, ACTIVE_AERODROME, ACTIVE_CONTROLLERS
 
 
 class Plane:
@@ -44,24 +44,25 @@ class Plane:
 
         self.lastTime = time.time()
 
-        if self.mode == PlaneMode.FLIGHTPLAN or self.mode == PlaneMode.HEADING:  # take aircraft
-            index = util.otherControllerIndex(self.currentSector)
-            if index is None:
-                return
-            controllerSock = otherControllerSocks[index]
-            # 10 second delay 
+        if AUTO_ASSUME:
+            if self.mode == PlaneMode.FLIGHTPLAN or self.mode == PlaneMode.HEADING:  # take aircraft
+                index = util.otherControllerIndex(self.currentSector)
+                if index is None:
+                    return
+                controllerSock = otherControllerSocks[index]
+                # 10 second delay 
 
-            util.PausableTimer(11, controllerSock.esSend, args=["$CQ" + self.currentSector, "@94835", "IT", callsign])
+                util.PausableTimer(11, controllerSock.esSend, args=["$CQ" + self.currentSector, "@94835", "IT", callsign])
 
     def calculatePosition(self):
         deltaT = (time.time() - self.lastTime) * timeMultiplier
         self.lastTime = time.time()
 
-        if self.altitude > 10000 and self.targetSpeed != 350:  # send it
-            self.targetSpeed = 350
+        # if self.altitude > 10000 and self.targetSpeed != 350:  # send it
+        #     self.targetSpeed = 350
         
-        if self.altitude < 10000 and self.targetSpeed > 250:
-            self.targetSpeed = 250
+        # if self.altitude < 10000 and self.targetSpeed > 250:
+        #     self.targetSpeed = 250
 
         if self.targetSpeed != self.speed and (self.mode == PlaneMode.HEADING or self.mode == PlaneMode.FLIGHTPLAN):
             if self.altitude < 2000 and self.vertSpeed > 0:  # below 2000ft, prioritise climbing over accelerating
@@ -101,9 +102,15 @@ class Plane:
             distanceOut = util.haversine(self.lat, self.lon, self.clearedILS[1][0], self.clearedILS[1][1]) / 1.852  # nautical miles
             requiredAltitude = math.tan(math.radians(3)) * distanceOut * 6076  # feet
 
+            if distanceOut < 4:
+                if self.speed > 125:
+                    self.speed -= 0.25 * deltaT
+                if self.speed < 125:
+                    self.speed = 125 
+
             if self.altitude > requiredAltitude:
                 if self.altitude - requiredAltitude > 1000:  # Joined ILS too high
-                    print("GOAROUND")
+                    print("GOAROUND")  # TODO
                 self.altitude = requiredAltitude
 
             self.lat += deltaLat
@@ -112,10 +119,16 @@ class Plane:
             self.lon = round(self.lon, 5)
         elif self.mode == PlaneMode.HEADING:
             if self.holdStartTime is not None:
-                if time.time() - self.holdStartTime >= 60:  # 60 sec holds
-                    self.holdStartTime = time.time()
-                    self.targetHeading += 180
-                    self.targetHeading = self.targetHeading % 360
+                # NEW LOGIC: JUST ORBIT!
+                if self.turnDir == "L":
+                    self.heading += TURN_RATE * deltaT
+                else:
+                    self.heading -= TURN_RATE * deltaT
+                self.targetHeading = self.heading
+                # if time.time() - self.holdStartTime >= 30:  # 30 sec hold legs
+                #     self.holdStartTime = time.time()
+                #     self.targetHeading += 180
+                #     self.targetHeading = self.targetHeading % 360
             if self.targetHeading != self.heading:  # turns
                 if TURN_RATE * deltaT > abs(self.targetHeading - self.heading):
                     self.heading = self.targetHeading
@@ -143,16 +156,17 @@ class Plane:
             self.lon = round(self.lon, 5)
 
             nextSector = util.whichSector(self.lat, self.lon, self.altitude)
-            if nextSector != self.currentSector and nextSector is not None:
-                index = util.otherControllerIndex(self.currentSector)
-                if index is not None:
-                    controllerSock = otherControllerSocks[index]
-                    if nextSector != ACTIVE_CONTROLLER:
-                        util.PausableTimer(11, controllerSock.esSend, args=["$CQ" + nextSector, "@94835", "IT", self.callsign])
-                    else:  # pass em over
-                        util.PausableTimer(5, controllerSock.esSend, args=["$HO" + self.currentSector, ACTIVE_CONTROLLER, self.callsign])
-                    
-                    self.currentSector = nextSector
+            if AUTO_ASSUME:
+                if nextSector != self.currentSector and nextSector is not None:
+                    index = util.otherControllerIndex(self.currentSector)
+                    if index is not None:
+                        controllerSock = otherControllerSocks[index]
+                        if nextSector not in ACTIVE_CONTROLLERS:
+                            util.PausableTimer(11, controllerSock.esSend, args=["$CQ" + nextSector, "@94835", "IT", self.callsign])
+                        else:  # pass em over
+                            util.PausableTimer(5, controllerSock.esSend, args=["$HO" + self.currentSector, ACTIVE_CONTROLLERS[0], self.callsign])
+                        
+                        self.currentSector = nextSector
         elif self.mode == PlaneMode.FLIGHTPLAN:
             distanceToTravel = tas * (deltaT / 3600)
             try:
@@ -162,9 +176,9 @@ class Plane:
             distanceToFix = util.haversine(self.lat, self.lon, nextFixCoords[0], nextFixCoords[1]) / 1.852  # nautical miles
 
             if self.currentlyWithData is not None:  # if we're on close to release point, hand off
-                if self.currentlyWithData[1] == self.flightPlan.route.fixes[0] and distanceToFix <= 5:
+                if self.currentlyWithData[1] == self.flightPlan.route.fixes[0] and distanceToFix <= 20:
                     self.currentlyWithData = None
-                    util.PausableTimer(11, self.masterSocketHandleData[0].esSend, args=["$HO" + self.masterSocketHandleData[1], ACTIVE_CONTROLLER, self.callsign])
+                    util.PausableTimer(11, self.masterSocketHandleData[0].esSend, args=["$HO" + self.masterSocketHandleData[1], ACTIVE_CONTROLLERS[0], self.callsign])
 
             if self.holdFix is not None and self.flightPlan.route.fixes[0] == self.holdFix and distanceToFix <= distanceToTravel:
                 activateHoldMode = True
@@ -207,16 +221,17 @@ class Plane:
                 self.lon = round(self.lon, 5)
 
                 nextSector = util.whichSector(self.lat, self.lon, self.altitude)
-                if nextSector != self.currentSector and nextSector is not None:
-                    index = util.otherControllerIndex(self.currentSector)
-                    if index is not None:
-                        controllerSock = otherControllerSocks[index]
-                        if nextSector != ACTIVE_CONTROLLER:
-                            util.PausableTimer(11, controllerSock.esSend, args=["$CQ" + nextSector, "@94835", "IT", self.callsign])
-                        else:
-                            util.PausableTimer(5, controllerSock.esSend, args=["$HO" + self.currentSector, ACTIVE_CONTROLLER, self.callsign])
-                        
-                        self.currentSector = nextSector
+                if AUTO_ASSUME:
+                    if nextSector != self.currentSector and nextSector is not None:
+                        index = util.otherControllerIndex(self.currentSector)
+                        if index is not None:
+                            controllerSock = otherControllerSocks[index]
+                            if nextSector not in ACTIVE_CONTROLLERS:
+                                util.PausableTimer(11, controllerSock.esSend, args=["$CQ" + nextSector, "@94835", "IT", self.callsign])
+                            else:
+                                util.PausableTimer(5, controllerSock.esSend, args=["$HO" + self.currentSector, ACTIVE_CONTROLLERS[0], self.callsign])
+                            
+                            self.currentSector = nextSector
         elif self.mode == PlaneMode.GROUND_STATIONARY:
             pass
         elif self.mode == PlaneMode.GROUND_TAXI:
@@ -282,9 +297,22 @@ class Plane:
 
         if activateHoldMode:
             self.holdStartTime = time.time()
-            self.targetHeading = 270
+            self.targetHeading = 307
             self.mode = PlaneMode.HEADING
-            self.turnDir = "L"
+            self.turnDir = "R"
+            if self.holdFix == "BIG":  # LL holds are coded
+                self.heading = 302
+                self.turnDir = "R"
+            elif self.holdFix == "LAM":
+                self.heading = 262
+                self.turnDir = "L"
+            elif self.holdFix == "BNN":
+                self.heading = 116
+                self.turnDir = "R"
+            elif self.holdFix == "OCK":
+                self.heading = 328
+                self.turnDir = "R"
+
 
     def positionUpdateText(self, calculatePosition=True) -> bytes:
         if calculatePosition:

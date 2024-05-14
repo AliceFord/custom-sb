@@ -152,4 +152,5 @@ def nameOfPoint(point):
 
 
 if __name__ == "__main__":
-    print(getTaxiRoute("B(2)_J", "B", "B(2)_J"))
+    # print(standDataParser())
+    print(getTaxiRoute("Z_J", "Z J P H", "H(1)_B"))

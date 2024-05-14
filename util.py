@@ -6,7 +6,7 @@ import socket
 import time
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
-from Constants import OTHER_CONTROLLERS, INACTIVE_SECTORS
+from Constants import OTHER_CONTROLLERS, INACTIVE_SECTORS, PORT
 
 from PlaneMode import PlaneMode
 from sfparser import loadSectorData, sfCoordsToNormalCoords
@@ -117,7 +117,7 @@ class ControllerSocket(EsSocket):
     @staticmethod
     def StartController(callsign: str) -> 'ControllerSocket':
         s = ControllerSocket()
-        s.connect(("127.0.0.1", 6809))
+        s.connect(("127.0.0.1", PORT))
         # Login controller:
         s.esSend("#AA" + callsign, "SERVER", "Alice Ford", "1646235", "pass", "7", "9", "1", "0", "51.14806", "-0.19028", "100")
         s.esSend("%" + callsign, "29430", "3", "100", "7", "51.14806", "-0.19028", "0")
@@ -143,7 +143,7 @@ class PlaneSocket(EsSocket):
 
         plane.masterSocketHandleData = (masterSock, masterCallsign)
 
-        s.connect(("127.0.0.1", 6809))
+        s.connect(("127.0.0.1", PORT))
         s.esSend("#AP" + plane.callsign, "SERVER", "1646235", "pass", "1", "9", "1", "Alice Ford")
         s.sendall(plane.positionUpdateText(calculatePosition=False))
         s.sendall(b'$FP' + plane.callsign.encode("UTF-8") + str(plane.flightPlan).encode("UTF-8") + b'\r\n')  # TODO

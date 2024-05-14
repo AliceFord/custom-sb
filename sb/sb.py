@@ -1,7 +1,7 @@
 import socket
 import threading
 
-PORT = 6809
+PORT = 6809  # 6810 for internet connection
 
 SERVER = "127.0.0.1"
 ADDR = (SERVER, PORT)
