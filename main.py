@@ -6,6 +6,7 @@ import sys
 import time
 from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import QTableWidgetItem
+from regex import B
 from Route import Route
 import re
 
@@ -173,7 +174,9 @@ def parseCommand():
                 # if text.split(" ")[2] == "KKT":  # TODO: choose airport
                 index = planes.index(plane)
                 planes.remove(plane)
-                planeSocks.pop(index).close()
+                sock = planeSocks.pop(index)
+                sock.esSend("#DP" + plane.callsign, "SERVER")
+                sock.close()
                 window.aircraftTable.removeRow(index)
             case "taxi":
                 if plane.mode not in PlaneMode.GROUND_MODES:
@@ -230,7 +233,13 @@ def parseCommand():
 
 # PLANE SPAWNING
 
-def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, callsign=None, **kwargs):
+def spawnRandomEveryNSeconds(nSeconds, data):
+    choice = random.choice(data)
+    util.PausableTimer(nSeconds, spawnRandomEveryNSeconds, args=(nSeconds, data))
+    spawnEveryNSeconds(nSeconds, choice["masterCallsign"], choice["controllerSock"], choice["method"], *choice["args"], callsign=None, spawnOne=True, **choice["kwargs"])
+
+
+def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, callsign=None, spawnOne=False, **kwargs):
     global planes, planeSocks
 
     if callsign is None:
@@ -242,20 +251,31 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
 
     timeWiggle = 0
     if method == "ARR":
-        timeWiggle = random.randint(-10, 15)
+        timeWiggle = random.randint(-15, 15)
 
-    util.PausableTimer(nSeconds + timeWiggle, spawnEveryNSeconds, args=(nSeconds, masterCallsign, controllerSock, method, *args), kwargs=kwargs)
+    if not spawnOne:
+        util.PausableTimer(nSeconds + timeWiggle, spawnEveryNSeconds, args=(nSeconds, masterCallsign, controllerSock, method, *args), kwargs=kwargs)
 
     fp: FlightPlan = kwargs["flightPlan"]
     kwargs.pop("flightPlan")
+
+    hdg = -1
+    if "hdg" in kwargs:
+        hdg = kwargs["hdg"]
+        kwargs.pop("hdg")
 
     if method == "ARR":
         plane = Plane.requestFromFix(callsign, *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
     elif method == "DEP":
         plane = Plane.requestDeparture(callsign, *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
-        plane.targetAltitude = int(fp.cruiseAltitude)  # climb it!
+        plane.targetAltitude = 5000  # climb it!
         plane.targetSpeed = 250
         plane.vertSpeed = CLIMB_RATE
+        if hdg != -1:
+            plane.heading = hdg
+            plane.targetHeading = hdg
+            plane.turnDir = "L"
+            plane.mode = PlaneMode.HEADING
     elif method == "GPT":
         plane = Plane.requestFromGroundPoint(callsign, *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
     elif method == "STD":
@@ -320,11 +340,13 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
         messages.pop()
         for message in messages:
             for contr in ACTIVE_CONTROLLERS:
-                if message.startswith("$HO"):
-                    continue
+                if message.startswith("$HO"):  # IF BREAKS JUST COMMENT THIS OUT
                     fromController = message.split(":")[0][3:]
+                    toController = message.split(":")[1]
                     callsign = message.split(":")[2]
                     if fromController not in ACTIVE_CONTROLLERS:  # this caused pain
+                        continue
+                    if toController in ACTIVE_CONTROLLERS:  # don't auto accept if they're a human!
                         continue
                     controllerSock.esSend("$CQ" + MASTER_CONTROLLER, "@94835", "HT", callsign, ACTIVE_CONTROLLERS[0])
                     for plane in planes:
@@ -365,7 +387,7 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
 
                     window.commandEntry.setText(f"{cs} sp {sp}")  # TODO: hacky!
                     parseCommand()
-                elif (m := re.match(r'^\$CQ' + contr + r':@94835:DR:(.*?)$', message)):
+                elif (m := re.match(r'^\$CQ' + contr + r':@94835:DR:(.*?)$', message)):  # kill em
                     cs = m.group(1)
                     window.commandEntry.setText(f"{cs} ho")  # TODO: hacky!
                     parseCommand()
@@ -397,7 +419,7 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                     
                     window.commandEntry.setText(f"{cs} {mode} {pd}")  # TODO: hacky!
                     parseCommand()
-                elif (m := re.match(r'^\$CQ' + contr + r':@94835:TA:(.*?):([0-9]+)$', message)):
+                elif (m := re.match(r'^\$CQ' + contr + r':@94835:TA:(.*?):([0-9]+)$', message)):  # climb / descend
                     print(message)
                     cs = m.group(1)
                     tgtAlt = int(m.group(2))
@@ -420,7 +442,7 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
 
                     window.commandEntry.setText(f"{cs} {cd} {tgtAlt // 100}")  # TODO: hacky!
                     parseCommand()
-                elif (m := re.match(r'^\$CQ' + contr + r':@94835:BC:(.*?):([0-9]{4})$', message)):
+                elif (m := re.match(r'^\$CQ' + contr + r':@94835:BC:(.*?):([0-9]{4})$', message)):  # set squawk
                     cs = m.group(1)
                     sq = m.group(2)
 
@@ -428,6 +450,7 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                         continue
 
                     window.commandEntry.setText(f"{cs} sq {sq}")
+                    parseCommand()
                 else:
                     pass
                     # print(message)
@@ -476,25 +499,25 @@ def main():
 
 
     # GATTERS IN THE HOLD
-    # for alt in range(8000, 9000 + 1000, 1000):
+    # for alt in range(8000, 12000 + 1000, 1000):
     #     plane = Plane.requestFromFix(util.callsignGen(), "TIMBA", squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("TIMBA"), currentlyWithData=(masterCallsign, "TIMBA"))
     #     plane.holdFix = "TIMBA"
     #     planes.append(plane)
 
-    # for alt in range(8000, 9000 + 1000, 1000):
+    # for alt in range(8000, 12000 + 1000, 1000):
     #     plane = Plane.requestFromFix(util.callsignGen(), "WILLO", squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("WILLO"), currentlyWithData=(masterCallsign, "WILLO"))
     #     plane.holdFix = "WILLO"
     #     planes.append(plane)
 
     # HEATHROW IN THE HOLD
 
-    llHoldFixes = ["BIG", "OCK", "BNN", "LAM"]
+    # llHoldFixes = ["BIG", "OCK", "BNN", "LAM"]
 
-    for holdFix in llHoldFixes:
-        for alt in range(8000, 8000 + 1 * 1000, 1000):
-            plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan(holdFix), currentlyWithData=(masterCallsign, holdFix))
-            plane.holdFix = holdFix
-            planes.append(plane)
+    # for holdFix in llHoldFixes:
+    #     for alt in range(8000, 13000 + 1 * 1000, 1000):
+    #         plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan(holdFix), currentlyWithData=(masterCallsign, holdFix))
+    #         plane.holdFix = holdFix
+    #         planes.append(plane)
 
     controllerSock: util.ControllerSocket = util.ControllerSocket.StartController(masterCallsign)
     controllerSock.setblocking(False)
@@ -514,20 +537,6 @@ def main():
 
     # util.PausableTimer(1, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGGW"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGGW", 1130, 1130, 27000, "EHAM", Route("MATCH Q295 BRAIN P44 DAGGA M85 ITVIP"))})
 
-    # # GATTERS:
-    # # ARRIVALS
-    # # 10ph AMDUT1G
-    # # 10ph VASUX1G
-    # # 5ph SIRIC1G
-    # # 10ph TELTU1G
-    # # 5ph GWC1G
-    # # 0ph KIDLI1G
-    # util.PausableTimer(random.randint(1, 60), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "SFD"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("SFD DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")})
-    # util.PausableTimer(random.randint(60, 120), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "TELTU"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("TELTU DCT HOLLY DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")})
-    # util.PausableTimer(random.randint(120, 180), spawnEveryNSeconds, args=(3600 // 5, masterCallsign, controllerSock, "ARR", "MID"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("MID DCT HOLLY DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")})
-    # util.PausableTimer(random.randint(180, 240), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "TELTU"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("TELTU DCT SFD DCT TIMBA"), "currentlyWithData": (masterCallsign, "TIMBA")})
-    # util.PausableTimer(random.randint(240, 300), spawnEveryNSeconds, args=(3600 // 5, masterCallsign, controllerSock, "ARR", "GWC"), kwargs={"speed": 250, "altitude": 9000, "flightPlan": FlightPlan.arrivalPlan("GWC DCT HOLLY DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")})
-
     # # DEPARTURES
     # util.PausableTimer(1, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 25000, "LFPG", Route("HARDY1X/26L HARDY M605 XIDIL UM605 BIBAX"))})
     # util.PausableTimer(90, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 26000, "EGCC", Route("LAM6M/26L LAM N57 WELIN T420 ELVOS"))})
@@ -537,27 +546,45 @@ def main():
     # util.PausableTimer(450, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGKK"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGKK", 1130, 1130, 27000, "EHAM", Route("FRANE1M/26L FRANE M604 GASBA M197 REDFA"))})
 
     # GATTERS INT
-    # util.PausableTimer(random.randint(1, 5), spawnEveryNSeconds, args=(60 * 5, masterCallsign, controllerSock, "ARR", "BOGNA"), kwargs={"speed": 250, "altitude": 8000, "flightPlan": FlightPlan.arrivalPlan("BOGNA DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")})
-    # util.PausableTimer(random.randint(120, 168), spawnEveryNSeconds, args=(60 * 5, masterCallsign, controllerSock, "ARR", "LYD"), kwargs={"speed": 250, "altitude": 8000, "flightPlan": FlightPlan.arrivalPlan("LYD DCT TIMBA"), "currentlyWithData": (masterCallsign, "TIMBA")})
+    # util.PausableTimer(random.randint(1, 5), spawnEveryNSeconds, args=(60 * 5, masterCallsign, controllerSock, "ARR", "BOGNA"), kwargs={"speed": 250, "altitude": 13000, "flightPlan": FlightPlan.arrivalPlan("BOGNA DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")})
+    # util.PausableTimer(random.randint(120, 168), spawnEveryNSeconds, args=(60 * 5, masterCallsign, controllerSock, "ARR", "LYD"), kwargs={"speed": 250, "altitude": 13000, "flightPlan": FlightPlan.arrivalPlan("LYD DCT TIMBA"), "currentlyWithData": (masterCallsign, "TIMBA")})
 
     # HEATHROW INT
-    util.PausableTimer(random.randint(1, 5), spawnEveryNSeconds, args=(60 * 8, masterCallsign, controllerSock, "ARR", "NOVMA"), kwargs={"speed": 220, "altitude": 11000, "flightPlan": FlightPlan.arrivalPlan("NOVMA DCT OCK"), "currentlyWithData": (masterCallsign, "OCK")})
-    util.PausableTimer(random.randint(100, 140), spawnEveryNSeconds, args=(60 * 8, masterCallsign, controllerSock, "ARR", "ODVIK"), kwargs={"speed": 220, "altitude": 11000, "flightPlan": FlightPlan.arrivalPlan("ODVIK DCT BIG"), "currentlyWithData": (masterCallsign, "BIG")})
-    util.PausableTimer(random.randint(220, 260), spawnEveryNSeconds, args=(60 * 8, masterCallsign, controllerSock, "ARR", "BRAIN"), kwargs={"speed": 220, "altitude": 11000, "flightPlan": FlightPlan.arrivalPlan("BRAIN DCT LAM"), "currentlyWithData": (masterCallsign, "LAM")})
-    util.PausableTimer(random.randint(340, 380), spawnEveryNSeconds, args=(60 * 8, masterCallsign, controllerSock, "ARR", "COWLY"), kwargs={"speed": 220, "altitude": 11000, "flightPlan": FlightPlan.arrivalPlan("COWLY DCT BNN"), "currentlyWithData": (masterCallsign, "BNN")})
+    # timeBetween = 90  # s
+    # minHoldLevel = 14000
+    # util.PausableTimer(random.randint(1, 5), spawnEveryNSeconds, args=(timeBetween * 4, masterCallsign, controllerSock, "ARR", "NOVMA"), kwargs={"speed": 220, "altitude": minHoldLevel, "flightPlan": FlightPlan.arrivalPlan("NOVMA DCT OCK"), "currentlyWithData": (masterCallsign, "OCK")})
+    # util.PausableTimer(random.randint(timeBetween - 20, timeBetween + 20), spawnEveryNSeconds, args=(timeBetween * 4, masterCallsign, controllerSock, "ARR", "ODVIK"), kwargs={"speed": 220, "altitude": minHoldLevel, "flightPlan": FlightPlan.arrivalPlan("ODVIK DCT BIG"), "currentlyWithData": (masterCallsign, "BIG")})
+    # util.PausableTimer(random.randint(timeBetween * 2 - 20, timeBetween * 2 + 20), spawnEveryNSeconds, args=(timeBetween * 4, masterCallsign, controllerSock, "ARR", "BRAIN"), kwargs={"speed": 220, "altitude": minHoldLevel, "flightPlan": FlightPlan.arrivalPlan("BRAIN DCT LAM"), "currentlyWithData": (masterCallsign, "LAM")})
+    # util.PausableTimer(random.randint(timeBetween * 3 - 20, timeBetween * 3 + 20), spawnEveryNSeconds, args=(timeBetween * 4, masterCallsign, controllerSock, "ARR", "COWLY"), kwargs={"speed": 220, "altitude": minHoldLevel, "flightPlan": FlightPlan.arrivalPlan("COWLY DCT BNN"), "currentlyWithData": (masterCallsign, "BNN")})
 
+    # AA INT
+    # timeBetween = 180  # s
+    # N = 6
+    # util.PausableTimer(random.randint(1, 5), spawnEveryNSeconds, args=(timeBetween * N, masterCallsign, controllerSock, "ARR", "PEPEG"), kwargs={"speed": 250, "altitude": 10000, "flightPlan": FlightPlan.arrivalPlan("PEPEG DCT ROBOP DCT IPSET DCT BELZU"), "currentlyWithData": (masterCallsign, "ROBOP")})
+    # util.PausableTimer(random.randint(timeBetween - 20, timeBetween + 20), spawnEveryNSeconds, args=(timeBetween * N, masterCallsign, controllerSock, "ARR", "NOPKI"), kwargs={"speed": 250, "altitude": 10000, "flightPlan": FlightPlan.arrivalPlan("NOPKI DCT MATUT DCT ROBOP DCT IPSET DCT BELZU"), "currentlyWithData": (masterCallsign, "ROBOP")})
+    # util.PausableTimer(random.randint(timeBetween * 2 - 20, timeBetween * 2 + 20), spawnEveryNSeconds, args=(timeBetween * N, masterCallsign, controllerSock, "ARR", "IOM"), kwargs={"speed": 250, "altitude": 10000, "flightPlan": FlightPlan.arrivalPlan("IOM DCT NELBO DCT BELZU"), "currentlyWithData": (masterCallsign, "NELBO")})
+    # util.PausableTimer(random.randint(timeBetween * 3 - 20, timeBetween * 3 + 20), spawnEveryNSeconds, args=(timeBetween * N, masterCallsign, controllerSock, "ARR", "REMSI"), kwargs={"speed": 250, "altitude": 10000, "flightPlan": FlightPlan.arrivalPlan("REMSI DCT MASOP DCT NELBO DCT BELZU"), "currentlyWithData": (masterCallsign, "NELBO")})
+    # util.PausableTimer(random.randint(timeBetween * 4 - 20, timeBetween * 4 + 20), spawnEveryNSeconds, args=(timeBetween * N, masterCallsign, controllerSock, "ARR", "NEVRI"), kwargs={"speed": 250, "altitude": 10000, "flightPlan": FlightPlan.arrivalPlan("NEVRI DCT ABSUN DCT BELZU"), "currentlyWithData": (masterCallsign, "ABSUN")})
+    # util.PausableTimer(random.randint(timeBetween * 5 - 20, timeBetween * 5 + 20), spawnEveryNSeconds, args=(timeBetween * N, masterCallsign, controllerSock, "ARR", "TUNSO"), kwargs={"speed": 250, "altitude": 10000, "flightPlan": FlightPlan.arrivalPlan("TUNSO DCT BLACA DCT BELZU"), "currentlyWithData": (masterCallsign, "BLACA")})
 
-    # HEATHROW 1
-    # ARRIVALS
-    # 10ph BNN
-    # 10ph LAM
-    # 10ph OCK
-    # 10ph BIG
-    # util.PausableTimer(random.randint(1, 1), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "WCO"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("WCO DCT BNN"), "currentlyWithData": (masterCallsign, "BNN")})
-    # util.PausableTimer(random.randint(72, 144), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "DET"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("DET DCT LAM"), "currentlyWithData": (masterCallsign, "LAM")})
-    # util.PausableTimer(random.randint(144, 216), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "HAZEL"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("HAZEL DCT OCK"), "currentlyWithData": (masterCallsign, "OCK")})
-    # util.PausableTimer(random.randint(216, 288), spawnEveryNSeconds, args=(3600 // 10, masterCallsign, controllerSock, "ARR", "MAY"), kwargs={"speed": 250, "altitude": 7000, "flightPlan": FlightPlan.arrivalPlan("MAY DCT BIG"), "currentlyWithData": (masterCallsign, "BIG")})
+    util.PausableTimer(5, spawnRandomEveryNSeconds, args=(150, [
+        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["PEPEG"], "kwargs": {"speed": 250, "altitude": 10000, "flightPlan": FlightPlan.arrivalPlan("PEPEG DCT ROBOP DCT IPSET DCT BELZU"), "currentlyWithData": (masterCallsign, "ROBOP")}},
+        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["NOPKI"], "kwargs": {"speed": 250, "altitude": 10000, "flightPlan": FlightPlan.arrivalPlan("NOPKI DCT MATUT DCT ROBOP DCT IPSET DCT BELZU"), "currentlyWithData": (masterCallsign, "ROBOP")}},
+        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["IOM"], "kwargs": {"speed": 250, "altitude": 10000, "flightPlan": FlightPlan.arrivalPlan("IOM DCT NELBO DCT BELZU"), "currentlyWithData": (masterCallsign, "NELBO")}},
+        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["REMSI"], "kwargs": {"speed": 250, "altitude": 10000, "flightPlan": FlightPlan.arrivalPlan("REMSI DCT MASOP DCT NELBO DCT BELZU"), "currentlyWithData": (masterCallsign, "NELBO")}},
+        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["NEVRI"], "kwargs": {"speed": 250, "altitude": 10000, "flightPlan": FlightPlan.arrivalPlan("NEVRI DCT ABSUN DCT BELZU"), "currentlyWithData": (masterCallsign, "ABSUN")}},
+        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["TUNSO"], "kwargs": {"speed": 250, "altitude": 10000, "flightPlan": FlightPlan.arrivalPlan("TUNSO DCT BLACA DCT BELZU"), "currentlyWithData": (masterCallsign, "BLACA")}}
+    ]))
 
+    util.PausableTimer(5, spawnRandomEveryNSeconds, args=(120, [
+        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": [ACTIVE_AERODROME], "kwargs": {"hdg": 250, "flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EHAM", Route("LISBO L603 PEPOD L15 HON L10 DTY L608 ADMIS M183 REDFA"))}},
+        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": [ACTIVE_AERODROME], "kwargs": {"hdg": 250, "flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EHAM", Route("LISBO L603 PEPOD L15 HON L10 DTY L608 ADMIS M183 REDFA"))}},
+        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": [ACTIVE_AERODROME], "kwargs": {"hdg": 250, "flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EHAM", Route("LISBO L603 PEPOD L15 HON L10 DTY L608 ADMIS M183 REDFA"))}},
+        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": [ACTIVE_AERODROME], "kwargs": {"hdg": 250, "flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EIDW", Route("BELZU DCT NUMPI P620 NIMAT"))}},
+        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": [ACTIVE_AERODROME], "kwargs": {"hdg": 250, "flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EGPH", Route("BLACA P600 TUNSO"))}}
+    ]))
+
+    
     # DEPARTURES
     # util.PausableTimer(1, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EHAM", Route("BPK7G/27L BPK Q295 BRAIN M197 REDFA"))})
     # util.PausableTimer(60, spawnEveryNSeconds, args=(240, masterCallsign, controllerSock, "DEP", ACTIVE_AERODROME), kwargs={"flightPlan": FlightPlan("I", "B738", 250, ACTIVE_AERODROME, 1130, 1130, 25000, "EGGD", Route("CPT3G/27L CPT"))})

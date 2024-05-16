@@ -104,9 +104,11 @@ class Plane:
 
             if distanceOut < 4:
                 if self.speed > 125:
-                    self.speed -= 0.25 * deltaT
+                    self.speed -= 0.75 * deltaT
                 if self.speed < 125:
                     self.speed = 125 
+                
+                self.speed = round(self.speed, 0)
 
             if self.altitude > requiredAltitude:
                 if self.altitude - requiredAltitude > 1000:  # Joined ILS too high
@@ -121,9 +123,9 @@ class Plane:
             if self.holdStartTime is not None:
                 # NEW LOGIC: JUST ORBIT!
                 if self.turnDir == "L":
-                    self.heading += TURN_RATE * deltaT
-                else:
                     self.heading -= TURN_RATE * deltaT
+                else:
+                    self.heading += TURN_RATE * deltaT
                 self.targetHeading = self.heading
                 # if time.time() - self.holdStartTime >= 30:  # 30 sec hold legs
                 #     self.holdStartTime = time.time()
@@ -312,6 +314,14 @@ class Plane:
             elif self.holdFix == "OCK":
                 self.heading = 328
                 self.turnDir = "R"
+            elif self.holdFix == "TIMBA":  # KK holds
+                self.heading = 307
+                self.turnDir = "R"
+            elif self.holdFix == "WILLO":
+                self.heading = 284
+                self.turnDir = "L"
+            else:
+                print("Hold fix not found")
 
 
     def positionUpdateText(self, calculatePosition=True) -> bytes:
