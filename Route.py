@@ -1,27 +1,29 @@
 from sfparser import loadSidAndFixData
 from globalVars import ATS_DATA, FIXES
-from Constants import ACTIVE_RUNWAY, ACTIVE_AERODROME
+from Constants import ACTIVE_RUNWAYS
 
 
 class Route:
-    def __init__(self, route: str):
+    def __init__(self, route: str, depAD: str):
         self.route = route
         self.initial = True
         self.fixes = []
+        self.depAD = depAD
         self.initialiseFixesFromRoute()
 
     def initialiseFixesFromRoute(self):
         fixAirways = self.route.split(" ")
 
-        if fixAirways[0].endswith("/" + ACTIVE_RUNWAY):
-            try:
-                data = loadSidAndFixData(ACTIVE_AERODROME)
-                sidName = fixAirways[0].split("/")[0]
-                self.fixes = data[0][sidName][ACTIVE_RUNWAY].split(" ")
-                FIXES.update(data[1])
-            except KeyError:
-                pass
-            fixAirways.pop(0)
+        if self.depAD.startswith("EG"):
+            if fixAirways[0].endswith("/" + ACTIVE_RUNWAYS[self.depAD]):
+                try:
+                    data = loadSidAndFixData(self.depAD)
+                    sidName = fixAirways[0].split("/")[0]
+                    self.fixes = data[0][sidName][ACTIVE_RUNWAYS[self.depAD]].split(" ")
+                    FIXES.update(data[1])
+                except KeyError:
+                    pass
+                fixAirways.pop(0)
 
         prevWpt = None
         prevRoute = None
@@ -77,8 +79,8 @@ class Route:
         return self.route
 
     @classmethod
-    def duplicate(cls, route):
-        return cls(route.route)
+    def duplicate(cls, route, depAD):
+        return cls(route.route, depAD)
 
 
 if __name__ == "__main__":

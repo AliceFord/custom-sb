@@ -9,7 +9,7 @@ import socket
 # sock.listen(5)
 
 serverIP = "4.tcp.eu.ngrok.io"
-serverPort = 12048
+serverPort = 13561
 
 # serverIP = input("Enter the server IP: ")
 # serverPort = int(input("Enter the server port: "))
@@ -36,12 +36,12 @@ print(op)
 while True:
     socketReady = select.select([clientConn], [], [], 0.5)  # 1 second timeout
     if socketReady[0]:
-        messages = clientConn.recv(262144)
+        messages = clientConn.recv(5246000)
         print(messages)
         server.sendall(messages)
 
     socketReady = select.select([server], [], [], 0.5)  # 1 second timeout
     if socketReady[0]:
-        messages = server.recv(262144)
+        messages = server.recv(5246000)
         print(messages)
         clientConn.sendall(messages)

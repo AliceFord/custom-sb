@@ -33,6 +33,16 @@ def parseFixes(path=None):
         with open(fixesPath, "r") as f:
             lines = f.read().split("\n")
 
+        ciczPath = r"data\Navaids\FIXES_CICZ.txt"
+
+        with open(ciczPath, "r") as f:
+            ciczPath = f.read().split("\n")
+            for line in ciczPath:
+                try:
+                    lines.append(line)
+                except IndexError:
+                    pass
+
         vorPath = r"data\Navaids\VOR_UK.txt"
 
         with open(vorPath, "r") as f:
@@ -150,6 +160,8 @@ def loadRunwayData(icao) -> dict[str, list[str, tuple[float, float]]]:
     runwayData = {}
 
     for line in lines:
+        if line == "":
+            continue
         runwayAIdentifier = line[:3].strip()
         runwayBIdentifier = line[4:7].strip()
         runwayAHeading = int(line[8:11])
@@ -235,4 +247,4 @@ def loadSectorData():
 
 
 if __name__ == "__main__":
-    print(loadSectorData())
+    print(parseFixes())
