@@ -6,7 +6,6 @@ import sys
 import time
 from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import QTableWidgetItem
-from regex import B
 from Route import Route
 import re
 
@@ -16,7 +15,7 @@ from FlightPlan import FlightPlan
 from Plane import Plane
 from PlaneMode import PlaneMode
 from globalVars import FIXES, planes, planeSocks, window, otherControllerSocks
-from Constants import ACTIVE_CONTROLLERS, ACTIVE_RUNWAYS, HIGH_DESCENT_RATE, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, OTHER_CONTROLLERS, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE
+from Constants import ACTIVE_CONTROLLERS, ACTIVE_RUNWAYS, HIGH_DESCENT_RATE, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, OTHER_CONTROLLERS, RADAR_UPDATE_RATE, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE
 import util
 import taxiCoordGen
 import sessionparser
@@ -316,7 +315,7 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
 
 
 def positionLoop(controllerSock: util.ControllerSocket):
-    util.PausableTimer(5, positionLoop, args=[controllerSock])
+    util.PausableTimer(RADAR_UPDATE_RATE, positionLoop, args=[controllerSock])
 
     controllerSock.esSend("%" + MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, "3", "100", "7", "51.14806", "-0.19028", "0")
 
@@ -341,7 +340,7 @@ def positionLoop(controllerSock: util.ControllerSocket):
 
 def messageMonitor(controllerSock: util.ControllerSocket) -> None:
     global window
-    t = threading.Timer(5, messageMonitor, args=[controllerSock])  # regular timer as should never be paused
+    t = threading.Timer(RADAR_UPDATE_RATE, messageMonitor, args=[controllerSock])  # regular timer as should never be paused
     t.daemon = True
     t.start()
 
@@ -363,9 +362,9 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                     controllerSock.esSend("$CQ" + MASTER_CONTROLLER, "@94835", "HT", callsign, toController)
                     for plane in planes:
                         if plane.callsign == callsign:
-                            if toController.endswith("APP"):  # proceed direct airport, descend to 2k, then kill at airport
-                                window.commandEntry.setText(f"{callsign} hoai")  # TODO: hacky!
-                                parseCommand()
+                            # if toController.endswith("APP"):  # proceed direct airport, descend to 2k, then kill at airport
+                            #     window.commandEntry.setText(f"{callsign} hoai")  # TODO: hacky!
+                            #     parseCommand()
                             
                             index = planes.index(plane)
                             plane.currentlyWithData = (MASTER_CONTROLLER, None)
@@ -689,7 +688,7 @@ def main():
     # ]))
 
     # STC
-    util.PausableTimer(5, spawnRandomEveryNSeconds, args=(120, [
+    util.PausableTimer(5, spawnRandomEveryNSeconds, args=(60, [
         {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["ABEVI"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPH", "ABEVI DCT INPIP"), "currentlyWithData": (masterCallsign, "INPIP")}},  # PH arrivals from south (x3 because we want more south)
         {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["NELSA"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPF", "NELSA DCT RIBEL"), "currentlyWithData": (masterCallsign, "RIBEL")}},  # PF arrivals from south
         {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["NELSA"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPK", "NELSA DCT RIBEL"), "currentlyWithData": (masterCallsign, "RIBEL")}},  # PK arrivals from south
@@ -706,7 +705,7 @@ def main():
         {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["IPSET"], "kwargs": {"speed": 250, "altitude": 8000, "flightPlan": FlightPlan.arrivalPlan("EGPK", "IPSET DCT BLACA"), "currentlyWithData": (masterCallsign, "BLACA")}},  # PK arrivals from west
     ]))
 
-    util.PausableTimer(5, spawnRandomEveryNSeconds, args=(120, [
+    util.PausableTimer(5, spawnRandomEveryNSeconds, args=(60, [
         {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPH"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPH", 1130, 1130, 31000, "EGKK", Route("GOSAM1D/06 GOSAM P600 FENIK L612 HON N859 KIDLI", "EGPH"))}},  # PH departures going south
         {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPH"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPH", 1130, 1130, 31000, "EGKK", Route("GOSAM1D/06 GOSAM P600 FENIK L612 HON N859 KIDLI", "EGPH"))}},  # PH departures going south
         {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPH"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPH", 1130, 1130, 22000, "EGAA", Route("GOSAM1D/06 GOSAM P600 BLACA DCT BELZU", "EGPH"))}},  # PH departures going west
@@ -787,7 +786,7 @@ def main():
                 #         break
 
     # Start message monitor
-    util.PausableTimer(5, messageMonitor, args=[controllerSock])
+    util.PausableTimer(RADAR_UPDATE_RATE, messageMonitor, args=[controllerSock])
 
     window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
 

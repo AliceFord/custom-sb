@@ -90,6 +90,19 @@ class Plane:
             self.altitude += approxVertSpeed * (deltaT / 60)
             self.altitude = round(self.altitude, 0)
 
+            if 1.5 * deltaT > abs(self.targetSpeed - self.speed):  # otherwise, speed logic
+                self.speed = self.targetSpeed
+            elif self.targetSpeed > self.speed:
+                self.speed += 1.5 * deltaT  # 0.5kts / sec
+                self.altitude += (self.vertSpeed * (deltaT / 60)) / 2  # 1/2 climb rate
+                self.altitude = round(self.altitude, 0)
+            elif self.targetSpeed < self.speed:
+                self.speed -= 1.5 * deltaT
+                self.altitude += (self.vertSpeed * (deltaT / 60)) / 2  # 1/2 climb rate
+                self.altitude = round(self.altitude, 0)
+
+            self.speed = round(self.speed, 0)
+
         elif self.targetSpeed != self.speed and (self.mode == PlaneMode.HEADING or self.mode == PlaneMode.FLIGHTPLAN):
             if self.altitude < 2000 and self.vertSpeed > 0:  # below 2000ft, prioritise climbing over accelerating
                 self.altitude += self.vertSpeed * (deltaT / 60)
