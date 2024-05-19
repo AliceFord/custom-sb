@@ -196,7 +196,10 @@ class PausableTimer(threading.Thread):
             time.sleep(0.5)
 
         PausableTimer.timers.remove(self)
-        self.function(*self.args, **self.kwargs)
+        try:
+            self.function(*self.args, **self.kwargs)
+        except Exception as e:
+            print(e)
 
 
 if __name__ == "__main__":

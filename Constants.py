@@ -7,13 +7,13 @@ CLIMB_RATE = 2000  # ft / min
 DESCENT_RATE = -2000  # ft / min
 HIGH_DESCENT_RATE = -3000  # ft / min
 
-RADAR_UPDATE_RATE = 8  # per second
+RADAR_UPDATE_RATE = 5  # per second
 
 CCAMS_SQUAWKS = list(range(1410, 1478)) + list(range(2001, 2078)) + list(range(2201, 2278)) + list(range(2701, 2738))  # realistically way way more
 
 # ACTIVE_AERODROMES = ["EGLL"]
 # ACTIVE_RUNWAYS = {"EGLL": "27R"}
-# ACTIVE_CONTROLLERS = ["EGLL_N_APP", "EGLL_S_APP", "EGLL_F_APP"]
+# ACTIVE_CONTROLLERS = ["EGLL_S_APP", "EGLL_N_APP", "EGLL_F_APP"]
 # MASTER_CONTROLLER = "LON_D_CTR"
 # MASTER_CONTROLLER_FREQ = "34905"
 
@@ -49,7 +49,7 @@ CCAMS_SQUAWKS = list(range(1410, 1478)) + list(range(2001, 2078)) + list(range(2
 
 ACTIVE_AERODROMES = ["EGPH", "EGPF", "EGPK"]
 ACTIVE_RUNWAYS = {"EGPH": "06", "EGPF": "05", "EGPK": "12"}
-ACTIVE_CONTROLLERS = ["STC_E_CTR", "STC_W_CTR", "EGPH_APP", "EGPF_APP", "EGPK_APP"]
+ACTIVE_CONTROLLERS = ["STC_CTR", "STC_E_CTR", "STC_W_CTR"]  # , "EGPH_APP", "EGPF_APP", "EGPK_APP"
 MASTER_CONTROLLER = "SCO_D_CTR"
 MASTER_CONTROLLER_FREQ = "35855"
 
@@ -66,9 +66,9 @@ INACTIVE_SECTORS = [
 
 # OTHER_CONTROLLERS = []
 OTHER_CONTROLLERS = [
-    # ("EGPH_APP", "21205"),
-    # ("EGPF_APP", "19100"),
-    # ("EGPK_APP", "29450"),
+    ("EGPH_APP", "21205"),
+    ("EGPF_APP", "19100"),
+    ("EGPK_APP", "29450"),
 
     ("LON_W_CTR", "26080"),
     ("LON_E_CTR", "18480"),

@@ -317,13 +317,15 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
 def positionLoop(controllerSock: util.ControllerSocket):
     util.PausableTimer(RADAR_UPDATE_RATE, positionLoop, args=[controllerSock])
 
+    t0 = time.time()
+
     controllerSock.esSend("%" + MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, "3", "100", "7", "51.14806", "-0.19028", "0")
 
-    for i, otherControllerSock in enumerate(otherControllerSocks):
+    for i, otherControllerSock in enumerate(otherControllerSocks):  # update controller pos
         otherControllerSock.esSend("%" + OTHER_CONTROLLERS[i][0], OTHER_CONTROLLERS[i][1], "3", "100", "7", "51.14806", "-0.19028", "0")
 
     dc = 0  # display counter
-    for i, plane in enumerate(planes):
+    for i, plane in enumerate(planes):  # update plane pos
         planeSocks[i].sendall(plane.positionUpdateText())  # position update
 
         # if plane.currentlyWithData is None:  # We only know who they are if they are with us
@@ -337,12 +339,19 @@ def positionLoop(controllerSock: util.ControllerSocket):
 
     print()
 
+    messageMonitor(controllerSock)
+
+    t1 = time.time()
+    print("Position Loop took", str(t1 - t0), "seconds")
+
 
 def messageMonitor(controllerSock: util.ControllerSocket) -> None:
-    global window
-    t = threading.Timer(RADAR_UPDATE_RATE, messageMonitor, args=[controllerSock])  # regular timer as should never be paused
-    t.daemon = True
-    t.start()
+    global window  # PAUSING WON'T WORK ATM
+    # t = threading.Timer(RADAR_UPDATE_RATE, messageMonitor, args=[controllerSock])  # regular timer as should never be paused
+    # t.daemon = True
+    # t.start()
+    
+    t0 = time.time()
 
     socketReady = select.select([controllerSock], [], [], 1)  # 1 second timeout
     if socketReady[0]:
@@ -362,9 +371,9 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                     controllerSock.esSend("$CQ" + MASTER_CONTROLLER, "@94835", "HT", callsign, toController)
                     for plane in planes:
                         if plane.callsign == callsign:
-                            # if toController.endswith("APP"):  # proceed direct airport, descend to 2k, then kill at airport
-                            #     window.commandEntry.setText(f"{callsign} hoai")  # TODO: hacky!
-                            #     parseCommand()
+                            if toController.endswith("APP"):  # proceed direct airport, descend to 2k, then kill at airport
+                                window.commandEntry.setText(f"{callsign} hoai")  # TODO: hacky!
+                                parseCommand()
                             
                             index = planes.index(plane)
                             plane.currentlyWithData = (MASTER_CONTROLLER, None)
@@ -498,6 +507,9 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
 
         # print()
 
+    t1 = time.time()
+    print("Message Monitor took", str(t1 - t0), "seconds")
+
 
 def cellClicked(row, _col):
     global window
@@ -556,7 +568,7 @@ def main():
     # llHoldFixes = ["BIG", "OCK", "BNN", "LAM"]
 
     # for holdFix in llHoldFixes:
-    #     for alt in range(8000, 10000 + 1 * 1000, 1000):
+    #     for alt in range(8000, 13000 + 1 * 1000, 1000):
     #         plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGLL", holdFix), currentlyWithData=(masterCallsign, holdFix))
     #         plane.holdFix = holdFix
     #         planes.append(plane)
@@ -688,7 +700,7 @@ def main():
     # ]))
 
     # STC
-    util.PausableTimer(5, spawnRandomEveryNSeconds, args=(60, [
+    util.PausableTimer(5, spawnRandomEveryNSeconds, args=(1, [
         {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["ABEVI"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPH", "ABEVI DCT INPIP"), "currentlyWithData": (masterCallsign, "INPIP")}},  # PH arrivals from south (x3 because we want more south)
         {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["NELSA"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPF", "NELSA DCT RIBEL"), "currentlyWithData": (masterCallsign, "RIBEL")}},  # PF arrivals from south
         {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["NELSA"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPK", "NELSA DCT RIBEL"), "currentlyWithData": (masterCallsign, "RIBEL")}},  # PK arrivals from south
@@ -705,7 +717,7 @@ def main():
         {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["IPSET"], "kwargs": {"speed": 250, "altitude": 8000, "flightPlan": FlightPlan.arrivalPlan("EGPK", "IPSET DCT BLACA"), "currentlyWithData": (masterCallsign, "BLACA")}},  # PK arrivals from west
     ]))
 
-    util.PausableTimer(5, spawnRandomEveryNSeconds, args=(60, [
+    util.PausableTimer(5, spawnRandomEveryNSeconds, args=(1, [
         {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPH"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPH", 1130, 1130, 31000, "EGKK", Route("GOSAM1D/06 GOSAM P600 FENIK L612 HON N859 KIDLI", "EGPH"))}},  # PH departures going south
         {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPH"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPH", 1130, 1130, 31000, "EGKK", Route("GOSAM1D/06 GOSAM P600 FENIK L612 HON N859 KIDLI", "EGPH"))}},  # PH departures going south
         {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPH"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPH", 1130, 1130, 22000, "EGAA", Route("GOSAM1D/06 GOSAM P600 BLACA DCT BELZU", "EGPH"))}},  # PH departures going west
@@ -799,6 +811,8 @@ def main():
 
     # START UI
     app.exec()
+
+    print("uh oh")
 
     # CLEANUP ONCE UI IS CLOSED
     for planeSock in planeSocks:
