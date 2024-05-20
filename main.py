@@ -1,4 +1,5 @@
 import json
+import msvcrt
 import random
 import select
 import threading
@@ -6,20 +7,32 @@ import sys
 import time
 from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import QTableWidgetItem
+import keyboard
 from Route import Route
 import re
+from pynput.keyboard import Key, Listener
+import pyttsx3
 
 from uiTest import MainWindow
 from sfparser import loadRunwayData, loadStarAndFixData
 from FlightPlan import FlightPlan
 from Plane import Plane
 from PlaneMode import PlaneMode
-from globalVars import FIXES, planes, planeSocks, window, otherControllerSocks
-from Constants import ACTIVE_CONTROLLERS, ACTIVE_RUNWAYS, HIGH_DESCENT_RATE, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, OTHER_CONTROLLERS, RADAR_UPDATE_RATE, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE
+from globalVars import FIXES, planes, planeSocks, window, otherControllerSocks, messagesToSpeak, currentSpeakingAC
+from Constants import ACTIVE_CONTROLLERS, ACTIVE_RUNWAYS, HIGH_DESCENT_RATE, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, OTHER_CONTROLLERS, RADAR_UPDATE_RATE, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE, TRANSITION_LEVEL
 import util
 import taxiCoordGen
 import sessionparser
 
+
+class _TTS:   # https://stackoverflow.com/questions/56032027/pyttsx3-runandwait-method-gets-stuck
+    engine = None
+    def __init__(self) -> None:
+        self.engine = pyttsx3.init()
+    
+    def start(self, text):
+        self.engine.say(text)
+        self.engine.runAndWait()
 
 # COMMAND PARSING
 
@@ -29,13 +42,17 @@ class CommandErrorException(Exception):
         self.message = message
 
 
-def parseCommand():
-    global planes, window
+def parseCommand(command: str = None):
+    global planes, window, currentSpeakingAC
     # See command spec
-    text: str = window.commandEntry.text()
 
-    window.commandEntry.setText("")
-    window.errorLabel.setText("")
+    if command is None:
+        text: str = window.commandEntry.text()
+
+        window.commandEntry.setText("")
+        window.errorLabel.setText("")
+    else:
+        text = command
     callsign = text.split(" ")[0]
 
     if callsign == "tm":  # time multiplier
@@ -63,6 +80,8 @@ def parseCommand():
 
     baseCommand = text.split(" ")[1]
 
+    currentSpeakingAC = callsign
+
     try:
         match baseCommand:
             case "d":
@@ -73,11 +92,21 @@ def parseCommand():
                     plane.vertSpeed = HIGH_DESCENT_RATE
                 else:
                     plane.vertSpeed = DESCENT_RATE
+
+                if plane.targetAltitude >= TRANSITION_LEVEL:
+                    messagesToSpeak.append(f"Descend flight level {' '.join(list(str(plane.targetAltitude // 100)))}")
+                else:
+                    messagesToSpeak.append(f"Descend altitude {' '.join(list(str(plane.targetAltitude // 100)))}")
             case "c":
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Cannot climb while on the ground")
                 plane.targetAltitude = int(text.split(" ")[2]) * 100
                 plane.vertSpeed = CLIMB_RATE
+
+                if plane.targetAltitude >= TRANSITION_LEVEL:
+                    messagesToSpeak.append(f"Climb flight level {' '.join(list(str(plane.targetAltitude // 100)))}")
+                else:
+                    messagesToSpeak.append(f"Climb altitude {' '.join(list(str(plane.targetAltitude // 100)))}")
             case "tl":
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Cannot change heading while on the ground")
@@ -87,6 +116,8 @@ def parseCommand():
                 plane.targetHeading = int(text.split(" ")[2]) % 360
                 plane.turnDir = "L"
                 # plane.heading = int(text.split(" ")[2])
+
+                messagesToSpeak.append(f"Turn left heading {' '.join(list(str(plane.targetHeading).zfill(3)))}")
             case "tr":
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Cannot change heading while on the ground")
@@ -95,6 +126,8 @@ def parseCommand():
                 plane.mode = PlaneMode.HEADING
                 plane.targetHeading = int(text.split(" ")[2]) % 360
                 plane.turnDir = "R"
+
+                messagesToSpeak.append(f"Turn right heading {' '.join(list(str(plane.targetHeading).zfill(3)))}")
             case "r":
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Cannot change heading while on the ground")
@@ -104,19 +137,25 @@ def parseCommand():
                 plane.targetHeading = plane.heading + int(text.split(" ")[2]) % 360
                 plane.targetHeading = plane.targetHeading % 360
                 plane.turnDir = "R"
+
+                messagesToSpeak.append(f"Turn right by {int(text.split(' ')[2]) % 360} degrees")
             case "l":
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Cannot change heading while on the ground")
                 if plane.holdStartTime is not None:  # end holding
                     plane.holdStartTime = None
                 plane.mode = PlaneMode.HEADING
-                plane.targetHeading = plane.heading - int(text.split(" ")[2]) % 360
+                plane.targetHeading = plane.heading - int(text.split(' ')[2]) % 360
                 plane.targetHeading = plane.targetHeading % 360
                 plane.turnDir = "L"
+
+                messagesToSpeak.append(f"Turn left by {int(text.split(' ')[2]) % 360} degrees")
             case "sp":
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Ground speed is fixed")
                 plane.targetSpeed = int(text.split(" ")[2])
+
+                messagesToSpeak.append(f"Speed {' '.join(list(str(plane.targetSpeed)))}")
             case "rond":
                 if plane.mode == PlaneMode.FLIGHTPLAN:
                     raise CommandErrorException("Already following a flightplan")
@@ -135,6 +174,8 @@ def parseCommand():
 
                 plane.mode = PlaneMode.FLIGHTPLAN
                 plane.flightPlan.route.initial = True
+
+                messagesToSpeak.append(f"Resume own navigation direct {text.split(' ')[2]}")
             case "pd":
                 if plane.mode == PlaneMode.HEADING:
                     raise CommandErrorException("Currently on headings")
@@ -152,29 +193,45 @@ def parseCommand():
                     raise CommandErrorException("Fix not found")
 
                 # plane.flightPlan.route.initial = True
+
+                messagesToSpeak.append(f"Proceed direct {text.split(' ')[2]}")
             case "sq":
                 plane.squawk = int(text.split(" ")[2])
+
+                messagesToSpeak.append(f"Squawk {list(' '.join(str(plane.squawk).zfill(4)))}")
             case "hold":
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Cannot enter hold while on the ground")
                 plane.holdFix = text.split(" ")[2]
+
+                messagesToSpeak.append(f"Hold at {text.split(' ')[2]}")
             case "star":
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Cannot assign STAR while on the ground")
                 starData, extraFixes = loadStarAndFixData(plane.flightPlan.destination)
                 FIXES.update(extraFixes)
                 plane.flightPlan.route.fixes.extend(starData[text.split(" ")[2]][ACTIVE_RUNWAYS[plane.flightPlan.destination]].split(" "))
+
+                messagesToSpeak.append(f"{text.split(' ')[2]} arrival")
             case "ils":
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Cannot assign ILS approach while on the ground")
                 if plane.mode == PlaneMode.FLIGHTPLAN:
                     raise CommandErrorException("Need headings to intercept")
+                
+                try:
 
-                runwayData = loadRunwayData(plane.flightPlan.destination)[ACTIVE_RUNWAYS[plane.flightPlan.destination]]
-                plane.clearedILS = runwayData
+                    runwayData = loadRunwayData(plane.flightPlan.destination)[ACTIVE_RUNWAYS[plane.flightPlan.destination]]
+                    plane.clearedILS = runwayData
+
+                    messagesToSpeak.append(f"Cleared ILS runway {ACTIVE_RUNWAYS[plane.flightPlan.destination]}")
+                except FileNotFoundError:
+                    pass
             case "lvl":
                 lvlFix = text.split(" ")[2]
                 plane.lvlCoords = FIXES[lvlFix]
+
+                messagesToSpeak.append(f"Be level {lvlFix}")
             case "ho":  # BIN EM
                 # if text.split(" ")[2] == "KKT":  # TODO: choose airport
                 index = planes.index(plane)
@@ -182,7 +239,7 @@ def parseCommand():
                 sock = planeSocks.pop(index)
                 sock.esSend("#DP" + plane.callsign, "SERVER")
                 sock.close()
-                window.aircraftTable.removeRow(index)
+                # window.aircraftTable.removeRow(index)
             case "hoai":
                 plane.mode = PlaneMode.HEADING
                 plane.targetAltitude = 2000
@@ -238,7 +295,8 @@ def parseCommand():
             case _:
                 raise CommandErrorException("Unknown Command")
     except CommandErrorException as e:
-        window.errorLabel.setText(e.message)
+        # window.errorLabel.setText(e.message)
+        print(e.message)
 
 
 # PLANE SPAWNING
@@ -299,23 +357,24 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
 
     planeSocks.append(sock)
 
-    window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
+    # window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
 
-    dc = 0
-    for plane in planes:
-        if plane.currentlyWithData is None:
-            window.aircraftTable.setItem(dc, 0, QTableWidgetItem(plane.callsign))
-            window.aircraftTable.setItem(dc, 1, QTableWidgetItem(util.modeConverter(plane.mode)))
-            window.aircraftTable.setItem(dc, 2, QTableWidgetItem(str(plane.squawk)))
-            window.aircraftTable.setItem(dc, 3, QTableWidgetItem(str(plane.speed)))
-            window.aircraftTable.setItem(dc, 4, QTableWidgetItem(str(plane.currentSector)))
-            dc += 1
+    # dc = 0
+    # for plane in planes:
+    #     if plane.currentlyWithData is None:
+    #         window.aircraftTable.setItem(dc, 0, QTableWidgetItem(plane.callsign))
+    #         window.aircraftTable.setItem(dc, 1, QTableWidgetItem(util.modeConverter(plane.mode)))
+    #         window.aircraftTable.setItem(dc, 2, QTableWidgetItem(str(plane.squawk)))
+    #         window.aircraftTable.setItem(dc, 3, QTableWidgetItem(str(plane.speed)))
+    #         window.aircraftTable.setItem(dc, 4, QTableWidgetItem(str(plane.currentSector)))
+    #         dc += 1
 
 # MAIN LOOP
 
 
 def positionLoop(controllerSock: util.ControllerSocket):
-    util.PausableTimer(RADAR_UPDATE_RATE, positionLoop, args=[controllerSock])
+    global planes
+    # util.PausableTimer(RADAR_UPDATE_RATE, positionLoop, args=[controllerSock])
 
     t0 = time.time()
 
@@ -326,7 +385,10 @@ def positionLoop(controllerSock: util.ControllerSocket):
 
     dc = 0  # display counter
     for i, plane in enumerate(planes):  # update plane pos
-        planeSocks[i].sendall(plane.positionUpdateText())  # position update
+        try:
+            planeSocks[i].sendall(plane.positionUpdateText())  # position update
+        except OSError:
+            pass  # probably means we've just killed them. If not then lol
 
         # if plane.currentlyWithData is None:  # We only know who they are if they are with us
         #     print(plane.callsign, end=", ")
@@ -372,12 +434,11 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                     for plane in planes:
                         if plane.callsign == callsign:
                             if toController.endswith("APP"):  # proceed direct airport, descend to 2k, then kill at airport
-                                window.commandEntry.setText(f"{callsign} hoai")  # TODO: hacky!
-                                parseCommand()
+                                parseCommand(f"{callsign} hoai")
                             
                             index = planes.index(plane)
                             plane.currentlyWithData = (MASTER_CONTROLLER, None)
-                            window.aircraftTable.removeRow(index)
+                            # window.aircraftTable.removeRow(index)
                             break
                 elif message.startswith("$HA"):  # accept handoff
                     callsign = message.split(":")[2]
@@ -385,7 +446,7 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                         if plane.callsign == callsign:
                             index = planes.index(plane)
                             plane.currentlyWithData = None
-                            window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
+                            # window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
                             break
                 elif message.startswith("$AM"):
                     cs = message.split(":")[2]
@@ -393,9 +454,8 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                     star = fp.split(" ")[-1]
                     if re.match(r'[A-Z]+\d[A-Z]\/\d+[LRC]*', star):
                         star = star.split("/")[0]
-
-                        window.commandEntry.setText(f"{cs} star {star}")  # TODO: hacky!
-                        parseCommand()
+                        
+                        parseCommand(f"{cs} star {star}")
                 elif (m := re.match(r'^\$CQ' + contr + r':@94835:SC:(.*?):H([0-9]+)$', message)):
                     cs = m.group(1)
                     tgtHdg = int(m.group(2))
@@ -412,18 +472,15 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                     else:
                         turnDir = "l"
                     
-                    window.commandEntry.setText(f"{cs} t{turnDir} {tgtHdg}")  # TODO: hacky!
-                    parseCommand()
+                    parseCommand(f"{cs} t{turnDir} {tgtHdg}")
                 elif (m := re.match(r'^\$CQ' + contr + r':@94835:SC:(.*?):S([0-9]+)$', message)):
                     cs = m.group(1)
                     sp = int(m.group(2))
 
-                    window.commandEntry.setText(f"{cs} sp {sp}")  # TODO: hacky!
-                    parseCommand()
+                    parseCommand(f"{cs} sp {sp}")
                 elif (m := re.match(r'^\$CQ' + contr + r':@94835:DR:(.*?)$', message)):  # kill em
                     cs = m.group(1)
-                    window.commandEntry.setText(f"{cs} ho")  # TODO: hacky!
-                    parseCommand()
+                    parseCommand(f"{cs} ho")
                 elif (m := re.match(r'^\$CQ' + contr + r':@94835:.*?:(.*?):([A-Z]+)$', message)):
                     cs = m.group(1)
                     pd = m.group(2)
@@ -432,21 +489,18 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                         continue
 
                     if pd == "ILS":
-                        window.commandEntry.setText(f"{cs} ils")  # TODO: hacky!
-                        parseCommand()
+                        parseCommand(f"{cs} ils")
                         continue
 
                     if pd == "HOLD":
                         for plane in planes:
                             if plane.callsign == cs:
-                                window.commandEntry.setText(f"{cs} hold {plane.flightPlan.route.fixes[-1]}")  # TODO: hacky!
-                                parseCommand()
+                                parseCommand(f"{cs} hold {plane.flightPlan.route.fixes[-1]}")
                                 continue
 
 
                     if re.match(r"LVL([A-Z]{3,5})", pd):
-                        window.commandEntry.setText(f"{cs} lvl {pd[3:]}")
-                        parseCommand()
+                        parseCommand(f"{cs} lvl {pd[3:]}")
                         continue
 
                     mode = "pd"
@@ -459,8 +513,7 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                         
                             break
                     
-                    window.commandEntry.setText(f"{cs} {mode} {pd}")  # TODO: hacky!
-                    parseCommand()
+                    parseCommand(f"{cs} {mode} {pd}")
                 elif (m := re.match(r'^\$CQ' + contr + r':@94835:TA:(.*?):([0-9]+)$', message)):  # climb / descend
                     print(message)
                     cs = m.group(1)
@@ -475,8 +528,7 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                             if tgtAlt == 0:
                                 tgtAlt = int(plane.flightPlan.cruiseAltitude)
                             if tgtAlt == 1:
-                                window.commandEntry.setText(f"{cs} ils")  # TODO: hacky!
-                                parseCommand()
+                                parseCommand(f"{cs} ils")
                                 exitNow = True
                             break
 
@@ -490,8 +542,7 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                     else:
                         cd = "d"
 
-                    window.commandEntry.setText(f"{cs} {cd} {tgtAlt // 100}")  # TODO: hacky!
-                    parseCommand()
+                    parseCommand(f"{cs} {cd} {tgtAlt // 100}")
                 elif (m := re.match(r'^\$CQ' + contr + r':@94835:BC:(.*?):([0-9]{4})$', message)):  # set squawk
                     cs = m.group(1)
                     sq = m.group(2)
@@ -499,8 +550,7 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                     if sq == "7000":
                         continue
 
-                    window.commandEntry.setText(f"{cs} sq {sq}")
-                    parseCommand()
+                    parseCommand(f"{cs} sq {sq}")
                 else:
                     pass
                     # print(message)
@@ -516,6 +566,38 @@ def cellClicked(row, _col):
     window.commandEntry.setText(window.aircraftTable.item(row, 0).text() + " ")
     window.commandEntry.setFocus()
 
+
+def stdArrival(masterCallsign, controllerSock, ad, delay, planLvlData):
+    parsedData = []
+    for currentData in planLvlData:
+        route, lvl = currentData
+        parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": [route.split(" ")[0]], "kwargs": {"speed": (350 if lvl >= 10000 else 250), "altitude": lvl, "flightPlan": FlightPlan.arrivalPlan(ad, route), "currentlyWithData": (masterCallsign, route.split(" ")[2])}})
+    util.PausableTimer(random.randint(5, 40), spawnRandomEveryNSeconds, args=(delay, parsedData))
+
+def stdDeparture(masterCallsign, controllerSock, ad, delay, planLvlData):
+    parsedData = []
+    for currentData in planLvlData:
+        route, arrAd = currentData
+        parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": [ad], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, ad, 1130, 1130, 25000, arrAd, Route(route, ad))}})
+    util.PausableTimer(random.randint(5, 40), spawnRandomEveryNSeconds, args=(delay, parsedData))
+
+
+def keyboardHandler():
+    global messagesToSpeak, currentSpeakingAC
+    while True:
+        evt = keyboard.read_event()
+        if evt.event_type == keyboard.KEY_UP and evt.name == "alt":
+            time.sleep(5)  # LOLZ PILOTS ARE SLOW EH
+            try:
+                tts = _TTS()
+                tts.start(" ".join(messagesToSpeak) + " " + currentSpeakingAC)
+                del(tts)
+
+                currentSpeakingAC = ""
+                messagesToSpeak = []
+            except NameError as e:
+                print(e)
+        
 
 def main():
     global planes, planeSocks, window, ACTIVE_RUNWAYS, ACTIVE_CONTROLLERS
@@ -585,9 +667,9 @@ def main():
 
     # SETUP UI
 
-    app = QtWidgets.QApplication(sys.argv)
+    # app = QtWidgets.QApplication(sys.argv)
 
-    window = MainWindow()
+    # window = MainWindow()
 
     # util.PausableTimer(1, spawnEveryNSeconds, args=(540, masterCallsign, controllerSock, "DEP", "EGGW"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EGGW", 1130, 1130, 27000, "EHAM", Route("MATCH Q295 BRAIN P44 DAGGA M85 ITVIP"))})
 
@@ -700,37 +782,93 @@ def main():
     # ]))
 
     # STC
-    util.PausableTimer(5, spawnRandomEveryNSeconds, args=(1, [
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["ABEVI"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPH", "ABEVI DCT INPIP"), "currentlyWithData": (masterCallsign, "INPIP")}},  # PH arrivals from south (x3 because we want more south)
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["NELSA"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPF", "NELSA DCT RIBEL"), "currentlyWithData": (masterCallsign, "RIBEL")}},  # PF arrivals from south
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["NELSA"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPK", "NELSA DCT RIBEL"), "currentlyWithData": (masterCallsign, "RIBEL")}},  # PK arrivals from south
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["ABEVI"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPH", "ABEVI DCT INPIP"), "currentlyWithData": (masterCallsign, "INPIP")}},  # PH arrivals from south
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["NELSA"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPF", "NELSA DCT RIBEL"), "currentlyWithData": (masterCallsign, "RIBEL")}},  # PF arrivals from south
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["NELSA"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPK", "NELSA DCT RIBEL"), "currentlyWithData": (masterCallsign, "RIBEL")}},  # PK arrivals from south
 
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["DIGBI"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPH", "DIGBI DCT AGPED"), "currentlyWithData": (masterCallsign, "AGPED")}},  # PH arrivals from east
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["DIGBI"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPF", "DIGBI DCT AGPED"), "currentlyWithData": (masterCallsign, "AGPED")}},  # PF arrivals from east
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["NATEB"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPK", "NATEB Y96 TLA DCT TRN"), "currentlyWithData": (masterCallsign, "AGPED")}},  # PK arrivals from east
+    # Arrivals
+    # PH every 2.5 mins
+    # util.PausableTimer(5, spawnRandomEveryNSeconds, args=(180, [
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["ABEVI"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPH", "ABEVI DCT INPIP"), "currentlyWithData": (masterCallsign, "INPIP")}},  # south
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["ABEVI"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPH", "ABEVI DCT INPIP"), "currentlyWithData": (masterCallsign, "INPIP")}},  # south
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["ABEVI"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPH", "ABEVI DCT INPIP"), "currentlyWithData": (masterCallsign, "INPIP")}},  # south
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["ABEVI"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPH", "ABEVI DCT INPIP"), "currentlyWithData": (masterCallsign, "INPIP")}},  # south
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["DIGBI"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPH", "DIGBI DCT AGPED"), "currentlyWithData": (masterCallsign, "AGPED")}},  # east
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["BLACA"], "kwargs": {"speed": 350, "altitude": 17000, "flightPlan": FlightPlan.arrivalPlan("EGPH", "BLACA DCT TUNSO"), "currentlyWithData": (masterCallsign, "TUNSO")}},  # west
+    # ]))
+    # # PF every 3 mins
+    # util.PausableTimer(5, spawnRandomEveryNSeconds, args=(180, [
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["NELSA"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPF", "NELSA DCT RIBEL"), "currentlyWithData": (masterCallsign, "RIBEL")}},  # south
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["NELSA"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPF", "NELSA DCT RIBEL"), "currentlyWithData": (masterCallsign, "RIBEL")}},  # south
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["NELSA"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPF", "NELSA DCT RIBEL"), "currentlyWithData": (masterCallsign, "RIBEL")}},  # south
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["NELSA"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPF", "NELSA DCT RIBEL"), "currentlyWithData": (masterCallsign, "RIBEL")}},  # south
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["DIGBI"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPF", "DIGBI DCT AGPED"), "currentlyWithData": (masterCallsign, "AGPED")}},  # east
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["BLACA"], "kwargs": {"speed": 350, "altitude": 15000, "flightPlan": FlightPlan.arrivalPlan("EGPF", "BLACA DCT GIRVA"), "currentlyWithData": (masterCallsign, "GIRVA")}},  # west
+    # ]))
+    # # PK every 3 mins
+    # util.PausableTimer(5, spawnRandomEveryNSeconds, args=(180, [
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["NELSA"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPK", "NELSA DCT RIBEL"), "currentlyWithData": (masterCallsign, "RIBEL")}},  # south
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["NELSA"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPK", "NELSA DCT RIBEL"), "currentlyWithData": (masterCallsign, "RIBEL")}},  # south
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["NELSA"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPK", "NELSA DCT RIBEL"), "currentlyWithData": (masterCallsign, "RIBEL")}},  # south
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["NELSA"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPK", "NELSA DCT RIBEL"), "currentlyWithData": (masterCallsign, "RIBEL")}},  # south
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["NATEB"], "kwargs": {"speed": 350, "altitude": 26000, "flightPlan": FlightPlan.arrivalPlan("EGPK", "NATEB Y96 TLA DCT TRN"), "currentlyWithData": (masterCallsign, "AGPED")}},  # east
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["IPSET"], "kwargs": {"speed": 250, "altitude": 10000, "flightPlan": FlightPlan.arrivalPlan("EGPK", "IPSET DCT BLACA"), "currentlyWithData": (masterCallsign, "BLACA")}},  # west
+    # ]))
 
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["BLACA"], "kwargs": {"speed": 350, "altitude": 17000, "flightPlan": FlightPlan.arrivalPlan("EGPH", "BLACA DCT TUNSO"), "currentlyWithData": (masterCallsign, "TUNSO")}},  # PH arrivals from west
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["BLACA"], "kwargs": {"speed": 350, "altitude": 15000, "flightPlan": FlightPlan.arrivalPlan("EGPF", "BLACA DCT GIRVA"), "currentlyWithData": (masterCallsign, "GIRVA")}},  # PF arrivals from west
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["IPSET"], "kwargs": {"speed": 250, "altitude": 8000, "flightPlan": FlightPlan.arrivalPlan("EGPK", "IPSET DCT BLACA"), "currentlyWithData": (masterCallsign, "BLACA")}},  # PK arrivals from west
-    ]))
+    # # Departures
+    # # PH every 2 mins
+    # util.PausableTimer(5, spawnRandomEveryNSeconds, args=(180, [
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPH"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPH", 1130, 1130, 31000, "EGKK", Route("GOSAM1D/06 GOSAM P600 FENIK L612 HON N859 KIDLI", "EGPH"))}},  # south
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPH"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPH", 1130, 1130, 31000, "EGKK", Route("GOSAM1D/06 GOSAM P600 FENIK L612 HON N859 KIDLI", "EGPH"))}},  # south
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPH"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPH", 1130, 1130, 31000, "EGKK", Route("GOSAM1D/06 GOSAM P600 FENIK L612 HON N859 KIDLI", "EGPH"))}},  # south
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPH"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPH", 1130, 1130, 22000, "EGAA", Route("GOSAM1D/06 GOSAM P600 BLACA DCT BELZU", "EGPH"))}},  # west
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPH"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPH", 1130, 1130, 37000, "EHAM", Route("TLA6D/06 TLA Y96 NATEB N610 LONAM", "EGPH"))}},  # east
+    # ]))
+    # # PF every 3 mins
+    # util.PausableTimer(5, spawnRandomEveryNSeconds, args=(180, [
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPF"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPF", 1130, 1130, 31000, "EGKK", Route("NORBO1J/05 NORBO T256 ROVLA UT256 DCS UN864 SUBUK DCT KEPAD L151 DISIT", "EGPF"))}},  # south
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPF"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPF", 1130, 1130, 31000, "EGKK", Route("NORBO1J/05 NORBO T256 ROVLA UT256 DCS UN864 SUBUK DCT KEPAD L151 DISIT", "EGPF"))}},  # south
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPF"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPF", 1130, 1130, 22000, "EGAA", Route("NORBO1J/05 NORBO L186 TRN P600 BLACA DCT BELZU", "EGPF"))}},  # west
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPF"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPF", 1130, 1130, 37000, "EHAM", Route("NORBO1J/05 NORBO Y96 NATEB N610 LONAM", "EGPF"))}},  # east
+    # ]))
+    # # PK every 3 mins
+    # util.PausableTimer(5, spawnRandomEveryNSeconds, args=(180, [
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPK"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPK", 1130, 1130, 31000, "EGKK", Route("SUDBY1L/12 SUDBY Z249 OSMEG T256 DCS L612 HON N859 KIDLI", "EGPK"))}},  # south
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPK"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPK", 1130, 1130, 31000, "EGKK", Route("SUDBY1L/12 SUDBY Z249 OSMEG T256 DCS L612 HON N859 KIDLI", "EGPK"))}},  # south
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPK"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPK", 1130, 1130, 22000, "EGAA", Route("TRN2L/12 P600 BLACA DCT BELZU", "EGPK"))}},  # west
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPK"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPK", 1130, 1130, 37000, "EHAM", Route("SUMIN1L/12 SUMIN Z250 HAVEN Y96 NATEB N610 LONAM", "EGPK"))}},  # east
+    # ]))
 
-    util.PausableTimer(5, spawnRandomEveryNSeconds, args=(1, [
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPH"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPH", 1130, 1130, 31000, "EGKK", Route("GOSAM1D/06 GOSAM P600 FENIK L612 HON N859 KIDLI", "EGPH"))}},  # PH departures going south
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPH"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPH", 1130, 1130, 31000, "EGKK", Route("GOSAM1D/06 GOSAM P600 FENIK L612 HON N859 KIDLI", "EGPH"))}},  # PH departures going south
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPH"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPH", 1130, 1130, 22000, "EGAA", Route("GOSAM1D/06 GOSAM P600 BLACA DCT BELZU", "EGPH"))}},  # PH departures going west
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPH"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPH", 1130, 1130, 37000, "EHAM", Route("TLA6D/06 TLA Y96 NATEB N610 LONAM", "EGPH"))}},  # PH departures going east
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPF"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPF", 1130, 1130, 31000, "EGKK", Route("NORBO1J/05 NORBO T256 ROVLA UT256 DCS UN864 SUBUK DCT KEPAD L151 DISIT", "EGPF"))}},  # PF departures going south
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPF"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPF", 1130, 1130, 31000, "EGKK", Route("NORBO1J/05 NORBO T256 ROVLA UT256 DCS UN864 SUBUK DCT KEPAD L151 DISIT", "EGPF"))}},  # PF departures going south
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPF"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPF", 1130, 1130, 22000, "EGAA", Route("NORBO1J/05 NORBO L186 TRN P600 BLACA DCT BELZU", "EGPF"))}},  # PF departures going west
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPF"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPF", 1130, 1130, 37000, "EHAM", Route("NORBO1J/05 NORBO Y96 NATEB N610 LONAM", "EGPF"))}},  # PF departures going east
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPK"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPK", 1130, 1130, 31000, "EGKK", Route("SUDBY1L/12 SUDBY Z249 OSMEG T256 DCS L612 HON N859 KIDLI", "EGPK"))}},  # PK departures going south
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPK"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPK", 1130, 1130, 31000, "EGKK", Route("SUDBY1L/12 SUDBY Z249 OSMEG T256 DCS L612 HON N859 KIDLI", "EGPK"))}},  # PK departures going south
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPK"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPK", 1130, 1130, 22000, "EGAA", Route("TRN2L/12 P600 BLACA DCT BELZU", "EGPK"))}},  # PK departures going west
-        {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": ["EGPK"], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, "EGPK", 1130, 1130, 37000, "EHAM", Route("SUMIN1L/12 SUMIN Z250 HAVEN Y96 NATEB N610 LONAM", "EGPK"))}},  # PK departures going east
-    ]))
+    # LTC-S
+    stdArrival(masterCallsign, controllerSock, "EGKK", 100, [  # KK arrivals
+        ["KUNAV DCT AMDUT DCT SFD DCT WILLO", 16000],
+        ["TEBRA DCT ABTUM DCT ARNUN DCT LARCK DCT TIMBA", 14000],
+        ["KONAN DCT KONAN DCT ARNUN DCT LARCK DCT TIMBA", 12000],  # !
+        ["AVANT DCT GWC DCT HOLLY DCT WILLO", 13000],
+        ["CAWZE DCT SIRIC DCT NIGIT DCT MID DCT TUFOZ DCT HOLLY DCT WILLO", 14000],
+        ["DISIT DCT KIDLI DCT MID DCT TUFOZ DCT HOLLY DCT WILLO", 15000]
+    ])
+
+    stdArrival(masterCallsign, controllerSock, "EGLL", 80, [  # LL arrivals
+        ["ROTNO DCT ETVAX DCT TIGER DCT BIG", 18000],
+        ["ROTNO DCT ETVAX DCT TIGER DCT BIG", 18000],
+        ["BEGTO DCT HAZEL DCT OCK", 13000],
+        ["CAWZE DCT SIRIC DCT NIGIT DCT OCK", 14000],
+        ["CAWZE DCT SIRIC DCT NIGIT DCT OCK", 14000],
+    ])
+
+    stdDeparture(masterCallsign, controllerSock, "EGKK", 90, [  # KK departures
+        ["HARDY1X/26L HARDY M605 XIDIL", "LFPG"],
+        ["NOVMA1X/26L NOVMA L620 NIBDA N14 HEKXA Q63 SAWPE", "EGGD"],
+        ["NOVMA1X/26L NOVMA L620 GIBSO", "EGTE"],
+        ["MIMFO1M/26L MIMFO Y312 DVR L9 KONAN", "EHAM"],
+        ["LAM6M/26L LAM UN57 WELIN T420 ELVOS", "EGCC"],
+        ["FRANE1M/26L FRANE M604 GASBA M189 CLN DCT BANEM", "EGSH"]
+    ])
+
+    stdDeparture(masterCallsign, controllerSock, "EGLL", 90, [  # LL departures
+        ["MAXIT1F/27R MAXIT Y803 MID L612 BOGNA DCT HARDY M605 XIDIL", "LFPG"],
+        ["CPT3F/27R CPT Q63 SAWPE", "EGGD"],
+        ["GOGSI2F/27R GOGSI N621 SAM DCT GIBSO", "EGTE"],
+        ["DET2F/27R L6 DVR UL9 KONAN", "EHAM"],
+    ])
 
     
     # DEPARTURES
@@ -798,19 +936,29 @@ def main():
                 #         break
 
     # Start message monitor
-    util.PausableTimer(RADAR_UPDATE_RATE, messageMonitor, args=[controllerSock])
+    # util.PausableTimer(RADAR_UPDATE_RATE, messageMonitor, args=[controllerSock])
 
-    window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
+    # window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
 
-    window.commandEntry.returnPressed.connect(parseCommand)
-    window.aircraftTable.cellClicked.connect(cellClicked)
-    window.show()
+    # window.commandEntry.returnPressed.connect(parseCommand)
+    # window.aircraftTable.cellClicked.connect(cellClicked)
+    # window.show()
 
     # START POSITION LOOP
-    positionLoop(controllerSock)
+    # positionLoop(controllerSock)
 
     # START UI
-    app.exec()
+    # app.exec()
+
+    # Start keyboard listener
+    # keyboardHandlerThread = threading.Thread(target=keyboardHandler)
+    # keyboardHandlerThread.daemon = True
+    # keyboardHandlerThread.start()
+
+    while True:  # block forver
+        positionLoop(controllerSock)
+        time.sleep(RADAR_UPDATE_RATE)
+
 
     print("uh oh")
 

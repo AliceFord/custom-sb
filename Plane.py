@@ -75,7 +75,7 @@ class Plane:
             sock = planeSocks.pop(index)
             sock.esSend("#DP" + self.callsign, "SERVER")
             sock.close()
-            window.aircraftTable.removeRow(index)
+            # window.aircraftTable.removeRow(index)
             return
         
         if self.lvlCoords is not None and self.mode == PlaneMode.FLIGHTPLAN:
