@@ -239,6 +239,14 @@ class Plane:
                     except IndexError:
                         self.mode = PlaneMode.HEADING
                         return
+                elif distanceToFix < 1.2:  # don't TP but do mark fix as passed
+                    self.flightPlan.route.removeFirstFix()
+                    
+                    try:
+                        nextFixCoords = FIXES[self.flightPlan.route.fixes[0]]
+                    except IndexError:
+                        self.mode = PlaneMode.HEADING
+                        return
 
                 self.targetHeading = util.headingFromTo((self.lat, self.lon), nextFixCoords)  # always recalculate heading
 
@@ -363,6 +371,12 @@ class Plane:
             elif self.holdFix == "WILLO":
                 self.heading = 284
                 self.turnDir = "L"
+            elif self.holdFix == "JACKO":  # THAMES holds
+                self.heading = 264
+                self.turnDir = "L"
+            elif self.holdFix == "GODLU":
+                self.heading = 309
+                self.turnDir = "R"
             else:
                 print("Hold fix not found")
 
