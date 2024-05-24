@@ -12,7 +12,7 @@ from Constants import ACTIVE_AERODROMES, AUTO_ASSUME, DESCENT_RATE, HIGH_DESCENT
 
 
 class Plane:
-    def __init__(self, callsign: str, squawk: int, altitude: int, heading: int, speed: float, lat: float, lon: float, vertSpeed: float, mode: PlaneMode, flightPlan: FlightPlan, currentlyWithData: tuple[str, str], stand=None):  # onGround?
+    def __init__(self, callsign: str, squawk: int, altitude: int, heading: int, speed: float, lat: float, lon: float, vertSpeed: float, mode: PlaneMode, flightPlan: FlightPlan, currentlyWithData: tuple[str, str], firstController=None, stand=None):  # onGround?
         self.callsign = callsign
         self.squawk = squawk
         self.altitude = altitude  # feet
@@ -24,6 +24,8 @@ class Plane:
         self.mode: PlaneMode = mode
         self.flightPlan = flightPlan  # fpln
         self.currentlyWithData = currentlyWithData  # (current controller, release point)
+
+        self.firstController = firstController
 
         self.groundPosition = None
         self.groundRoute = None
@@ -222,7 +224,10 @@ class Plane:
             if self.currentlyWithData is not None:  # if we're on close to release point, hand off
                 if self.currentlyWithData[1] == self.flightPlan.route.fixes[0] and distanceToFix <= 20:
                     self.currentlyWithData = None
-                    util.PausableTimer(11, self.masterSocketHandleData[0].esSend, args=["$HO" + self.masterSocketHandleData[1], ACTIVE_CONTROLLERS[0], self.callsign])
+                    if self.firstController is not None:
+                        util.PausableTimer(11, self.masterSocketHandleData[0].esSend, args=["$HO" + self.masterSocketHandleData[1], self.firstController, self.callsign])
+                    else:
+                        util.PausableTimer(11, self.masterSocketHandleData[0].esSend, args=["$HO" + self.masterSocketHandleData[1], ACTIVE_CONTROLLERS[0], self.callsign])
 
             if self.holdFix is not None and self.flightPlan.route.fixes[0] == self.holdFix and distanceToFix <= distanceToTravel:
                 activateHoldMode = True
@@ -239,7 +244,7 @@ class Plane:
                     except IndexError:
                         self.mode = PlaneMode.HEADING
                         return
-                elif distanceToFix < 1.2:  # don't TP but do mark fix as passed
+                elif distanceToFix < 1.2 and self.holdFix is None:  # don't TP but do mark fix as passed
                     self.flightPlan.route.removeFirstFix()
                     
                     try:
@@ -391,13 +396,14 @@ class Plane:
         return b'@N:' + self.callsign.encode("UTF-8") + b':' + str(self.squawk).encode("UTF-8") + b':1:' + str(self.lat).encode("UTF-8") + b':' + str(self.lon).encode("UTF-8") + b':' + str(self.altitude).encode("UTF-8") + b':' + str(self.speed).encode("UTF-8") + b':' + str(int((100 / 9) * displayHeading)).encode("UTF-8") + b':0\r\n'
 
     @classmethod
-    def requestFromFix(cls, callsign: str, fix: str, squawk: int = 1234, altitude: int = 10000, heading: int = 0, speed: float = 0, vertSpeed: float = 0, flightPlan: FlightPlan = FlightPlan("I", "B738", 250, ACTIVE_AERODROMES[0], 1130, 1130, 36000, "EDDF", Route("MIMFO Y312 DVR L9 KONAN L607 KOK UL607 SPI T180 UNOKO", ACTIVE_AERODROMES[0])), currentlyWithData: str = None):
+    def requestFromFix(cls, callsign: str, fix: str, squawk: int = 1234, altitude: int = 10000, heading: int = 0, speed: float = 0, vertSpeed: float = 0, flightPlan: FlightPlan = FlightPlan("I", "B738", 250, ACTIVE_AERODROMES[0], 1130, 1130, 36000, "EDDF", Route("MIMFO Y312 DVR L9 KONAN L607 KOK UL607 SPI T180 UNOKO", ACTIVE_AERODROMES[0])), currentlyWithData: str = None, firstController: str = None):
         try:
             coords = FIXES[fix]
         except KeyError:
             print("Fix not found")
             coords = (51.15487, -0.16454)
-        return cls(callsign, squawk, altitude, heading, speed, coords[0], coords[1], vertSpeed, PlaneMode.FLIGHTPLAN, flightPlan, currentlyWithData)
+        
+        return cls(callsign, squawk, altitude, heading, speed, coords[0], coords[1], vertSpeed, PlaneMode.FLIGHTPLAN, flightPlan, currentlyWithData, firstController=firstController)
 
     @classmethod
     def requestFromGroundPoint(cls, callsign: str, groundPoint: str, squawk: int = 1234, flightPlan: FlightPlan = FlightPlan("I", "B738", 250, ACTIVE_AERODROMES[0], 1130, 1130, 36000, "EDDF", Route("MIMFO Y312 DVR L9 KONAN L607 KOK UL607 SPI T180 UNOKO", ACTIVE_AERODROMES[0]))):
