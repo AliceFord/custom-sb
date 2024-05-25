@@ -247,4 +247,4 @@ def loadSectorData():
 
 
 if __name__ == "__main__":
-    print(parseFixes())
+    print(loadRunwayData("EGBB"))

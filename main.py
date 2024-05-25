@@ -227,6 +227,8 @@ def parseCommand(command: str = None):
                     messagesToSpeak.append(f"Cleared ILS runway {ACTIVE_RUNWAYS[plane.flightPlan.destination]}")
                 except FileNotFoundError:
                     pass
+                except KeyError:
+                    pass
             case "lvl":
                 lvlFix = text.split(" ")[2]
                 plane.lvlCoords = FIXES[lvlFix]
@@ -301,9 +303,9 @@ def parseCommand(command: str = None):
 
 # PLANE SPAWNING
 
-def spawnRandomEveryNSeconds(nSeconds, data):
+def spawnRandomEveryNSeconds(nSeconds, variance, data):
     choice = random.choice(data)
-    util.PausableTimer(nSeconds, spawnRandomEveryNSeconds, args=(nSeconds, data))
+    util.PausableTimer(random.randint(nSeconds * (1 - variance), nSeconds * (1 + variance)) , spawnRandomEveryNSeconds, args=(nSeconds, variance, data))
     spawnEveryNSeconds(nSeconds, choice["masterCallsign"], choice["controllerSock"], choice["method"], *choice["args"], callsign=None, spawnOne=True, **choice["kwargs"])
 
 
@@ -570,19 +572,19 @@ def cellClicked(row, _col):
     window.commandEntry.setFocus()
 
 
-def stdArrival(masterCallsign, controllerSock, ad, delay, planLvlData):
+def stdArrival(masterCallsign, controllerSock, ad, delay, planLvlData, variance=0):
     parsedData = []
     for currentData in planLvlData:
         route, lvl, ctrl = currentData
         parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": [route.split(" ")[0]], "kwargs": {"speed": (350 if lvl >= 10000 else 250), "altitude": lvl, "flightPlan": FlightPlan.arrivalPlan(ad, route), "currentlyWithData": (masterCallsign, route.split(" ")[2]), "firstController": ctrl}})
-    util.PausableTimer(random.randint(5, 40), spawnRandomEveryNSeconds, args=(delay, parsedData))
+    util.PausableTimer(random.randint(5, 40), spawnRandomEveryNSeconds, args=(delay, variance, parsedData))
 
 def stdDeparture(masterCallsign, controllerSock, ad, delay, planLvlData):
     parsedData = []
     for currentData in planLvlData:
         route, arrAd = currentData
         parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": [ad], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, ad, 1130, 1130, 25000, arrAd, Route(route, ad))}})
-    util.PausableTimer(random.randint(5, 40), spawnRandomEveryNSeconds, args=(delay, parsedData))
+    util.PausableTimer(random.randint(5, 40), spawnRandomEveryNSeconds, args=(delay, 0, parsedData))
 
 
 def keyboardHandler():
@@ -660,11 +662,12 @@ def main():
 
     # LC IN THE HOLD
 
-    # llHoldFixes = ["GODLU", "JACKO"]
+
+    # llHoldFixes = ["PIGOT", "ROKUP"]
 
     # for holdFix in llHoldFixes:
-    #     for alt in range(8000, 10000 + 1 * 1000, 1000):
-    #         plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=210, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGLC", holdFix), currentlyWithData=(masterCallsign, holdFix))
+    #     for alt in range(8000, 11000 + 1 * 1000, 1000):
+    #         plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGNX", holdFix), currentlyWithData=(masterCallsign, holdFix))
     #         plane.holdFix = holdFix
     #         planes.append(plane)
 
@@ -850,24 +853,24 @@ def main():
     # ]))
 
     # LTC-S
-    stdArrival(masterCallsign, controllerSock, "EGKK", 90, [  # KK arrivals
-        ["KUNAV DCT AMDUT DCT SFD DCT WILLO", 16000, "LTC_SE_CTR"],
-        ["TEBRA DCT ABTUM DCT ARNUN DCT LARCK DCT TIMBA", 14000, "LTC_SE_CTR"],
-        ["KONAN DCT KONAN DCT ARNUN DCT LARCK DCT TIMBA", 12000, "LTC_SE_CTR"],  # !
-        ["AVANT DCT GWC DCT HOLLY DCT WILLO", 13000, "LTC_SW_CTR"],
-        ["CAWZE DCT SIRIC DCT NIGIT DCT MID DCT TUFOZ DCT HOLLY DCT WILLO", 14000, "LTC_SW_CTR"],
-        ["DISIT DCT KIDLI DCT MID DCT TUFOZ DCT HOLLY DCT WILLO", 15000, "LTC_SW_CTR"]
-    ])
+    # stdArrival(masterCallsign, controllerSock, "EGKK", 90, [  # KK arrivals
+    #     ["KUNAV DCT AMDUT DCT SFD DCT WILLO", 16000, "LTC_SE_CTR"],
+    #     ["TEBRA DCT ABTUM DCT ARNUN DCT LARCK DCT TIMBA", 14000, "LTC_SE_CTR"],
+    #     ["KONAN DCT KONAN DCT ARNUN DCT LARCK DCT TIMBA", 12000, "LTC_SE_CTR"],  # !
+    #     ["AVANT DCT GWC DCT HOLLY DCT WILLO", 13000, "LTC_SW_CTR"],
+    #     ["CAWZE DCT SIRIC DCT NIGIT DCT MID DCT TUFOZ DCT HOLLY DCT WILLO", 14000, "LTC_SW_CTR"],
+    #     ["DISIT DCT KIDLI DCT MID DCT TUFOZ DCT HOLLY DCT WILLO", 15000, "LTC_SW_CTR"]
+    # ])
 
-    stdArrival(masterCallsign, controllerSock, "EGLL", 75, [  # LL arrivals
-        ["ROTNO DCT ETVAX DCT TIGER DCT BIG", 18000, "LTC_SE_CTR"],
-        ["ROTNO DCT ETVAX DCT TIGER DCT BIG", 18000, "LTC_SE_CTR"],
-        ["BEGTO DCT HAZEL DCT OCK", 13000, "LTC_SW_CTR"],
-        ["CAWZE DCT SIRIC DCT NIGIT DCT OCK", 14000, "LTC_SW_CTR"],
+    # stdArrival(masterCallsign, controllerSock, "EGLL", 75, [  # LL arrivals
+    #     ["ROTNO DCT ETVAX DCT TIGER DCT BIG", 18000, "LTC_SE_CTR"],
+    #     ["ROTNO DCT ETVAX DCT TIGER DCT BIG", 18000, "LTC_SE_CTR"],
+    #     ["BEGTO DCT HAZEL DCT OCK", 13000, "LTC_SW_CTR"],
+    #     ["CAWZE DCT SIRIC DCT NIGIT DCT OCK", 14000, "LTC_SW_CTR"],
 
         # ["SOPIT DCT WCO DCT BNN", 15000, "LTC_N_CTR"],
         # ["SABER DCT BRASO DCT WESUL DCT LAM", 16000, "LTC_N_CTR"]
-    ])
+    # ])
 
     # stdArrival(masterCallsign, controllerSock, "EGSS", 140, [  # SS arrivals
     #     ["AVANT DCT HAZEL DCT SILVA DCT BOMBO DCT BKY DCT BUSTA DCT LOREL", 13000, "LTC_N_CTR"],
@@ -882,24 +885,24 @@ def main():
     #     ["MUCTE DCT OFJES DCT UDDIZ DCT COCCU DCT JUMZI DCT ZAGZO", 14000, "LTC_N_CTR"],
     # ])
 
-    stdDeparture(masterCallsign, controllerSock, "EGKK", 90, [  # KK departures
-        ["HARDY1X/26L HARDY M605 XIDIL", "LFPG"],
-        ["NOVMA1X/26L NOVMA L620 NIBDA N14 HEKXA Q63 SAWPE", "EGGD"],
-        ["NOVMA1X/26L NOVMA L620 GIBSO", "EGTE"],
-        ["MIMFO1M/26L MIMFO Y312 DVR L9 KONAN", "EHAM"],
-        ["LAM6M/26L LAM UN57 WELIN T420 ELVOS", "EGCC"],
-        ["FRANE1M/26L FRANE M604 GASBA M189 CLN DCT BANEM", "EGSH"]
-    ])
+    # stdDeparture(masterCallsign, controllerSock, "EGKK", 90, [  # KK departures
+    #     ["HARDY1X/26L HARDY M605 XIDIL", "LFPG"],
+    #     ["NOVMA1X/26L NOVMA L620 NIBDA N14 HEKXA Q63 SAWPE", "EGGD"],
+    #     ["NOVMA1X/26L NOVMA L620 GIBSO", "EGTE"],
+    #     ["MIMFO1M/26L MIMFO Y312 DVR L9 KONAN", "EHAM"],
+    #     ["LAM6M/26L LAM UN57 WELIN T420 ELVOS", "EGCC"],
+    #     ["FRANE1M/26L FRANE M604 GASBA M189 CLN DCT BANEM", "EGSH"]
+    # ])
 
-    stdDeparture(masterCallsign, controllerSock, "EGLL", 90, [  # LL departures
-        ["MAXIT1F/27R MAXIT Y803 MID L612 BOGNA DCT HARDY M605 XIDIL", "LFPG"],
-        ["CPT3F/27R CPT Q63 SAWPE", "EGGD"],
-        ["GOGSI2F/27R GOGSI N621 SAM DCT GIBSO", "EGTE"],
-        ["DET2F/27R L6 DVR UL9 KONAN", "EHAM"],
+    # stdDeparture(masterCallsign, controllerSock, "EGLL", 90, [  # LL departures
+    #     ["MAXIT1F/27R MAXIT Y803 MID L612 BOGNA DCT HARDY M605 XIDIL", "LFPG"],
+    #     ["CPT3F/27R CPT Q63 SAWPE", "EGGD"],
+    #     ["GOGSI2F/27R GOGSI N621 SAM DCT GIBSO", "EGTE"],
+    #     ["DET2F/27R L6 DVR UL9 KONAN", "EHAM"],
 
-        ["UMLAT1F/27R UMLAT T418 WELIN T420 ELVOS", "EGCC"],
-        ["BPK7F/27R BPK Q295 BRAIN M197 REDFA", "EHAM"]
-    ])
+    #     ["UMLAT1F/27R UMLAT T418 WELIN T420 ELVOS", "EGCC"],
+    #     ["BPK7F/27R BPK Q295 BRAIN M197 REDFA", "EHAM"]
+    # ])
 
     # stdDeparture(masterCallsign, controllerSock, "EGSS", 240, [  # SS departures
     #     ["DET2R/22 DET M604 LYD M189 WAFFU UM605 XIDIL", "LFPG"],
@@ -929,8 +932,8 @@ def main():
 
     # NX
     # stdArrival(masterCallsign, controllerSock, "EGNX", 100, [
-    #     ["WELIN DCT PIGOT", 9999],
-    #     ["XAPOS DCT ROKUP", 8000]
+    #     ["WELIN DCT PIGOT", 9999, "EGNX_APP"],
+    #     ["XAPOS DCT ROKUP", 8000, "EGNX_APP"]
     # ])
 
     # stdDeparture(masterCallsign, controllerSock, "EGNX", 100, [
@@ -940,7 +943,7 @@ def main():
     # ])
 
     # LC
-    # stdArrival(masterCallsign, controllerSock, "EGLC", 110, [
+    # stdArrival(masterCallsign, controllerSock, "EGLC", 115, [
     #     ["RATLO DCT JACKO", 9000, "THAMES_APP"],
     #     ["ERKEX DCT GODLU", 9999, "THAMES_APP"]
     # ])
@@ -956,6 +959,35 @@ def main():
     #     ["ODUKU1H/09 ODUKU", "EGCC"],
     #     ["SOQQA1H/09 SOQQA", "EGCC"]
     # ])
+
+
+
+    # TCM
+
+    stdArrival(masterCallsign, controllerSock, "EGNX", 110, [
+        ["LAM DCT HEMEL DCT WELIN DCT VELAG DCT UPDUK DCT PIGOT", 22000, "LTC_M_CTR"],
+        ["XAPOS DCT ROKUP", 8000, "EGNX_APP"]
+    ])
+
+    stdDeparture(masterCallsign, controllerSock, "EGNX", 120, [
+        ["DTY4P/09 DTY DCT WCO DCT MID", "EGKK"],
+        ["DTY4P/09 DTY DCT WCO DCT MID", "EGKK"],
+        ["DTY4P/09 DTY DCT WCO DCT MID", "EGKK"],
+        ["DTY4P/09 DTY L10 HON", "EGBB"]
+    ])
+
+    stdArrival(masterCallsign, controllerSock, "EGBB", 180, [
+        ["LAM DCT HEMEL DCT WELIN DCT PUFAX DCT HON DCT OSKOT DCT GROVE", 22000, "LTC_M_CTR"],
+        ["VEGAR DCT CHASE", 9000, "LTC_M_CTR"]
+    ])
+
+    stdDeparture(masterCallsign, controllerSock, "EGBB", 120, [
+        ["ADMEX1M/33 ADMEX Y321 EMKUK L612 MID", "EGKK"],
+        ["ADMEX1M/33 ADMEX Y321 EMKUK L612 MID", "EGKK"],
+        ["ADMEX1M/33 ADMEX Y321 EMKUK L612 MID", "EGKK"],
+        ["UNGAP1M/33 UNGAP DCT DTY", "EGNX"]
+    ])
+
 
     
     # DEPARTURES
