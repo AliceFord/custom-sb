@@ -878,13 +878,13 @@ def main():
         ["SABER DCT BRASO DCT WESUL DCT LAM", 16000, "LTC_N_CTR"]
     ])
 
-    stdArrival(masterCallsign, controllerSock, "EGSS", 140, [  # SS arrivals
+    stdArrival(masterCallsign, controllerSock, "EGSS", 100, [  # SS arrivals
         ["AVANT DCT HAZEL DCT SILVA DCT BOMBO DCT BKY DCT BUSTA DCT LOREL", 13000, "LTC_N_CTR"],
         ["ROGBI DCT FINMA DCT BOMBO DCT BKY DCT BUSTA DCT LOREL", 15000, "LTC_N_CTR"],
         ["VATON DCT BPK DCT BKY DCT BUSTA DCT LOREL", 16000, "LTC_N_CTR"],
     ])
 
-    stdArrival(masterCallsign, controllerSock, "EGGW", 140, [  # GW arrivals
+    stdArrival(masterCallsign, controllerSock, "EGGW", 100, [  # GW arrivals
         ["AVANT DCT HAZEL DCT SILVA DCT WOBUN DCT EDCOX DCT JUMZI DCT ZAGZO", 13000, "LTC_N_CTR"],
         ["ROGBI DCT FINMA DCT WOBUN DCT EDCOX DCT JUMZI DCT ZAGZO", 15000, "LTC_N_CTR"],
         ["VATON DCT OZZOT DCT BPK DCT ILLOC DCT OXDUF DCT COCCU DCT JUMZI DCT ZAGZO", 16000, "LTC_N_CTR"],
