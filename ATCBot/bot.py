@@ -80,12 +80,15 @@ class Bot:
         order = self.landing_order.index(plane)
         preceeding_dist = self.get_distance_to_td(self.landing_order[order-1])
         current_distance = self.get_distance_to_td(plane)
-        diff = 5 - (current_distance - preceeding_dist)
+        diff = 5*50 - (current_distance - preceeding_dist)
         
         rad = math.radians(plane.h - 90)
         dx = 550 - plane.x
         dy = dx * math.tan(rad)
         planned_itx = plane.y + dy
+        if plane.y < self.runway_pos[1]:
+            diff = - diff
+        
         itx_point = planned_itx + diff
 
         dx = 500 - plane.x
@@ -137,8 +140,8 @@ class Plane:
         if self.x < 2 and 398 < self.y < 402:
             ... # remove but later
         rad = math.radians(self.h - 90)
-        dx = (self.s/50 / 60 /10) * math.cos(rad)
-        dy = (self.s/50 / 60/10) * math.sin(rad)
+        dx = (self.s/50 / 60 ) * math.cos(rad)
+        dy = (self.s/50 / 60 ) * math.sin(rad)
         self.x += dx
         self.y += dy
 
