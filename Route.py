@@ -15,15 +15,18 @@ class Route:
         fixAirways = self.route.split(" ")
 
         if self.depAD.startswith("EG"):
-            if fixAirways[0].endswith("/" + ACTIVE_RUNWAYS[self.depAD]):
-                try:
-                    data = loadSidAndFixData(self.depAD)
-                    sidName = fixAirways[0].split("/")[0]
-                    self.fixes = data[0][sidName][ACTIVE_RUNWAYS[self.depAD]].split(" ")
-                    FIXES.update(data[1])
-                except KeyError:
-                    pass
-                fixAirways.pop(0)
+            try:
+                if fixAirways[0].endswith("/" + ACTIVE_RUNWAYS[self.depAD]):
+                    try:
+                        data = loadSidAndFixData(self.depAD)
+                        sidName = fixAirways[0].split("/")[0]
+                        self.fixes = data[0][sidName][ACTIVE_RUNWAYS[self.depAD]].split(" ")
+                        FIXES.update(data[1])
+                    except KeyError:
+                        pass
+                    fixAirways.pop(0)
+            except KeyError:
+                pass
 
         prevWpt = None
         prevRoute = None

@@ -1,4 +1,5 @@
 import math
+import shelve
 import time
 
 from FlightPlan import FlightPlan
@@ -49,15 +50,15 @@ class Plane:
         self.dieOnReaching2K = False
         self.lvlCoords = None
 
-        if AUTO_ASSUME:
-            if self.mode == PlaneMode.FLIGHTPLAN or self.mode == PlaneMode.HEADING:  # take aircraft
-                index = util.otherControllerIndex(self.currentSector)
-                if index is None:
-                    return
-                controllerSock = otherControllerSocks[index]
-                # 10 second delay 
+        # if AUTO_ASSUME:
+        #     if self.mode == PlaneMode.FLIGHTPLAN or self.mode == PlaneMode.HEADING:  # take aircraft
+        #         index = util.otherControllerIndex(self.currentSector)
+        #         if index is None:
+        #             return
+        #         controllerSock = otherControllerSocks[index]
+        #         # 10 second delay 
 
-                util.PausableTimer(11, controllerSock.esSend, args=["$CQ" + self.currentSector, "@94835", "IT", callsign])
+        #         util.PausableTimer(11, controllerSock.esSend, args=["$CQ" + self.currentSector, "@94835", "IT", callsign])
 
     def calculatePosition(self):
         deltaT = (time.time() - self.lastTime) * timeMultiplier
@@ -202,17 +203,17 @@ class Plane:
             self.lon = round(self.lon, 5)
 
             nextSector = util.whichSector(self.lat, self.lon, self.altitude)
-            if AUTO_ASSUME:
-                if nextSector != self.currentSector and nextSector is not None:
-                    index = util.otherControllerIndex(self.currentSector)
-                    if index is not None:
-                        controllerSock = otherControllerSocks[index]
-                        if nextSector not in ACTIVE_CONTROLLERS:
-                            util.PausableTimer(11, controllerSock.esSend, args=["$CQ" + nextSector, "@94835", "IT", self.callsign])
-                        else:  # pass em over
-                            util.PausableTimer(5, controllerSock.esSend, args=["$HO" + self.currentSector, ACTIVE_CONTROLLERS[0], self.callsign])
+            # if AUTO_ASSUME:
+            #     if nextSector != self.currentSector and nextSector is not None:
+            #         index = util.otherControllerIndex(self.currentSector)
+            #         if index is not None:
+            #             controllerSock = otherControllerSocks[index]
+            #             if nextSector not in ACTIVE_CONTROLLERS:
+            #                 util.PausableTimer(11, controllerSock.esSend, args=["$CQ" + nextSector, "@94835", "IT", self.callsign])
+            #             else:  # pass em over
+            #                 util.PausableTimer(5, controllerSock.esSend, args=["$HO" + self.currentSector, ACTIVE_CONTROLLERS[0], self.callsign])
                         
-                        self.currentSector = nextSector
+            #             self.currentSector = nextSector
         elif self.mode == PlaneMode.FLIGHTPLAN:
             distanceToTravel = tas * (deltaT / 3600)
             try:
@@ -279,17 +280,17 @@ class Plane:
                 self.lon = round(self.lon, 5)
 
                 nextSector = util.whichSector(self.lat, self.lon, self.altitude)
-                if AUTO_ASSUME:
-                    if nextSector != self.currentSector and nextSector is not None:
-                        index = util.otherControllerIndex(self.currentSector)
-                        if index is not None:
-                            controllerSock = otherControllerSocks[index]
-                            if nextSector not in ACTIVE_CONTROLLERS:
-                                util.PausableTimer(11, controllerSock.esSend, args=["$CQ" + nextSector, "@94835", "IT", self.callsign])
-                            else:
-                                util.PausableTimer(5, controllerSock.esSend, args=["$HO" + self.currentSector, ACTIVE_CONTROLLERS[0], self.callsign])
+                # if AUTO_ASSUME:
+                #     if nextSector != self.currentSector and nextSector is not None:
+                #         index = util.otherControllerIndex(self.currentSector)
+                #         if index is not None:
+                #             controllerSock = otherControllerSocks[index]
+                #             if nextSector not in ACTIVE_CONTROLLERS:
+                #                 util.PausableTimer(11, controllerSock.esSend, args=["$CQ" + nextSector, "@94835", "IT", self.callsign])
+                #             else:
+                #                 util.PausableTimer(5, controllerSock.esSend, args=["$HO" + self.currentSector, ACTIVE_CONTROLLERS[0], self.callsign])
                             
-                            self.currentSector = nextSector
+                #             self.currentSector = nextSector
         elif self.mode == PlaneMode.GROUND_STATIONARY:
             pass
         elif self.mode == PlaneMode.GROUND_TAXI:
@@ -393,6 +394,7 @@ class Plane:
         if self.stand is not None or self.mode == PlaneMode.GROUND_READY:  # if we're pushing, display heading is 180 degrees off
             displayHeading += 180
             displayHeading %= 360
+
         return b'@N:' + self.callsign.encode("UTF-8") + b':' + str(self.squawk).encode("UTF-8") + b':1:' + str(self.lat).encode("UTF-8") + b':' + str(self.lon).encode("UTF-8") + b':' + str(self.altitude).encode("UTF-8") + b':' + str(self.speed).encode("UTF-8") + b':' + str(int((100 / 9) * displayHeading)).encode("UTF-8") + b':0\r\n'
 
     @classmethod
@@ -421,3 +423,9 @@ class Plane:
         # coords = loadRunwayData(airport)[ACTIVE_RUNWAY]   # TODO: Dynamic
         coords = list(loadRunwayData(airport).values())[0]
         return cls(callsign, squawk, altitude, heading, speed, coords[1][0], coords[1][1], vertSpeed, PlaneMode.FLIGHTPLAN, flightPlan, None)
+
+
+if __name__ == "__main__":
+    plane = Plane.requestFromFix("TEST", "MIMFO")
+    with shelve.open("planes") as planes:
+        planes[plane.callsign] = plane
