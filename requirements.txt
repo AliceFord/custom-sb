@@ -1,2 +1,11 @@
-PyQt6==6.6.1
+keyboard==0.13.5
+pocketsphinx==5.0.3
+prettytable==3.10.0
+pygame==2.5.2
+pynput==1.7.7
+PyQt6==6.7.0
 PyQt6_sip==13.6.0
+pyttsx3==2.90
+regex==2024.5.15
+Requests==2.32.3
+Shapely==2.0.4
