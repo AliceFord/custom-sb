@@ -23,6 +23,7 @@ from Constants import ACTIVE_CONTROLLERS, ACTIVE_RUNWAYS, HIGH_DESCENT_RATE, MAS
 import util
 import taxiCoordGen
 import sessionparser
+from ATCBot.BotV2 import Bot
 
 
 class _TTS:   # https://stackoverflow.com/questions/56032027/pyttsx3-runandwait-method-gets-stuck
@@ -313,7 +314,7 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
     global planes, planeSocks
 
     if callsign is None:
-        callsign = util.callsignGen()
+        callsign = util.callsignGen([plane.callsign for plane in planes],5)
     else:
         for plane in planes:
             if plane.callsign == callsign:
@@ -447,6 +448,8 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                     for plane in planes:
                         if plane.callsign == callsign:
                             index = planes.index(plane)
+                            bot.accept_plane(planes[index])
+                            print("Got Plen")
                             plane.currentlyWithData = None
                             # window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
                             break
@@ -657,13 +660,13 @@ def main():
 
     # HEATHROW IN THE HOLD
 
-    # llHoldFixes = ["BIG", "OCK", "BNN", "LAM"]
+    llHoldFixes = ["BIG", "OCK", "BNN", "LAM"]
 
-    # for holdFix in llHoldFixes:
-    #     for alt in range(8000, 13000 + 1 * 1000, 1000):
-    #         plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGLL", holdFix), currentlyWithData=(masterCallsign, holdFix))
-    #         plane.holdFix = holdFix
-    #         planes.append(plane)
+    for holdFix in llHoldFixes:
+        for alt in range(8000, 13000 + 1 * 1000, 1000):
+            plane = Plane.requestFromFix(util.callsignGen(planes, 5), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGLL", holdFix), currentlyWithData=(masterCallsign, holdFix))
+            plane.holdFix = holdFix
+            planes.append(plane)
 
     # LC IN THE HOLD
 
@@ -859,81 +862,81 @@ def main():
     # ]))
 
     # LTC-S
-    stdArrival(masterCallsign, controllerSock, "EGKK", 90, [  # KK arrivals
-        ["KUNAV DCT AMDUT DCT SFD DCT WILLO", 16000, "LTC_SE_CTR"],
-        ["TEBRA DCT ABTUM DCT ARNUN DCT LARCK DCT TIMBA", 14000, "LTC_SE_CTR"],
-        ["KONAN DCT KONAN DCT ARNUN DCT LARCK DCT TIMBA", 12000, "LTC_SE_CTR"],  # !
-        ["AVANT DCT GWC DCT HOLLY DCT WILLO", 13000, "LTC_SW_CTR"],
-        ["CAWZE DCT SIRIC DCT NIGIT DCT MID DCT TUFOZ DCT HOLLY DCT WILLO", 14000, "LTC_SW_CTR"],
-        ["DISIT DCT KIDLI DCT MID DCT TUFOZ DCT HOLLY DCT WILLO", 15000, "LTC_SW_CTR"]
-    ])
-
-    stdArrival(masterCallsign, controllerSock, "EGLL", 75, [  # LL arrivals
-        ["ROTNO DCT ETVAX DCT TIGER DCT BIG", 18000, "LTC_SE_CTR"],
-        ["ROTNO DCT ETVAX DCT TIGER DCT BIG", 18000, "LTC_SE_CTR"],
-        ["BEGTO DCT HAZEL DCT OCK", 13000, "LTC_SW_CTR"],
-        ["CAWZE DCT SIRIC DCT NIGIT DCT OCK", 14000, "LTC_SW_CTR"],
-
-        ["SOPIT DCT WCO DCT BNN", 15000, "LTC_N_CTR"],
-        ["SABER DCT BRASO DCT WESUL DCT LAM", 16000, "LTC_N_CTR"]
-    ])
-
-    stdArrival(masterCallsign, controllerSock, "EGSS", 100, [  # SS arrivals
-        ["AVANT DCT HAZEL DCT SILVA DCT BOMBO DCT BKY DCT BUSTA DCT LOREL", 13000, "LTC_N_CTR"],
-        ["ROGBI DCT FINMA DCT BOMBO DCT BKY DCT BUSTA DCT LOREL", 15000, "LTC_N_CTR"],
-        ["VATON DCT BPK DCT BKY DCT BUSTA DCT LOREL", 16000, "LTC_N_CTR"],
-    ])
-
-    stdArrival(masterCallsign, controllerSock, "EGGW", 100, [  # GW arrivals
-        ["AVANT DCT HAZEL DCT SILVA DCT WOBUN DCT EDCOX DCT JUMZI DCT ZAGZO", 13000, "LTC_N_CTR"],
-        ["ROGBI DCT FINMA DCT WOBUN DCT EDCOX DCT JUMZI DCT ZAGZO", 15000, "LTC_N_CTR"],
-        ["VATON DCT OZZOT DCT BPK DCT ILLOC DCT OXDUF DCT COCCU DCT JUMZI DCT ZAGZO", 16000, "LTC_N_CTR"],
-        ["MUCTE DCT OFJES DCT UDDIZ DCT COCCU DCT JUMZI DCT ZAGZO", 14000, "LTC_N_CTR"],
-    ])
-
-    stdDeparture(masterCallsign, controllerSock, "EGKK", 90, [  # KK departures
-        ["HARDY1X/26L HARDY M605 XIDIL", "LFPG"],
-        ["NOVMA1X/26L NOVMA L620 NIBDA N14 HEKXA Q63 SAWPE", "EGGD"],
-        ["NOVMA1X/26L NOVMA L620 GIBSO", "EGTE"],
-        ["MIMFO1M/26L MIMFO Y312 DVR L9 KONAN", "EHAM"],
-        ["LAM6M/26L LAM UN57 WELIN T420 ELVOS", "EGCC"],
-        ["FRANE1M/26L FRANE M604 GASBA M189 CLN DCT BANEM", "EGSH"]
-    ])
-
-    stdDeparture(masterCallsign, controllerSock, "EGLL", 90, [  # LL departures
-        ["MAXIT1F/27R MAXIT Y803 MID L612 BOGNA DCT HARDY M605 XIDIL", "LFPG"],
-        ["CPT3F/27R CPT Q63 SAWPE", "EGGD"],
-        ["GOGSI2F/27R GOGSI N621 SAM DCT GIBSO", "EGTE"],
-        ["DET2F/27R L6 DVR UL9 KONAN", "EHAM"],
-
-        ["UMLAT1F/27R UMLAT T418 WELIN T420 ELVOS", "EGCC"],
-        ["BPK7F/27R BPK Q295 BRAIN M197 REDFA", "EHAM"]
-    ])
-
-    stdDeparture(masterCallsign, controllerSock, "EGSS", 180, [  # SS departures
-        ["DET2R/22 DET M604 LYD M189 WAFFU UM605 XIDIL", "LFPG"],
-        ["NUGBO1R/22 NUGBO M183 SILVA P86 SAWPE", "EGGD"]
-    ])
-
-    stdDeparture(masterCallsign, controllerSock, "EGGW", 180, [  # GW departures
-        ["DET3Y/25 DET DCT TIMBA", "EGKK"],
-        ["RODNI1B/25 RODNI N27 ICTAM", "EGGD"],
-    ])
-
-    # SS
-    # stdArrival(masterCallsign, controllerSock, "EGSS", 95, [  # SS arrivals
-    #     ["BOMBO DCT BKY DCT BUSTA DCT LOREL", 9000],
-    #     ["BPK DCT BKY DCT BUSTA DCT LOREL", 9000],
-    #     ["LOFFO DCT ABBOT", 9000],
-    #     ["CLN DCT ABBOT", 9000],
-    #     ["LAPRA DCT ABBOT", 9000]
+    # stdArrival(masterCallsign, controllerSock, "EGKK", 90, [  # KK arrivals
+    #     ["KUNAV DCT AMDUT DCT SFD DCT WILLO", 16000, "LTC_SE_CTR"],
+    #     ["TEBRA DCT ABTUM DCT ARNUN DCT LARCK DCT TIMBA", 14000, "LTC_SE_CTR"],
+    #     ["KONAN DCT KONAN DCT ARNUN DCT LARCK DCT TIMBA", 12000, "LTC_SE_CTR"],  # !
+    #     ["AVANT DCT GWC DCT HOLLY DCT WILLO", 13000, "LTC_SW_CTR"],
+    #     ["CAWZE DCT SIRIC DCT NIGIT DCT MID DCT TUFOZ DCT HOLLY DCT WILLO", 14000, "LTC_SW_CTR"],
+    #     ["DISIT DCT KIDLI DCT MID DCT TUFOZ DCT HOLLY DCT WILLO", 15000, "LTC_SW_CTR"]
     # ])
 
-    # stdArrival(masterCallsign, controllerSock, "EGGW", 110, [  # GW arrivals
-    #     ["OXDUF DCT COCCU DCT JUMZI DCT ZAGZO", 9000],
-    #     ["WOBUN DCT EDCOX DCT JUMZI DCT ZAGZO", 9000],
-    #     ["LOFFO DCT ABBOT", 9000],
-    #     ["CLN DCT ABBOT", 9000],
+    # stdArrival(masterCallsign, controllerSock, "EGLL", 75, [  # LL arrivals
+    #     ["ROTNO DCT ETVAX DCT TIGER DCT BIG", 18000, "LTC_SE_CTR"],
+    #     ["ROTNO DCT ETVAX DCT TIGER DCT BIG", 18000, "LTC_SE_CTR"],
+    #     ["BEGTO DCT HAZEL DCT OCK", 13000, "LTC_SW_CTR"],
+    #     ["CAWZE DCT SIRIC DCT NIGIT DCT OCK", 14000, "LTC_SW_CTR"],
+
+    #     ["SOPIT DCT WCO DCT BNN", 15000, "LTC_N_CTR"],
+    #     ["SABER DCT BRASO DCT WESUL DCT LAM", 16000, "LTC_N_CTR"]
+    # ])
+
+    # stdArrival(masterCallsign, controllerSock, "EGSS", 100, [  # SS arrivals
+    #     ["AVANT DCT HAZEL DCT SILVA DCT BOMBO DCT BKY DCT BUSTA DCT LOREL", 13000, "LTC_N_CTR"],
+    #     ["ROGBI DCT FINMA DCT BOMBO DCT BKY DCT BUSTA DCT LOREL", 15000, "LTC_N_CTR"],
+    #     ["VATON DCT BPK DCT BKY DCT BUSTA DCT LOREL", 16000, "LTC_N_CTR"],
+    # ])
+
+    # stdArrival(masterCallsign, controllerSock, "EGGW", 100, [  # GW arrivals
+    #     ["AVANT DCT HAZEL DCT SILVA DCT WOBUN DCT EDCOX DCT JUMZI DCT ZAGZO", 13000, "LTC_N_CTR"],
+    #     ["ROGBI DCT FINMA DCT WOBUN DCT EDCOX DCT JUMZI DCT ZAGZO", 15000, "LTC_N_CTR"],
+    #     ["VATON DCT OZZOT DCT BPK DCT ILLOC DCT OXDUF DCT COCCU DCT JUMZI DCT ZAGZO", 16000, "LTC_N_CTR"],
+    #     ["MUCTE DCT OFJES DCT UDDIZ DCT COCCU DCT JUMZI DCT ZAGZO", 14000, "LTC_N_CTR"],
+    # ])
+
+    # stdDeparture(masterCallsign, controllerSock, "EGKK", 90, [  # KK departures
+    #     ["HARDY1X/26L HARDY M605 XIDIL", "LFPG"],
+    #     ["NOVMA1X/26L NOVMA L620 NIBDA N14 HEKXA Q63 SAWPE", "EGGD"],
+    #     ["NOVMA1X/26L NOVMA L620 GIBSO", "EGTE"],
+    #     ["MIMFO1M/26L MIMFO Y312 DVR L9 KONAN", "EHAM"],
+    #     ["LAM6M/26L LAM UN57 WELIN T420 ELVOS", "EGCC"],
+    #     ["FRANE1M/26L FRANE M604 GASBA M189 CLN DCT BANEM", "EGSH"]
+    # ])
+
+    # stdDeparture(masterCallsign, controllerSock, "EGLL", 90, [  # LL departures
+    #     ["MAXIT1F/27R MAXIT Y803 MID L612 BOGNA DCT HARDY M605 XIDIL", "LFPG"],
+    #     ["CPT3F/27R CPT Q63 SAWPE", "EGGD"],
+    #     ["GOGSI2F/27R GOGSI N621 SAM DCT GIBSO", "EGTE"],
+    #     ["DET2F/27R L6 DVR UL9 KONAN", "EHAM"],
+
+    #     ["UMLAT1F/27R UMLAT T418 WELIN T420 ELVOS", "EGCC"],
+    #     ["BPK7F/27R BPK Q295 BRAIN M197 REDFA", "EHAM"]
+    # ])
+
+    # stdDeparture(masterCallsign, controllerSock, "EGSS", 180, [  # SS departures
+    #     ["DET2R/22 DET M604 LYD M189 WAFFU UM605 XIDIL", "LFPG"],
+    #     ["NUGBO1R/22 NUGBO M183 SILVA P86 SAWPE", "EGGD"]
+    # ])
+
+    # stdDeparture(masterCallsign, controllerSock, "EGGW", 180, [  # GW departures
+    #     ["DET3Y/25 DET DCT TIMBA", "EGKK"],
+    #     ["RODNI1B/25 RODNI N27 ICTAM", "EGGD"],
+    # ])
+
+    # SS
+    # stdArrival(masterCallsign, controllerSock, "EGSS", 100, [  # SS arrivals
+    #     ["BOMBO DCT BKY DCT BUSTA DCT LOREL", 9000,"ESSEX_APP"],
+    #     ["BPK DCT BKY DCT BUSTA DCT LOREL", 9000,"ESSEX_APP"],
+    #     ["LOFFO DCT ABBOT", 9000,"ESSEX_APP"],
+    #     ["CLN DCT ABBOT", 9000,"ESSEX_APP"],
+    #     ["LAPRA DCT ABBOT", 9000,"ESSEX_APP"]
+    # ])
+
+    # stdArrival(masterCallsign, controllerSock, "EGGW", 120, [  # GW arrivals
+    #     ["OXDUF DCT COCCU DCT JUMZI DCT ZAGZO", 9000,"ESSEX_APP"],
+    #     ["WOBUN DCT EDCOX DCT JUMZI DCT ZAGZO", 9000,"ESSEX_APP"],
+    #     ["LOFFO DCT ABBOT", 9000,"ESSEX_APP"],
+    #     ["CLN DCT ABBOT", 9000,"ESSEX_APP"],
     # ])
 
     # NX
@@ -1093,6 +1096,8 @@ def main():
 
     controllerSock.close()
 
+
+bot = Bot("EGLL",(51.477692222222, -0.43244666666667), 269)
 
 if __name__ == "__main__":
     main()
