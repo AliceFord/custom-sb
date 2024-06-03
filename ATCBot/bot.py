@@ -6,7 +6,7 @@ import os
 from prettytable import PrettyTable
 pygame.init()
 font = pygame.font.Font(None, 25)
-VECTOR_FOR = 5  # nm
+VECTOR_FOR = 3.5 # nm
 
 
 class Bot:
@@ -28,6 +28,7 @@ class Bot:
 
         pygame.draw.line(self.screen, (255, 255, 255),
                          (550, 0), (550, self.s_height), 1)
+        os.system("cls" if os.name == "nt" else "clear")
         self.update_landing_order()
         self.vector()
         for plane in self.planes:
@@ -41,7 +42,6 @@ class Bot:
                 plane.x + 1000 * math.cos(rad)), (plane.y + 1000 * math.sin(rad))))
 
         self.display_landing_order()
-        os.system("cls" if os.name == "nt" else "clear")
         table = PrettyTable(["Plane", "NM to TD", "State", "Dist"])
         table.clear_rows()
         for i, plane in enumerate(self.landing_order):
@@ -97,7 +97,9 @@ class Bot:
             return (abs(self.runway_pos[1] - plane.y) + 550)
         if plane.ils:
             return plane.x
-
+        if plane.h == None: #ummmm
+            print(plane.cs)
+            print("Heading was none")
         rad = math.radians(plane.h - 90)
         dx = 550 - plane.x
         dy = dx * math.tan(rad)
@@ -114,51 +116,62 @@ class Bot:
         return distance_to_base + distance_on_base + distance_down_ILS
 
     def find_itx_heading(self, plane):
-
+        print("Getting heading")
         order = self.landing_order.index(plane)
         plane_before = self.landing_order[order-1]
 
         current_distance = self.get_distance_to_td(plane)
         proc_distance = self.get_distance_to_td(plane_before)
         # should never be negative... (hopefully)
-        diff = current_distance - proc_distance
-        if not math.isclose(diff, VECTOR_FOR, abs_tol=0.1):
+        diff = (current_distance - proc_distance) / 50
+        print(diff)
+        if not (math.isclose(diff, VECTOR_FOR, abs_tol=0.1) or math.isclose(plane.x, 550, abs_tol=3*50) or plane.base or plane.ils):
             test_plane = Plane(-1, plane.x, plane.y, h=plane.h)
-            if diff < VECTOR_FOR:  # too far - get moar planes in
+            print("new plane")
+            if diff > VECTOR_FOR:  # too far - get moar planes in
+                print("Too far")
                 if plane.y > self.runway_pos[1] and plane.x < 550 or plane.y < self.runway_pos[1] and plane.x > 550:
+                    print("left")
                     for _ in range(17):
                         test_plane.h -= 5
                         new_distance = self.get_distance_to_td(test_plane)
-                        new_diff = new_distance - proc_distance
+                        new_diff = (new_distance - proc_distance) / 50
                         if new_diff < VECTOR_FOR:
                             return test_plane.h + 5  # new heading to turn to
                 else:
+                    print("right")
                     for _ in range(17):
                         test_plane.h += 5
                         new_distance = self.get_distance_to_td(test_plane)
-                        new_diff = new_distance - proc_distance
+                        new_diff = (new_distance - proc_distance) / 50
                         if new_diff < VECTOR_FOR:
                             return test_plane.h - 5  # new heading to turn to
-            else:  # larger than 5 - slide towards
+            else:  # too close
                 if plane.y > self.runway_pos[1] and plane.x < 550 or plane.y < self.runway_pos[1] and plane.x > 550:
+                    print("Right")
                     for _ in range(17):
                         test_plane.h += 5
                         new_distance = self.get_distance_to_td(test_plane)
-                        new_diff = new_distance - proc_distance
+                        new_diff = (new_distance - proc_distance)/50
                         if new_diff > VECTOR_FOR:
                             return test_plane.h  # new heading to turn to
                 else:
+                    print("left")
                     for _ in range(17):
                         test_plane.h -= 5
                         new_distance = self.get_distance_to_td(test_plane)
-                        new_diff = new_distance - proc_distance
+                        new_diff = (new_distance - proc_distance)/50
                         if new_diff > VECTOR_FOR:
                             return test_plane.h  # new heading to turn to
+        return plane.h
 
     def vector(self):
         for i, plane in enumerate(self.landing_order):
             if i != 0:
                 plane.h = self.find_itx_heading(plane)
+                if plane.h == None:
+                    print(f"Ooops {plane.cs} was assigned a none heading")
+                    raise TypeError("Cannot be none type")
 
     def test_planes(self, mx, my):
         id = len(self.planes) + 1
@@ -197,6 +210,9 @@ class Plane:
 
         if self.x < 2 and 398 < self.y < 402:
             self.landed = True
+        if self.h == None:
+            print(self.cs)
+            print("Heading was None")
         rad = math.radians(self.h - 90)
         dx = (self.s/50) * math.cos(rad)
         dy = (self.s/50) * math.sin(rad)
@@ -208,7 +224,7 @@ if __name__ == "__main__":
     bot = Bot()
     running = True
     while running:
-        time.sleep(0.5)
+        time.sleep(0.1)
         bot.draw()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
