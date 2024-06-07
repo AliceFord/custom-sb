@@ -1,5 +1,6 @@
 import socket
 import threading
+from Constants import ACTIVE_CONTROLLERS
 
 PORT = 6809  # 6810 for internet connection
 
@@ -147,10 +148,11 @@ def handle_client(conn: socket.socket, addr):
                 status = messageHandler.handle(message)
                 if status == 1:
                     for controller in controllers:
-                        if controller.callsign != messageHandler.callsign:
+                        if controller.callsign != messageHandler.callsign:  # not us, but is an actual human that cares about packets  #  and controller.callsign in ACTIVE_CONTROLLERS
                             controller.sock.sendall(esConvert(message))
                 elif status == 2:
                     for controller in controllers:
+                        # if controller.callsign in ACTIVE_CONTROLLERS:
                         controller.sock.sendall(esConvert(message))
 
         except ConnectionResetError:

@@ -617,6 +617,24 @@ def stdDeparture(masterCallsign, controllerSock, ad, delay, planLvlData):
     util.PausableTimer(random.randint(5, delay), spawnRandomEveryNSeconds, args=(delay, 0, parsedData))
 
 
+def stdTransit(masterCallsign, controllerSock, delay, data, withMaster=True):
+    parsedData = []
+    for currentData in data:
+        depAd, arrAd, inLvl, filedLvl, route, ctrl = currentData
+        spd = 250
+        if inLvl > 30000:
+            spd = 450
+        elif inLvl > 10000:
+            spd = 350
+
+        if withMaster:
+            parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": [route.split(" ")[0]], "kwargs": {"speed": spd, "altitude": inLvl, "flightPlan": FlightPlan("I", "B738", 250, depAd, 1130, 1130, filedLvl, arrAd, Route(route, arrAd)), "currentlyWithData": (masterCallsign, route.split(" ")[2]), "firstController": ctrl}})
+        else:
+            parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": [route.split(" ")[0]], "kwargs": {"speed": spd, "altitude": inLvl, "flightPlan": FlightPlan("I", "B738", 250, depAd, 1130, 1130, filedLvl, arrAd, Route(route, arrAd)), "firstController": ctrl}})
+
+    util.PausableTimer(random.randint(5, delay), spawnRandomEveryNSeconds, args=(delay, 0, parsedData))
+
+
 def keyboardHandler():
     global messagesToSpeak, currentSpeakingAC
     while True:
@@ -640,11 +658,11 @@ def main():
 
     masterCallsign = MASTER_CONTROLLER
 
-    # shelving
-    # with shelve.open("savestates/2024-06-03_18-05-15.112072") as f:
-    #     for plane in f.values():
-    #         plane.lastTime = time.time()
-    #         planes.append(plane)
+    # shelving savestates\2024-06-04_21-05-55.242111.bak
+    with shelve.open("savestates/2024-06-07_21-10-09.233405") as f:
+        for plane in f.values():
+            plane.lastTime = time.time()
+            planes.append(plane)
 
     # planes.append(Plane.requestFromFix("EZY1", "SAM", squawk=util.squawkGen(), speed=250, altitude=5000, flightPlan=FlightPlan("I", "B738", 250, "EGHI", 1130, 1130, 37000, "EGBB", Route("SAM DCT NORRY Q41 SILVA"))))
 
@@ -1050,156 +1068,253 @@ def main():
 
     # ScAC E
 
-    stdArrival(masterCallsign, controllerSock, "EGPH", 540, [  # PH arrivals
-        ["RENEQ Y96 AGPED", 34000, "SCO_E_CTR"],
-        ["VALBO DCT AVRAL DCT ROBEM DCT AGPED", 34000, "SCO_E_CTR"],
-        ["PETIL DCT SURAT DCT ROBEM DCT AGPED", 34000, "SCO_E_CTR"],
-        ["GOREV DCT SURAT DCT ROBEM DCT AGPED", 34000, "SCO_E_CTR"],
-        ["TINAC DCT ITSUX DCT ROBEM DCT AGPED", 34000, "SCO_E_CTR"],
-        ["VAXIT DCT ELSAN DCT ADN P600 PTH", 34000, "SCO_E_CTR"],
-        ["ALOTI DCT ADN P600 PTH", 34000, "SCO_E_CTR"],
-        ["KLONN DCT ADN P600 PTH", 34000, "SCO_E_CTR"],
-        ["RIGVU DCT ADN P600 PTH", 34000, "SCO_E_CTR"],
-        ["BEREP DCT ADN P600 PTH", 34000, "SCO_E_CTR"],
-        ["PEMOS DCT LAGAV N560 FOYLE DCT STIRA", 35000, "SCO_E_CTR"],
-        ["OSBON DCT LAGAV N560 FOYLE DCT STIRA", 35000, "SCO_E_CTR"],
-        ["NALAN DCT LAGAV N560 FOYLE DCT STIRA", 35000, "SCO_E_CTR"],
-        ["MATIK DCT BESGA DCT LAGAV N560 FOYLE DCT STIRA", 35000, "SCO_E_CTR"],
-        ["RATSU DCT BARKU DCT BRUCE L602 CLYDE DCT STIRA", 35000, "SCO_E_CTR"],
-        ["ATSIX DCT AKIVO DCT BRUCE L602 CLYDE DCT STIRA", 35000, "SCO_E_CTR"],
-        ["ORTAV DCT ODPEX DCT BRUCE L602 CLYDE DCT STIRA", 35000, "SCO_E_CTR"],
+    # stdArrival(masterCallsign, controllerSock, "EGPH", 540, [  # PH arrivals
+    #     ["RENEQ Y96 AGPED", 34000, "SCO_E_CTR"],
+    #     ["VALBO DCT AVRAL DCT ROBEM DCT AGPED", 34000, "SCO_E_CTR"],
+    #     ["PETIL DCT SURAT DCT ROBEM DCT AGPED", 34000, "SCO_E_CTR"],
+    #     ["GOREV DCT SURAT DCT ROBEM DCT AGPED", 34000, "SCO_E_CTR"],
+    #     ["TINAC DCT ITSUX DCT ROBEM DCT AGPED", 34000, "SCO_E_CTR"],
+    #     ["VAXIT DCT ELSAN DCT ADN P600 PTH", 34000, "SCO_E_CTR"],
+    #     ["ALOTI DCT ADN P600 PTH", 34000, "SCO_E_CTR"],
+    #     ["KLONN DCT ADN P600 PTH", 34000, "SCO_E_CTR"],
+    #     ["RIGVU DCT ADN P600 PTH", 34000, "SCO_E_CTR"],
+    #     ["BEREP DCT ADN P600 PTH", 34000, "SCO_E_CTR"],
+    #     ["PEMOS DCT LAGAV N560 FOYLE DCT STIRA", 35000, "SCO_E_CTR"],
+    #     ["OSBON DCT LAGAV N560 FOYLE DCT STIRA", 35000, "SCO_E_CTR"],
+    #     ["NALAN DCT LAGAV N560 FOYLE DCT STIRA", 35000, "SCO_E_CTR"],
+    #     ["MATIK DCT BESGA DCT LAGAV N560 FOYLE DCT STIRA", 35000, "SCO_E_CTR"],
+    #     ["RATSU DCT BARKU DCT BRUCE L602 CLYDE DCT STIRA", 35000, "SCO_E_CTR"],
+    #     ["ATSIX DCT AKIVO DCT BRUCE L602 CLYDE DCT STIRA", 35000, "SCO_E_CTR"],
+    #     ["ORTAV DCT ODPEX DCT BRUCE L602 CLYDE DCT STIRA", 35000, "SCO_E_CTR"],
+    # ], withMaster=False)
+
+    # stdArrival(masterCallsign, controllerSock, "EGPF", 540, [  # PF arrivals
+    #     ["RENEQ Y96 AGPED", 34000, "SCO_E_CTR"],
+    #     ["VALBO DCT AVRAL DCT ROBEM DCT AGPED", 34000, "SCO_E_CTR"],
+    #     ["PETIL DCT SURAT DCT ROBEM DCT AGPED", 34000, "SCO_E_CTR"],
+    #     ["GOREV DCT SURAT DCT ROBEM DCT AGPED", 34000, "SCO_E_CTR"],
+    #     ["TINAC DCT ITSUX DCT ROBEM DCT AGPED", 34000, "SCO_E_CTR"],
+    #     ["VAXIT DCT ELSAN DCT ADN P600 PTH", 34000, "SCO_E_CTR"],
+    #     ["ALOTI DCT ADN P600 PTH", 34000, "SCO_E_CTR"],
+    #     ["KLONN DCT ADN P600 PTH", 34000, "SCO_E_CTR"],
+    #     ["RIGVU DCT ADN P600 PTH", 34000, "SCO_E_CTR"],
+    #     ["BEREP DCT ADN P600 PTH", 34000, "SCO_E_CTR"],
+    #     ["PEMOS DCT NESDI N560 ERSON", 35000, "SCO_E_CTR"],
+    #     ["OSBON DCT NESDI N560 ERSON", 35000, "SCO_E_CTR"],
+    #     ["NALAN DCT NESDI N560 ERSON", 35000, "SCO_E_CTR"],
+    #     ["MATIK DCT BESGA DCT NESDI N560 ERSON", 35000, "SCO_E_CTR"],
+    #     ["RATSU DCT BARKU DCT NESDI N560 ERSON", 35000, "SCO_E_CTR"],
+    #     ["ATSIX DCT AKIVO DCT NESDI N560 ERSON", 35000, "SCO_E_CTR"],
+    #     ["ORTAV DCT ODPEX DCT NESDI N560 ERSON", 35000, "SCO_E_CTR"],
+    # ], withMaster=False)
+
+    # stdArrival(masterCallsign, controllerSock, "EGPK", 540, [  # PK arrivals
+    #     ["RENEQ Y96 TLA DCT TRN", 34000, "SCO_E_CTR"],
+    #     ["VALBO DCT AVRAL DCT ROBEM DCT AGPED Y96 TLA DCT TRN", 34000, "SCO_E_CTR"],
+    #     ["PETIL DCT SURAT DCT ROBEM DCT AGPED Y96 TLA DCT TRN", 34000, "SCO_E_CTR"],
+    #     ["GOREV DCT SURAT DCT ROBEM DCT AGPED Y96 TLA DCT TRN", 34000, "SCO_E_CTR"],
+    #     ["TINAC DCT ITSUX DCT ROBEM DCT AGPED Y96 TLA DCT TRN", 34000, "SCO_E_CTR"],
+    #     ["VAXIT DCT ELSAN DCT ADN P600 TRN", 34000, "SCO_E_CTR"],
+    #     ["ALOTI DCT ADN P600 TRN", 34000, "SCO_E_CTR"],
+    #     ["KLONN DCT ADN P600 TRN", 34000, "SCO_E_CTR"],
+    #     ["RIGVU DCT ADN P600 TRN", 34000, "SCO_E_CTR"],
+    #     ["BEREP DCT ADN P600 TRN", 34000, "SCO_E_CTR"],
+    #     ["PEMOS DCT INBAS N560 GOW DCT TRN", 35000, "SCO_E_CTR"],
+    #     ["OSBON DCT INBAS N560 GOW DCT TRN", 35000, "SCO_E_CTR"],
+    #     ["NALAN DCT INBAS N560 GOW DCT TRN", 35000, "SCO_E_CTR"],
+    #     ["MATIK DCT BESGA DCT INBAS N560 GOW DCT TRN", 35000, "SCO_E_CTR"],
+    #     ["RATSU DCT BARKU DCT INBAS N560 GOW DCT TRN", 35000, "SCO_E_CTR"],
+    #     ["ATSIX DCT AKIVO DCT INBAS N560 GOW DCT TRN", 35000, "SCO_E_CTR"],
+    #     ["ORTAV DCT ODPEX DCT INBAS N560 GOW DCT TRN", 35000, "SCO_E_CTR"],
+    # ], withMaster=False)
+
+    # stdArrival(masterCallsign, controllerSock, "EGPD", 540, [  # PD arrivals
+    #     ["RENEQ P38 ROBEM DCT FINDO P600 NAXIL", 34000, "SCO_E_CTR"],
+    #     ["VALBO DCT AVRAL DCT OVDAN P600 ADN", 34000, "SCO_E_CTR"],
+    #     ["PETIL DCT SURAT DCT FINDO P600 NAXIL", 34000, "SCO_E_CTR"],
+    #     ["GOREV DCT SURAT DCT MADAD P18 RATPU", 34000, "SCO_E_CTR"],
+    #     ["TINAC DCT ITSUX DCT OVDAN P600 ADN", 34000, "SCO_E_CTR"],
+    #     ["VAXIT DCT REKNA DCT MADAD P18 RATPU", 34000, "SCO_E_CTR"],
+    #     ["ALOTI DCT OVDAN P600 ADN", 34000, "SCO_E_CTR"],
+    #     ["KLONN DCT OVDAN P600 LESNI DCT ADN", 34000, "SCO_E_CTR"],
+    #     ["RIGVU DCT OVDAN P600 ADN", 34000, "SCO_E_CTR"],
+    #     ["PEMOS DCT WIK Y904 ADN", 35000, "SCO_E_CTR"],
+    #     ["OSBON DCT WIK Y904 ADN", 35000, "SCO_E_CTR"],
+    #     ["NALAN DCT WIK Y904 ADN", 35000, "SCO_E_CTR"],
+    #     ["MATIK DCT BESGA DCT WIK Y904 ADN", 35000, "SCO_E_CTR"],
+    #     ["RATSU DCT BARKU DCT WIK Y904 ADN", 35000, "SCO_E_CTR"],
+    #     ["ATSIX DCT AKIVO DCT WIK Y904 ADN", 35000, "SCO_E_CTR"],
+    #     ["ORTAV DCT ODPEX DCT WIK Y904 ADN", 35000, "SCO_E_CTR"],
+    # ], withMaster=False)
+
+    # stdArrival(masterCallsign, controllerSock, "EGPE", 540, [  # PE arrivals
+    #     ["VALBO DCT AVRAL DCT ADN", 34000, "SCO_E_CTR"],
+    #     ["PETIL DCT REKNA DCT ADN", 34000, "SCO_E_CTR"],
+    #     ["VAXIT DCT ELSAN DCT ADN", 34000, "SCO_E_CTR"],
+    #     ["ALOTI DCT ADN", 34000, "SCO_E_CTR"],
+    #     ["PEMOS DCT STN Y906 GARVA", 35000, "SCO_E_CTR"],
+    #     ["OSBON DCT STN Y906 GARVA", 35000, "SCO_E_CTR"],
+    #     ["NALAN DCT STN Y906 GARVA", 35000, "SCO_E_CTR"],
+    #     ["MATIK DCT BESGA DCT STN Y906 GARVA", 35000, "SCO_E_CTR"],
+    #     ["RATSU DCT BARKU DCT STN Y906 GARVA", 35000, "SCO_E_CTR"],
+    #     ["ATSIX DCT AKIVO DCT STN Y906 GARVA", 35000, "SCO_E_CTR"],
+    #     ["ORTAV DCT ODPEX DCT STN Y906 GARVA", 35000, "SCO_E_CTR"],
+    # ], withMaster=False)
+
+
+
+    # stdDeparture(masterCallsign, controllerSock, "EGPH", 480, [
+    #     ["GRICE4D/06 GRICE P600 ASNUD DCT ELSAN DCT VAXIT", "BIKF"],
+    #     ["GRICE4D/06 GRICE P600 ASNUD DCT ALOTI", "BIKF"],
+    #     ["GRICE4D/06 GRICE P600 ASNUD DCT KLONN", "BIKF"],
+    #     ["GRICE4D/06 GRICE P600 ASNUD DCT RIGVU", "BIKF"],
+    #     ["GRICE4D/06 GRICE P600 ASNUD DCT BEREP", "BIKF"],
+    #     ["GRICE4D/06 GRICE DCT FOYLE N560 ERSON DCT PEMOS", "BIKF"],
+    #     ["GRICE4D/06 GRICE DCT FOYLE N560 ERSON DCT OSBON", "BIKF"],
+    #     ["GRICE4D/06 GRICE DCT FOYLE N560 ERSON DCT NALAN", "BIKF"],
+    #     ["GRICE4D/06 GRICE DCT FOYLE N560 ERSON DCT BESGA DCT MATIK", "BIKF"],
+    #     ["GRICE4D/06 GRICE DCT FOYLE N560 ERSON DCT BARKU DCT RATSU", "BIKF"],
+    #     ["GRICE4D/06 GRICE DCT FOYLE N560 ERSON DCT ATSIX", "BIKF"],
+    #     ["GRICE4D/06 GRICE DCT FOYLE N560 ERSON DCT ORTAV", "BIKF"],
+    # ])
+
+    # stdDeparture(masterCallsign, controllerSock, "EGPF", 480, [
+    #     ["PTH4B/05 PTH P600 ASNUD DCT ELSAN DCT VAXIT", "BIKF"],
+    #     ["PTH4B/05 PTH P600 ASNUD DCT ALOTI", "BIKF"],
+    #     ["PTH4B/05 PTH P600 ASNUD DCT KLONN", "BIKF"],
+    #     ["PTH4B/05 PTH P600 ASNUD DCT RIGVU", "BIKF"],
+    #     ["PTH4B/05 PTH P600 ASNUD DCT BEREP", "BIKF"],
+    #     ["FOYLE3B/05 FOYLE N560 LAGAV DCT PEMOS", "BIKF"],
+    #     ["FOYLE3B/05 FOYLE N560 LAGAV DCT OSBON", "BIKF"],
+    #     ["FOYLE3B/05 FOYLE N560 LAGAV DCT NALAN", "BIKF"],
+    #     ["FOYLE3B/05 FOYLE N560 LAGAV DCT BESGA DCT MATIK", "BIKF"],
+    #     ["FOYLE3B/05 FOYLE N560 LAGAV DCT BARKU DCT RATSU", "BIKF"],
+    #     ["FOYLE3B/05 FOYLE N560 LAGAV DCT ATSIX", "BIKF"],
+    #     ["FOYLE3B/05 FOYLE N560 LAGAV DCT ORTAV", "BIKF"],
+    # ])
+
+    # stdDeparture(masterCallsign, controllerSock, "EGPD", 480, [
+    #     ["ADN P600 BUDON DCT LAMRO DCT ARTEX DCT VAXIT", "BIKF"],
+    #     ["ADN P600 BUDON DCT ALOTI", "BIKF"],
+    #     ["ADN P600 BUDON DCT KLONN", "BIKF"],
+    #     ["ADN P600 BUDON DCT RIGVU", "BIKF"],
+    #     ["ADN P600 BUDON DCT BEREP", "BIKF"],
+    #     ["ADN Y904 WIK DCT PEMOS", "BIKF"],
+    #     ["ADN Y904 WIK DCT OSBON", "BIKF"],
+    #     ["ADN Y904 WIK DCT NALAN", "BIKF"],
+    #     ["ADN DCT RIMOL DCT BESGA DCT MATIK", "BIKF"],
+    #     ["ADN DCT RIMOL DCT BARKU DCT RATSU", "BIKF"],
+    #     ["ADN DCT RIMOL DCT ATSIX", "BIKF"],
+    #     ["ADN DCT RIMOL DCT ORTAV", "BIKF"],
+    # ])
+
+    # stdDeparture(masterCallsign, controllerSock, "EGPE", 480, [
+    #     ["ADN DCT ALOTI", "BIKF"],
+    #     ["GARVA Y906 STN DCT PEMOS", "BIKF"],
+    #     ["GARVA Y906 STN DCT OSBON", "BIKF"],
+    #     ["GARVA Y906 STN DCT NALAN", "BIKF"],
+    #     ["GARVA Y906 STN DCT BESGA DCT MATIK", "BIKF"],
+    #     ["GARVA Y906 STN DCT BARKU DCT RATSU", "BIKF"],
+    #     ["GARVA Y906 STN DCT ATSIX", "BIKF"],
+    #     ["GARVA Y906 STN DCT ORTAV", "BIKF"],
+    # ])
+
+
+    # AC W
+
+    # stdTransit(masterCallsign, controllerSock, 600, [  # east to west (south)
+    #     ["EGLL", "KJFK", 26000, 36000, "OSNUG DCT ADKIK DCT JOMZA DCT LULOX", "LON_W_CTR"],
+    #     ["EGLL", "KJFK", 26000, 36000, "OSNUG DCT ADKIK DCT JOMZA DCT GAPLI", "LON_W_CTR"],
+    #     ["EGLL", "KJFK", 26000, 36000, "OSNUG DCT ADKIK DCT FONZU DCT LESLU", "LON_W_CTR"],
+    #     ["EGLL", "KJFK", 26000, 36000, "OSNUG DCT ADKIK DCT FONZU DCT LEDGO", "LON_W_CTR"],
+    #     ["EGLL", "KJFK", 26000, 36000, "OSNUG DCT ADKIK DCT MOPAT", "LON_W_CTR"],
+    # ], withMaster=False)
+    # stdTransit(masterCallsign, controllerSock, 600, [  # east to west (north)
+    #     ["EGLL", "EIDW", 15000, 36000, "CPT DCT DIDZA L9 BUCGO DCT OFSOX DCT BANBA", "LON_W_CTR"],
+    #     ["EGLL", "EIDW", 15000, 36000, "CPT DCT DIDZA L9 BUCGO DCT FELCA DCT OFSOX DCT ENJEX", "LON_W_CTR"],
+    #     ["EGLL", "EIDW", 15000, 36000, "CPT DCT DIDZA L9 BUCGO DCT FELCA DCT OFSOX DCT SLANY", "LON_W_CTR"],
+    #     ["EGLL", "EIDW", 15000, 36000, "CPT DCT DIDZA L9 BUCGO DCT FELCA DCT NICXI DCT BAKUR", "LON_W_CTR"],
+    #     ["EGLL", "EIDW", 15000, 36000, "CPT DCT DIDZA N14 OKTAD DCT MEDOG DCT VATRY", "LON_W_CTR"],
+    #     ["EGLL", "EIDW", 15000, 36000, "CPT DCT DIDZA N14 OKTAD DCT MEDOG DCT LANON DCT LIPGO", "LON_W_CTR"],
+    # ], withMaster=False)
+    # stdTransit(masterCallsign, controllerSock, 600, [  # east to west (upper)
+    #     ["EHAM", "KJFK", 36000, 36000, "SAWPE DCT OZZIL DCT ZIPWE DCT ADHAV DCT SLANY", "LON_W_CTR"],
+    #     ["EHAM", "KJFK", 36000, 36000, "OKSAW DCT FELCA DCT FADZU DCT SLANY", "LON_W_CTR"],
+    #     ["EHAM", "KJFK", 36000, 36000, "ADKIK DCT MOPAT", "LON_W_CTR"],
+    #     ["EHAM", "KJFK", 36000, 36000, "SAWPE DCT OZZIL DCT ZIPWE DCT ADHAV DCT BANBA", "LON_W_CTR"],
+    #     ["EHAM", "KJFK", 36000, 36000, "ENHAQ DCT DCT GAJIT DCT GAPLI", "LON_W_CTR"],
+    #     ["EHAM", "KJFK", 36000, 36000, "DIDZA DCT CESQA DCT BIBPE DCT MEDOG DCT LANON DCT LIPGO", "LON_W_CTR"],
+    # ], withMaster=False)
+    # stdTransit(masterCallsign, controllerSock, 600, [  # south to west (south)
+    #     ["EDDM", "EIDW", 36000, 36000, "LIZAD DCT LULOX", "LON_W_CTR"],
+    #     ["EDDM", "EIDW", 36000, 36000, "LIZAD DCT ARKIL", "LON_W_CTR"],
+    #     ["EDDM", "EIDW", 36000, 36000, "LIZAD DCT BOGMI N160 LEDGO", "LON_W_CTR"],
+    #     ["EDDM", "EIDW", 36000, 36000, "LIZAD DCT NAKID DCT UPCAB DCT IJALA DCT EVRIN", "LON_W_CTR"],
+    #     ["EDDM", "EIDW", 36000, 36000, "NOZHU DCT BOXHE DCT SHIRI DCT UNFIT DCT PENWU DCT NICXI DCT OFSOX DCT SLANY", "LON_W_CTR"],
+    #     ["EDDM", "EIDW", 36000, 36000, "NOZHU DCT BOXHE DCT SHIRI DCT UNFIT DCT PENWU DCT NICXI DCT VATRY", "LON_W_CTR"],
+    # ], withMaster=False)
+    # stdTransit(masterCallsign, controllerSock, 600, [  # south to north
+    #     ["EGJJ", "EIDW", 20000, 36000, "SKESO DCT LIFOX P16 FIMCA N22 BHD N864 TIGWE L9 SLANY", "LON_W_CTR"],
+    #     ["EGJJ", "EIDW", 20000, 36000, "SKESO DCT LIFOX P16 FIMCA N22 BHD N864 TIGWE L9 NICXI M17 VATRY", "LON_W_CTR"],
+    #     ["EGJJ", "EGCC", 20000, 36000, "SKESO DCT SKERY L22 EMWIP P16 FIMCA DCT TOJAQ DCT EPACE DCT ACCOP DCT MOCQO P16 AXCIS", "LON_W_CTR"],
+    #     ["EGJJ", "EGCC", 20000, 36000, "SKESO DCT SKERY L22 EMWIP P16 FIMCA DCT TOJAQ DCT UNFIT DCT PENWU DCT NICXI DCT VATRY", "LON_W_CTR"],
+    # ], withMaster=False)
+    
+
+    # stdTransit(masterCallsign, controllerSock, 600, [  # west to east (upper)
+    #     ["KJFK", "EHAM", 35000, 35000, "BAKUR DCT GUBJE DCT GISOK DCT TACQI DCT FONZU DCT DAWLY L149 BIGNO", "LON_W_CTR"],
+    #     ["KJFK", "EHAM", 35000, 35000, "BAKUR DCT TIKCA DCT BIGNO", "LON_W_CTR"],
+    #     ["KJFK", "EHAM", 35000, 35000, "BAKUR DCT TIKCA DCT PEWBI DCT OXLOW M140 SAM Y8 GWC UN859 SITET", "LON_W_CTR"],
+    #     ["KJFK", "EHAM", 35000, 35000, "NORLA DCT PEWBI DCT OXLOW M140 SAM L620 MID UM185 KOBBI M197 REDFA", "LON_W_CTR"],
+    #     ["KJFK", "EHAM", 35000, 35000, "SAMON DCT SIRIC P2 DVR L18 VABIK", "LON_W_CTR"],
+    #     ["KJFK", "EHAM", 35000, 35000, "LEDGO DCT BOGMI DCT ANNET", "LON_W_CTR"],
+    #     ["KJFK", "EHAM", 35000, 35000, "LESLU DCT OXLOW M142 ROKKE M140 DVR UL9 KONAN", "LON_W_CTR"],
+    #     ["KJFK", "EHAM", 35000, 35000, "LESLU DCT DANWO DCT REDFA", "LON_W_CTR"],
+    #     ["KJFK", "EHAM", 35000, 35000, "LESLU DCT BAPHU DCT GAJIT DCT ENHAQ M197 ICTAM Q295 BPK UM185 DIGSU P144 LATMU P48 ROKAN P40 LESLU", "LON_W_CTR"],
+    #     ["KJFK", "EHAM", 35000, 35000, "LESLU DCT BAPHU DCT GAJIT DCT ENHAQ M197 BRAIN Q295 PAAVO M604 LARGA DCT PENUN", "LON_W_CTR"],
+    #     ["KJFK", "EHAM", 35000, 35000, "GAPLI DCT SIDDI DCT DAWLY DCT GIBSO L620 SAM M140 DVR UL9 KONAN", "LON_W_CTR"],
+    #     ["KJFK", "EHAM", 35000, 35000, "GAPLI DCT GAJIT DCT ENHAQ M197 ICTAM Q295 PAAVO M604 LARGA DCT INBOB", "LON_W_CTR"],
+    #     ["KJFK", "EHAM", 35000, 35000, "GAPLI DCT GAJIT DCT ENHAQ M197 REDFA", "LON_W_CTR"],
+    #     ["KJFK", "EHAM", 35000, 35000, "AMPOP DCT SIDDI DCT DAWLY DCT GIBSO L620 SAM M140 DVR UL9 KONAN", "LON_W_CTR"],
+    # ], withMaster=False)
+    # stdTransit(masterCallsign, controllerSock, 240, [  # west to east (upper)
+    #     ["KJFK", "EGJJ", 35000, 35000, "BAKUR DCT GUBJE DCT GISOK DCT TACQI DCT FONZU DCT DAWLY DCT ABBEW N90 ENHEL N862 SKERY", "LON_W_CTR"],
+    #     ["KJFK", "EGJJ", 35000, 35000, "BAKUR DCT GUBJE DCT GISOK DCT TACQI DCT FONZU DCT DAWLY DCT KLAKI L149 BIGNO", "LON_W_CTR"],
+    #     ["KJFK", "EGLL", 35000, 35000, "LULOX DCT SIDDI DCT DAWLY DCT ELRIP DCT OTMET", "LON_W_CTR"],
+    #     ["KJFK", "EGCC", 35000, 35000, "GAPLI DCT PEWBI DCT INFEC DCT ACCOP DCT MOCQO P16 AXCIS", "LON_W_CTR"],
+    #     ["KJFK", "EGBB", 35000, 35000, "GAPLI DCT PEWBI DCT INFEC DCT ICOSA DCT ZIPWE L180 FIGZI", "LON_W_CTR"],
+    # ], withMaster=False)
+
+    stdArrival(masterCallsign, controllerSock, "EGFF", 80, [  # FF arrivals from north
+        ["KARNO DCT ALHUP DCT LUCSA N862 WEVBE", 29000, "LON_W_CTR"],
+        ["AMPOP DCT SIDDI DCT TOJAQ", 30000, "LON_W_CTR"],
+        ["GAPLI DCT SIDDI DCT TOJAQ", 32000, "LON_W_CTR"],
+        ["ENJEX DCT ADHAV DCT AGCAT Q63 BAJJA", 30000, "LON_W_CTR"],
+        ["ROVUS DCT ICTAM", 26000, "LON_W_CTR"],
+        ["ROVUS DCT ICTAM", 26000, "LON_W_CTR"],
+    ], withMaster=False)
+    stdArrival(masterCallsign, controllerSock, "EGGD", 80, [  # FF arrivals from north
+        ["KARNO DCT ALHUP DCT LUCSA N862 WEVBE", 29000, "LON_W_CTR"],
+        ["AMPOP DCT SIDDI DCT TOJAQ", 30000, "LON_W_CTR"],
+        ["GAPLI DCT SIDDI DCT TOJAQ", 32000, "LON_W_CTR"],
+        ["ENJEX DCT ADHAV DCT AGCAT Q63 BAJJA", 30000, "LON_W_CTR"],
+        ["ROVUS DCT ICTAM", 22000, "LON_W_CTR"],
+        ["ROVUS DCT ICTAM", 22000, "LON_W_CTR"],
     ], withMaster=False)
 
-    stdArrival(masterCallsign, controllerSock, "EGPF", 540, [  # PF arrivals
-        ["RENEQ Y96 AGPED", 34000, "SCO_E_CTR"],
-        ["VALBO DCT AVRAL DCT ROBEM DCT AGPED", 34000, "SCO_E_CTR"],
-        ["PETIL DCT SURAT DCT ROBEM DCT AGPED", 34000, "SCO_E_CTR"],
-        ["GOREV DCT SURAT DCT ROBEM DCT AGPED", 34000, "SCO_E_CTR"],
-        ["TINAC DCT ITSUX DCT ROBEM DCT AGPED", 34000, "SCO_E_CTR"],
-        ["VAXIT DCT ELSAN DCT ADN P600 PTH", 34000, "SCO_E_CTR"],
-        ["ALOTI DCT ADN P600 PTH", 34000, "SCO_E_CTR"],
-        ["KLONN DCT ADN P600 PTH", 34000, "SCO_E_CTR"],
-        ["RIGVU DCT ADN P600 PTH", 34000, "SCO_E_CTR"],
-        ["BEREP DCT ADN P600 PTH", 34000, "SCO_E_CTR"],
-        ["PEMOS DCT NESDI N560 ERSON", 35000, "SCO_E_CTR"],
-        ["OSBON DCT NESDI N560 ERSON", 35000, "SCO_E_CTR"],
-        ["NALAN DCT NESDI N560 ERSON", 35000, "SCO_E_CTR"],
-        ["MATIK DCT BESGA DCT NESDI N560 ERSON", 35000, "SCO_E_CTR"],
-        ["RATSU DCT BARKU DCT NESDI N560 ERSON", 35000, "SCO_E_CTR"],
-        ["ATSIX DCT AKIVO DCT NESDI N560 ERSON", 35000, "SCO_E_CTR"],
-        ["ORTAV DCT ODPEX DCT NESDI N560 ERSON", 35000, "SCO_E_CTR"],
-    ], withMaster=False)
-
-    stdArrival(masterCallsign, controllerSock, "EGPK", 540, [  # PK arrivals
-        ["RENEQ Y96 TLA DCT TRN", 34000, "SCO_E_CTR"],
-        ["VALBO DCT AVRAL DCT ROBEM DCT AGPED Y96 TLA DCT TRN", 34000, "SCO_E_CTR"],
-        ["PETIL DCT SURAT DCT ROBEM DCT AGPED Y96 TLA DCT TRN", 34000, "SCO_E_CTR"],
-        ["GOREV DCT SURAT DCT ROBEM DCT AGPED Y96 TLA DCT TRN", 34000, "SCO_E_CTR"],
-        ["TINAC DCT ITSUX DCT ROBEM DCT AGPED Y96 TLA DCT TRN", 34000, "SCO_E_CTR"],
-        ["VAXIT DCT ELSAN DCT ADN P600 TRN", 34000, "SCO_E_CTR"],
-        ["ALOTI DCT ADN P600 TRN", 34000, "SCO_E_CTR"],
-        ["KLONN DCT ADN P600 TRN", 34000, "SCO_E_CTR"],
-        ["RIGVU DCT ADN P600 TRN", 34000, "SCO_E_CTR"],
-        ["BEREP DCT ADN P600 TRN", 34000, "SCO_E_CTR"],
-        ["PEMOS DCT INBAS N560 GOW DCT TRN", 35000, "SCO_E_CTR"],
-        ["OSBON DCT INBAS N560 GOW DCT TRN", 35000, "SCO_E_CTR"],
-        ["NALAN DCT INBAS N560 GOW DCT TRN", 35000, "SCO_E_CTR"],
-        ["MATIK DCT BESGA DCT INBAS N560 GOW DCT TRN", 35000, "SCO_E_CTR"],
-        ["RATSU DCT BARKU DCT INBAS N560 GOW DCT TRN", 35000, "SCO_E_CTR"],
-        ["ATSIX DCT AKIVO DCT INBAS N560 GOW DCT TRN", 35000, "SCO_E_CTR"],
-        ["ORTAV DCT ODPEX DCT INBAS N560 GOW DCT TRN", 35000, "SCO_E_CTR"],
-    ], withMaster=False)
-
-    stdArrival(masterCallsign, controllerSock, "EGPD", 540, [  # PD arrivals
-        ["RENEQ P38 ROBEM DCT FINDO P600 NAXIL", 34000, "SCO_E_CTR"],
-        ["VALBO DCT AVRAL DCT OVDAN P600 ADN", 34000, "SCO_E_CTR"],
-        ["PETIL DCT SURAT DCT FINDO P600 NAXIL", 34000, "SCO_E_CTR"],
-        ["GOREV DCT SURAT DCT MADAD P18 RATPU", 34000, "SCO_E_CTR"],
-        ["TINAC DCT ITSUX DCT OVDAN P600 ADN", 34000, "SCO_E_CTR"],
-        ["VAXIT DCT REKNA DCT MADAD P18 RATPU", 34000, "SCO_E_CTR"],
-        ["ALOTI DCT OVDAN P600 ADN", 34000, "SCO_E_CTR"],
-        ["KLONN DCT OVDAN P600 LESNI DCT ADN", 34000, "SCO_E_CTR"],
-        ["RIGVU DCT OVDAN P600 ADN", 34000, "SCO_E_CTR"],
-        ["PEMOS DCT WIK Y904 ADN", 35000, "SCO_E_CTR"],
-        ["OSBON DCT WIK Y904 ADN", 35000, "SCO_E_CTR"],
-        ["NALAN DCT WIK Y904 ADN", 35000, "SCO_E_CTR"],
-        ["MATIK DCT BESGA DCT WIK Y904 ADN", 35000, "SCO_E_CTR"],
-        ["RATSU DCT BARKU DCT WIK Y904 ADN", 35000, "SCO_E_CTR"],
-        ["ATSIX DCT AKIVO DCT WIK Y904 ADN", 35000, "SCO_E_CTR"],
-        ["ORTAV DCT ODPEX DCT WIK Y904 ADN", 35000, "SCO_E_CTR"],
-    ], withMaster=False)
-
-    stdArrival(masterCallsign, controllerSock, "EGPE", 540, [  # PE arrivals
-        ["VALBO DCT AVRAL DCT ADN", 34000, "SCO_E_CTR"],
-        ["PETIL DCT REKNA DCT ADN", 34000, "SCO_E_CTR"],
-        ["VAXIT DCT ELSAN DCT ADN", 34000, "SCO_E_CTR"],
-        ["ALOTI DCT ADN", 34000, "SCO_E_CTR"],
-        ["PEMOS DCT STN Y906 GARVA", 35000, "SCO_E_CTR"],
-        ["OSBON DCT STN Y906 GARVA", 35000, "SCO_E_CTR"],
-        ["NALAN DCT STN Y906 GARVA", 35000, "SCO_E_CTR"],
-        ["MATIK DCT BESGA DCT STN Y906 GARVA", 35000, "SCO_E_CTR"],
-        ["RATSU DCT BARKU DCT STN Y906 GARVA", 35000, "SCO_E_CTR"],
-        ["ATSIX DCT AKIVO DCT STN Y906 GARVA", 35000, "SCO_E_CTR"],
-        ["ORTAV DCT ODPEX DCT STN Y906 GARVA", 35000, "SCO_E_CTR"],
-    ], withMaster=False)
-
-
-
-    stdDeparture(masterCallsign, controllerSock, "EGPH", 540, [
-        ["GRICE4D/06 GRICE P600 ASNUD DCT ELSAN DCT VAXIT", "BIKF"],
-        ["GRICE4D/06 GRICE P600 ASNUD DCT ALOTI", "BIKF"],
-        ["GRICE4D/06 GRICE P600 ASNUD DCT KLONN", "BIKF"],
-        ["GRICE4D/06 GRICE P600 ASNUD DCT RIGVU", "BIKF"],
-        ["GRICE4D/06 GRICE P600 ASNUD DCT BEREP", "BIKF"],
-        ["GRICE4D/06 GRICE DCT FOYLE N560 ERSON DCT PEMOS", "BIKF"],
-        ["GRICE4D/06 GRICE DCT FOYLE N560 ERSON DCT OSBON", "BIKF"],
-        ["GRICE4D/06 GRICE DCT FOYLE N560 ERSON DCT NALAN", "BIKF"],
-        ["GRICE4D/06 GRICE DCT FOYLE N560 ERSON DCT BESGA DCT MATIK", "BIKF"],
-        ["GRICE4D/06 GRICE DCT FOYLE N560 ERSON DCT BARKU DCT RATSU", "BIKF"],
-        ["GRICE4D/06 GRICE DCT FOYLE N560 ERSON DCT ATSIX", "BIKF"],
-        ["GRICE4D/06 GRICE DCT FOYLE N560 ERSON DCT ORTAV", "BIKF"],
+    stdDeparture(masterCallsign, controllerSock, "EGFF", 120, [
+        ["EXMOR1B/12 EXMOR N92 DAWLY DCT JOZMA DCT GAPLI", "KJFK"],
+        ["BCN1B/12 BCN P4 FELCA DCT NICXI DCT OFSOX DCT ENJEX", "KJFK"],
+        ["BCN1B/12 BCN P69 DIZIM N864 AVTIC N38 NOKIN P17 POL N601 INPIP", "EGPH"],
+        ["LEKCI1B/12 LEKCI P4 HAWFA L607 KONAN", "EHAM"]
+    ])
+    stdDeparture(masterCallsign, controllerSock, "EGGD", 120, [
+        ["EXMOR1Z/09 EXMOR N92 DAWLY DCT JOZMA DCT GAPLI", "KJFK"],
+        ["BCN1Z/09 BCN P4 FELCA DCT NICXI DCT OFSOX DCT ENJEX", "KJFK"],
+        ["BCN1Z/09 BCN P69 DIZIM N864 AVTIC N38 NOKIN P17 POL N601 INPIP", "EGPH"],
+        ["YORQI1Z/09 YORQI L607 BIG L9 KONAN", "EHAM"]
     ])
 
-    stdDeparture(masterCallsign, controllerSock, "EGPF", 540, [
-        ["PTH4B/05 PTH P600 ASNUD DCT ELSAN DCT VAXIT", "BIKF"],
-        ["PTH4B/05 PTH P600 ASNUD DCT ALOTI", "BIKF"],
-        ["PTH4B/05 PTH P600 ASNUD DCT KLONN", "BIKF"],
-        ["PTH4B/05 PTH P600 ASNUD DCT RIGVU", "BIKF"],
-        ["PTH4B/05 PTH P600 ASNUD DCT BEREP", "BIKF"],
-        ["FOYLE3B/05 FOYLE N560 LAGAV DCT PEMOS", "BIKF"],
-        ["FOYLE3B/05 FOYLE N560 LAGAV DCT OSBON", "BIKF"],
-        ["FOYLE3B/05 FOYLE N560 LAGAV DCT NALAN", "BIKF"],
-        ["FOYLE3B/05 FOYLE N560 LAGAV DCT BESGA DCT MATIK", "BIKF"],
-        ["FOYLE3B/05 FOYLE N560 LAGAV DCT BARKU DCT RATSU", "BIKF"],
-        ["FOYLE3B/05 FOYLE N560 LAGAV DCT ATSIX", "BIKF"],
-        ["FOYLE3B/05 FOYLE N560 LAGAV DCT ORTAV", "BIKF"],
-    ])
-
-    stdDeparture(masterCallsign, controllerSock, "EGPD", 540, [
-        ["ADN P600 BUDON DCT LAMRO DCT ARTEX DCT VAXIT", "BIKF"],
-        ["ADN P600 BUDON DCT ALOTI", "BIKF"],
-        ["ADN P600 BUDON DCT KLONN", "BIKF"],
-        ["ADN P600 BUDON DCT RIGVU", "BIKF"],
-        ["ADN P600 BUDON DCT BEREP", "BIKF"],
-        ["ADN Y904 WIK DCT PEMOS", "BIKF"],
-        ["ADN Y904 WIK DCT OSBON", "BIKF"],
-        ["ADN Y904 WIK DCT NALAN", "BIKF"],
-        ["ADN DCT RIMOL DCT BESGA DCT MATIK", "BIKF"],
-        ["ADN DCT RIMOL DCT BARKU DCT RATSU", "BIKF"],
-        ["ADN DCT RIMOL DCT ATSIX", "BIKF"],
-        ["ADN DCT RIMOL DCT ORTAV", "BIKF"],
-    ])
-
-    stdDeparture(masterCallsign, controllerSock, "EGPE", 540, [
-        ["ADN DCT ALOTI", "BIKF"],
-        ["GARVA Y906 STN DCT PEMOS", "BIKF"],
-        ["GARVA Y906 STN DCT OSBON", "BIKF"],
-        ["GARVA Y906 STN DCT NALAN", "BIKF"],
-        ["GARVA Y906 STN DCT BESGA DCT MATIK", "BIKF"],
-        ["GARVA Y906 STN DCT BARKU DCT RATSU", "BIKF"],
-        ["GARVA Y906 STN DCT ATSIX", "BIKF"],
-        ["GARVA Y906 STN DCT ORTAV", "BIKF"],
-    ])
 
 
     

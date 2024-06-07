@@ -24,4 +24,4 @@ class FlightPlan:
 
     @staticmethod
     def arrivalPlan(dest: str, route: Route):
-        return FlightPlan("I", "A20N", 250, "EDDF", 1130, 1130, 36000, dest, Route(route, "EDDF"))
+        return FlightPlan("I", "A20N", 250, "KJFK", 1130, 1130, 36000, dest, Route(route, "KJFK"))
