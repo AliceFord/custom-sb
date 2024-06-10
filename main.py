@@ -5,6 +5,7 @@ import select
 import threading
 import sys
 import time
+from math import isclose
 from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import QTableWidgetItem
 import keyboard
@@ -12,14 +13,14 @@ from Route import Route
 import re
 from pynput.keyboard import Key, Listener
 import pyttsx3
-
+import subprocess
 from uiTest import MainWindow
 from sfparser import loadRunwayData, loadStarAndFixData
 from FlightPlan import FlightPlan
 from Plane import Plane
 from PlaneMode import PlaneMode
 from globalVars import FIXES, planes, planeSocks, window, otherControllerSocks, messagesToSpeak, currentSpeakingAC
-from Constants import ACTIVE_CONTROLLERS, ACTIVE_RUNWAYS, HIGH_DESCENT_RATE, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, OTHER_CONTROLLERS, RADAR_UPDATE_RATE, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE, TRANSITION_LEVEL
+from Constants import ACTIVE_CONTROLLERS,BOT_CONTROLLERS, ACTIVE_RUNWAYS, HIGH_DESCENT_RATE, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, OTHER_CONTROLLERS, RADAR_UPDATE_RATE, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE, TRANSITION_LEVEL
 import util
 import taxiCoordGen
 import sessionparser
@@ -312,14 +313,18 @@ def spawnRandomEveryNSeconds(nSeconds, variance, data):
 
 def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, callsign=None, spawnOne=False, **kwargs):
     global planes, planeSocks
-
+    fp: FlightPlan = kwargs["flightPlan"]
+    dest = fp.destination
+    
     if callsign is None:
-        callsign = util.callsignGen([plane.callsign for plane in planes],5)
+        callsign, aircraft_type = util.callsignGen(dest,[p.callsign for p in planes],5)
+
     else:
         for plane in planes:
             if plane.callsign == callsign:
                 return  # nonono bug
 
+    fp.aircraftType = aircraft_type
     timeWiggle = 0
     if method == "ARR":
         timeWiggle = random.randint(-15, 15)
@@ -327,7 +332,6 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
     if not spawnOne:
         util.PausableTimer(nSeconds + timeWiggle, spawnEveryNSeconds, args=(nSeconds, masterCallsign, controllerSock, method, *args), kwargs=kwargs)
 
-    fp: FlightPlan = kwargs["flightPlan"]
     kwargs.pop("flightPlan")
 
     hdg = -1
@@ -390,8 +394,9 @@ def positionLoop(controllerSock: util.ControllerSocket):
     for i, plane in enumerate(planes):  # update plane pos
         try:
             planeSocks[i].sendall(plane.positionUpdateText())  # position update
-        except OSError:
-            pass  # probably means we've just killed them. If not then lol
+        except Exception as e:
+            print(e)
+            # probably means we've just killed them. If not then lol
 
         # if plane.currentlyWithData is None:  # We only know who they are if they are with us
         #     print(plane.callsign, end=", ")
@@ -431,6 +436,7 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                     callsign = message.split(":")[2]
                     if fromController not in ACTIVE_CONTROLLERS:  # this caused pain
                         continue
+
                     if toController in ACTIVE_CONTROLLERS:  # don't auto accept if they're a human!
                         continue
                     controllerSock.esSend("$CQ" + MASTER_CONTROLLER, "@94835", "HT", callsign, toController)
@@ -448,8 +454,7 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                     for plane in planes:
                         if plane.callsign == callsign:
                             index = planes.index(plane)
-                            bot.accept_plane(planes[index])
-                            print("Got Plen")
+
                             plane.currentlyWithData = None
                             # window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
                             break
@@ -660,13 +665,13 @@ def main():
 
     # HEATHROW IN THE HOLD
 
-    llHoldFixes = ["BIG", "OCK", "BNN", "LAM"]
+    # llHoldFixes = ["BIG", "OCK", "BNN", "LAM"]
 
-    for holdFix in llHoldFixes:
-        for alt in range(8000, 13000 + 1 * 1000, 1000):
-            plane = Plane.requestFromFix(util.callsignGen(planes, 5), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGLL", holdFix), currentlyWithData=(masterCallsign, holdFix))
-            plane.holdFix = holdFix
-            planes.append(plane)
+    # for holdFix in llHoldFixes:
+    #     for alt in range(8000, 13000 + 1 * 1000, 1000):
+    #         plane = Plane.requestFromFix(util.callsignGen(planes, 5), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGLL", holdFix), currentlyWithData=(masterCallsign, holdFix))
+    #         plane.holdFix = holdFix
+    #         planes.append(plane)
 
     # LC IN THE HOLD
 
@@ -709,13 +714,13 @@ def main():
     # util.PausableTimer(random.randint(1, 5), spawnEveryNSeconds, args=(60 * 5, masterCallsign, controllerSock, "ARR", "BOGNA"), kwargs={"speed": 250, "altitude": 13000, "flightPlan": FlightPlan.arrivalPlan("BOGNA DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")})
     # util.PausableTimer(random.randint(120, 168), spawnEveryNSeconds, args=(60 * 5, masterCallsign, controllerSock, "ARR", "LYD"), kwargs={"speed": 250, "altitude": 13000, "flightPlan": FlightPlan.arrivalPlan("LYD DCT TIMBA"), "currentlyWithData": (masterCallsign, "TIMBA")})
 
-    # HEATHROW INT
-    # stdArrival(masterCallsign, controllerSock, "EGLL", 75, [
-    #     ["NOVMA DCT OCK", 8000, "EGLL_N_APP"],
-    #     ["ODVIK DCT BIG", 8000, "EGLL_N_APP"],
-    #     ["BRAIN DCT LAM", 8000, "EGLL_N_APP"],
-    #     ["COWLY DCT BNN", 8000, "EGLL_N_APP"],
-    # ], 0.2)
+    #HEATHROW INT
+    stdArrival(masterCallsign, controllerSock, "EGLL", 75/100, [
+        ["NOVMA DCT OCK", 8000, "EGLL_N_APP"],
+        ["ODVIK DCT BIG", 8000, "EGLL_N_APP"],
+        ["BRAIN DCT LAM", 8000, "EGLL_N_APP"],
+        ["COWLY DCT BNN", 8000, "EGLL_N_APP"],
+    ], 0.2)
 
 
     # AA INT
@@ -1083,9 +1088,14 @@ def main():
     # keyboardHandlerThread.daemon = True
     # keyboardHandlerThread.start()
 
-    while True:  # block forver
-        positionLoop(controllerSock)
-        time.sleep(RADAR_UPDATE_RATE)
+    running = True
+    loop_time = time.time()
+    while running:  # block forver
+        if time.time() - loop_time >= RADAR_UPDATE_RATE:
+            positionLoop(controllerSock)
+            loop_time = time.time()
+
+        #time.sleep(RADAR_UPDATE_RATE)
 
 
     print("uh oh")
@@ -1096,8 +1106,6 @@ def main():
 
     controllerSock.close()
 
-
-bot = Bot("EGLL",(51.477692222222, -0.43244666666667), 269)
 
 if __name__ == "__main__":
     main()

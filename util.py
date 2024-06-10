@@ -6,7 +6,7 @@ import socket
 import time
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
-from Constants import OTHER_CONTROLLERS, INACTIVE_SECTORS, PORT, FLEET
+from Constants import OTHER_CONTROLLERS, INACTIVE_SECTORS, PORT, FLEET,AIRPORTS
 
 from PlaneMode import PlaneMode
 from sfparser import loadSectorData, sfCoordsToNormalCoords
@@ -26,13 +26,16 @@ def haversine(lat1, lon1, lat2, lon2):  # from https://rosettacode.org/wiki/Have
     return R * c
 
 
-def callsignGen(planes,attempts):
+def callsignGen(dest,planes,attempts):
     """
     Returns a random callsign in the FORM ICAO NUMBER NUMBER LETTER LETTER
     """
     for _ in range(attempts):
         callsign = ""
-        callsign += random.choice(list(FLEET.keys()))
+        if dest in AIRPORTS.keys():
+            callsign += random.choice(AIRPORTS[dest])
+        else:
+            callsign += random.choice(list(FLEET.keys()))
         ac_type = random.choice(FLEET[callsign])
         callsign += random.choice(string.digits) 
         callsign += random.choice(string.digits) if random.random() < 0.5 else ""
@@ -40,8 +43,8 @@ def callsignGen(planes,attempts):
         callsign += random.choice(string.ascii_uppercase) if random.random() < 0.5 else ""
 
         if callsign not in planes:
-            return callsign
-    return callsign # you got VERY unlucky lolz(1 in a very big number)
+            return callsign, ac_type
+    return callsign, ac_type # you got VERY unlucky lolz(1 in a very big number)
 
 
 def squawkGen():
@@ -155,7 +158,7 @@ class PlaneSocket(EsSocket):
         s.connect(("127.0.0.1", PORT))
         s.esSend("#AP" + plane.callsign, "SERVER", "1646235", "pass", "1", "9", "1", "Alice Ford")
         s.sendall(plane.positionUpdateText(calculatePosition=False))
-        s.sendall(b'$FP' + plane.callsign.encode("UTF-8") + str(plane.flightPlan).encode("UTF-8") + b'\r\n')  # TODO
+        s.sendall(b'$FP' + plane.callsign.encode("UTF-8") +  str(plane.flightPlan).encode("UTF-8") + b'\r\n')  # TODO
 
         masterSock.esSend(f"$CQ{masterCallsign}", "SERVER", "FP", plane.callsign)
         masterSock.esSend(f"$CQ{masterCallsign}", "@94835", "WH", plane.callsign)
