@@ -63,84 +63,97 @@ class Bot:
         net1 = neat.nn.FeedForwardNetwork.create(genome,config)
         while self.simulating:
             # run the sim and see
+            print(len(planes))
             if len(planes) >= 1:
                 self.start_time = time.time()
             for plane in planes:
-                input_nodes = [-1] * 57
+                if plane.distance_travelled > 5:
+                    input_nodes = [-1] * 57
 
-                input_nodes[0] = plane.lat
-                input_nodes[1] = plane.lon
-                input_nodes[2] = plane.altitude
-                input_nodes[3] = plane.speed
-                input_nodes[4] = plane.heading
-                input_nodes[5] = self.airport[0]
-                input_nodes[6] = self.airport[1]
-                for i,p in enumerate(planes):
-                    if i >= 10:
-                        break
-                    if p != plane:
-                        offset = (i*5) + 7
-                        input_nodes[offset] = p.lat
-                        input_nodes[offset + 1] = p.lon
-                        input_nodes[offset + 2] = p.altitude
-                        input_nodes[offset + 3] = p.speed
-                        input_nodes[offset + 4] = p.heading
-
-
-
-                output = net1.activate(tuple(input_nodes)) # pop in the thingys
-                given_inst = False
-                
-
-                if given_inst:
-                    plane.instructions += 1
-
-                heading = output[:73]
-                heading_desc = heading.index(max(heading))
-                plane.targetHeading = heading_desc * 5
-
-                altitude = output[73:79]
-                altitude_desc = altitude.index(max(altitude))
-                if plane.altitude < (altitude_desc * 1000) + 1000:
-                    plane.climbed = True
-                plane.targetAltitude = (altitude_desc * 1000) + 1000
-
-                speed = output[79:105]
-                speed_desc = speed.index(max(speed))
-                if plane.speed < (speed_desc * 5) + 125:
-                    plane.sped_up = True
-                plane.targetSpeed = (speed_desc * 5) + 125
-                
-                if output[-1] >= 0.75: # CL/APP
-                    runwayData = loadRunwayData(plane.flightPlan.destination)[ACTIVE_RUNWAYS[plane.flightPlan.destination]]
-                    plane.clearedILS = runwayData
-                    plane.mode = PlaneMode.ILS
-
-                if plane.mode == PlaneMode.HEADING:
-                    if not plane.left_rma and not self.RMA_POLYGON.contains(Point(plane.lat,plane.lon)):
-                        plane.left_rma = True
-
-                for p in planes:
-                    landed = False
-                    if math.isclose((util.haversine(plane.lat,plane.lon,self.airport[0],self.airport[1]) / 1.852),0.1,abs_tol=0.1):
-                        self.planes.append(plane)
-                        landed = True
-                        distances = []
-                    if p != plane:
-                        if landed and p.mode == PlaneMode.ILS:
-                            distances.append(abs(util.haversine(p.lat,p.lon,self.airport[0],self.airport[1])))
+                    input_nodes[0] = plane.lat
+                    input_nodes[1] = plane.lon
+                    input_nodes[2] = plane.altitude
+                    input_nodes[3] = plane.speed
+                    input_nodes[4] = plane.heading
+                    input_nodes[5] = self.airport[0]
+                    input_nodes[6] = self.airport[1]
+                    for i,p in enumerate(planes):
+                        if i >= 10:
+                            break
+                        if p != plane:
+                            offset = (i*5) + 7
+                            input_nodes[offset] = p.lat
+                            input_nodes[offset + 1] = p.lon
+                            input_nodes[offset + 2] = p.altitude
+                            input_nodes[offset + 3] = p.speed
+                            input_nodes[offset + 4] = p.heading
 
 
-                        if abs(util.haversine(p.lat,p.lon,plane.lat,plane.lon) / 1.852) < 2.5 and abs(p.altitude - plane.altitude) < 1000:
-                            plane.close_call += 1
 
-                    if landed:
-                        plane.dist_from_behind = min(distances)
-                        index = planes.index(plane)
-                        planes.remove(plane)
-                        sock = planeSocks.pop(index)
-                        sock.esSend("#DP" + plane.callsign, "SERVER")
-                        sock.close()
+                    output = net1.activate(tuple(input_nodes)) # pop in the thingys
+                    given_inst = False
+                    
+
+                    if given_inst:
+                        plane.instructions += 1
+
+                    heading = output[:73]
+                    heading_desc = heading.index(max(heading))
+                    if plane.targetHeading != heading_desc * 5:
+                        given_inst = True
+                    plane.targetHeading = heading_desc * 5
+
+                    altitude = output[73:79]
+                    altitude_desc = altitude.index(max(altitude))
+                    if plane.altitude < (altitude_desc * 1000) + 1000:
+                        plane.climbed = True
+                    if plane.targetAltitude != (altitude_desc * 1000) + 1000:
+                        given_inst = True
+                    plane.targetAltitude = (altitude_desc * 1000) + 1000
+
+                    if given_inst and not self.RMA_POLYGON.contains(Point(plane.lat,plane.lon)):
+                        plane.vectored_out_rma = True
+
+                    speed = output[79:105]
+                    speed_desc = speed.index(max(speed))
+                    if plane.speed < (speed_desc * 5) + 125:
+                        plane.sped_up = True
+                    plane.targetSpeed = (speed_desc * 5) + 125
+                    
+                    if output[-1] >= 0.75: # CL/APP
+                        runwayData = loadRunwayData(plane.flightPlan.destination)[ACTIVE_RUNWAYS[plane.flightPlan.destination]]
+                        plane.clearedILS = runwayData
+                        plane.mode = PlaneMode.ILS
+
+                    if plane.mode == PlaneMode.HEADING:
+                        if not plane.left_rma and not self.RMA_POLYGON.contains(Point(plane.lat,plane.lon)):
+                            plane.left_rma = True
+
+                    for p in planes:
+                        landed = False
+                        if math.isclose((util.haversine(plane.lat,plane.lon,self.airport[0],self.airport[1]) / 1.852),0.1,abs_tol=0.1):
+                            self.planes.append(plane)
+                            landed = True
+                            distances = []
+                        if p != plane:
+                            if landed and p.mode == PlaneMode.ILS:
+                                distances.append(abs(util.haversine(p.lat,p.lon,self.airport[0],self.airport[1])))
+
+
+                            if abs(util.haversine(p.lat,p.lon,plane.lat,plane.lon) / 1.852) < 2.5 and abs(p.altitude - plane.altitude) < 1000:
+                                plane.close_calls += 1
+
+                        if landed:
+                            plane.dist_from_behind = min(distances)
+                            index = planes.index(plane)
+                            planes.remove(plane)
+                            sock = planeSocks.pop(index)
+                            sock.esSend("#DP" + plane.callsign, "SERVER")
+                            sock.close()
+
+                        if util.haversine(plane.lat,plane.lon,self.airport[0],self.airport[1]) / 1.852 >= 60 and plane.heading != 0:
+                            self.simulating = False
+                            genome.fitness -= 100
 
 
             if self.start_time != None:
@@ -156,20 +169,24 @@ class Bot:
     def calc_fitness(self,genome):
         #genome.fitness += 1 # TODO : tune this
         for plane in self.planes:
-            if plane.intercept_dist < 8:
-                genome.fitness -= 10
-            else:
-                diff = abs(plane.intercept_dist - 12)
-                genome.fitness += calc_score(diff) * 10
-                genome.fitness += round(diff,1) * 5
+            if plane.intercept_dist != None:
+                if plane.intercept_dist < 8:
+                    genome.fitness -= 10
+                else:
+                    diff = abs(plane.intercept_dist - 12)
+                    genome.fitness += calc_score(diff) * 10
+                    genome.fitness += round(diff,1) * 5
 
-            if math.isclose(plane.altitude_at_intercept,math.tan(math.radians(3)) * plane.intercept_dist * 6076, abs_tol=500):
-                genome.fitness += 20
-            else:
-                genome.fitness -= abs(plane.altitude_at_intercept-math.tan(math.radians(3)) * plane.intercept_dist * 6076 ) / 500
+                if math.isclose(plane.altitude_at_intercept,math.tan(math.radians(3)) * plane.intercept_dist * 6076, abs_tol=500):
+                    genome.fitness += 20
+                else:
+                    genome.fitness -= abs(plane.altitude_at_intercept-math.tan(math.radians(3)) * plane.intercept_dist * 6076 ) / 500
 
             if plane.left_rma:
                 genome.fitness -= 100
+
+            if plane.vectored_out_rma:
+                genome.fitness -= 75
 
             if plane.sped_up:
                 genome.fitness -= 25
@@ -177,19 +194,20 @@ class Bot:
             if plane.climbed:
                 genome.fitness -= 35
 
-            if plane.dist_from_behind < 3:
-                genome.fitness -= 100
-            elif plane.dist_from_behind == 3: # hhhm not likely
-                genome.fitness += 100
-            else:
-                genome.fitness += min(1/(plane.dist_from_behind - 3),150)
+            if plane.dist_from_behind != None:
+                if plane.dist_from_behind < 3:
+                    genome.fitness -= 100
+                elif plane.dist_from_behind == 3: # hhhm not likely
+                    genome.fitness += 100
+                else:
+                    genome.fitness += min(1/(plane.dist_from_behind - 3),150)
 
 
             genome.fitness -= plane.close_calls * 100
             genome.fitness += (13 - plane.instructions)* 0.1
-            if plane.distance_traveled >= 60:
+            if plane.distance_travelled >= 60:
                 genome.fitness -= 150
-            genome.fitness += 1/(60 - plane.distance_traveled)
+            genome.fitness += 1/(60 - plane.distance_travelled)
 
             
 
@@ -206,8 +224,9 @@ def eval_genomes(genomes,config):
     
     for i, (genomes_id1,genome1) in enumerate(genomes):
         genome1.fitness = 0
-        bot = Bot("EGLL")
+        bot = Bot((51.477697222222, -0.43554333333333))
         bot.train_ai(genome1,config)
+        time.sleep(60) # wait for planes to clear
 
 
 
