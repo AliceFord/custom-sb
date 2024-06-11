@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import List
 import time
 import pygame
 import random
@@ -9,21 +10,23 @@ from shapely.geometry import LineString
 from PlaneMode import PlaneMode
 from prettytable import PrettyTable
 from util import haversine, EsSocket, ControllerSocket, headingFromTo
-from Constants import KM_TO_NM, TURN_RATE
+from Constants import KM_TO_NM, TURN_RATE, ACTIVE_RUNWAYS
 from math import sin, cos, atan2,degrees,radians,tan, asin, sqrt,isclose
 from Plane import Plane
+from sfparser import loadRunwayData
+from shapely.geometry import Point,Polygon
 
 
 
 class Bot:
     def __init__(self,name : str,threshold : tuple, runway_heading :int):
-        self.planes = []
-        self.landing_order = []
+        self.planes : List[Plane] = []
+        self.landing_order : List[Plane] = []
         self.thd = threshold
         self.rhed = runway_heading
         self.VECTOR_FOR = 5 # nm - in the rma
 
-        self.base_start = self.get_coordinates_pbd(self.thd[0], self.thd[1], (self.rhed + 180)%360, 11)
+        self.base_start = self.get_coordinates_pbd(self.thd[0], self.thd[1], (self.rhed + 180)%360, 13)
         self.default_base_len_north = self.get_coordinates_pbd(self.base_start[0],self.base_start[1],(self.rhed + 90)%360,2)
         self.default_base_len_south = self.get_coordinates_pbd(self.base_start[0],self.base_start[1],(self.rhed - 90)%360,2)
 
@@ -32,6 +35,18 @@ class Bot:
         self.table_font = pygame.font.Font(None, 15)
         self.start_time = time.time()
 
+        self.RMA = [(51.726111111111, -0.54972222222222),
+                    (51.655833333333, -0.32583333333333),
+                    (51.646111111111, 0.15166666666667),
+                    (51.505277777778, 0.055277777777778),
+                    (51.330875, 0.034811111111111),
+                    (51.305, -0.44722222222222),
+                    (51.4775, -0.46138888888889),
+                    (51.624755555556, -0.51378083333333),
+                    (51.726111111111, -0.54972222222222)]
+        self.RMA_POLYGON = Polygon(self.RMA)
+
+
 
         print(self.thd)
         print(self.base_start)
@@ -39,12 +54,11 @@ class Bot:
         print(self.default_base_len_south)
         print(haversine(self.default_base_len_north[0],self.default_base_len_north[1],self.default_base_len_south[0],self.default_base_len_south[1])/KM_TO_NM)
 
-    def init_pygame(self):
+    def init_pygame(self) -> None:
         pygame.init()
         self.screen = pygame.display.set_mode((800,800))
-        #self.update_pygame()
 
-    def draw_plane(self,plane : Plane):
+    def draw_plane(self,plane : Plane) -> None:
         x,y = self.convert_coords(plane.lat,plane.lon)
         pygame.draw.circle(self.screen,(255,0,0),(x,y),5)
         print(f"Drawn {plane.callsign} at {x},{y}")
@@ -54,7 +68,7 @@ class Bot:
         pygame.draw.circle(self.screen,(200,200,0), self.convert_coords(plane.base_intercept[0],plane.base_intercept[1]),2)
         
 
-    def update_pygame(self):
+    def update_pygame(self) -> None:
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -66,12 +80,18 @@ class Bot:
         timer = self.font.render(str(int(time_left)),True,(255,255,255))
         self.screen.blit(timer, (self.screen.get_width() - timer.get_width(), 0))
 
-        table = PrettyTable(["Callsign","DTTD","Base Length"])
-
+        table = PrettyTable(["Callsign","DTTD","Base Length","BASE","BASE CHECK", "ILS","ROUTE","MODE"])
 
 
         for plane in self.planes:
-            table.add_row([plane.callsign,self.get_distance_to_td(plane),haversine(plane.base_intercept[0],plane.base_intercept[1],self.base_start[0],self.base_start[1])/KM_TO_NM])
+            table.add_row([plane.callsign,
+                           self.get_distance_to_td(plane),
+                           haversine(plane.base_intercept[0],plane.base_intercept[1],self.base_start[0],self.base_start[1])/KM_TO_NM,
+                           plane.base,
+                           haversine(plane.lat,plane.lon,plane.base_intercept[0],plane.base_intercept[1])/KM_TO_NM,
+                           plane.ils,
+                           plane.flightPlan.route.fixes,
+                           plane.mode])
             self.draw_plane(plane)
         
         table_lines = str(table).split('\n')
@@ -81,7 +101,7 @@ class Bot:
         pygame.draw.line(self.screen,(255,255,255), self.convert_coords(self.thd[0],self.thd[1]),self.convert_coords(self.base_start[0],self.base_start[1]),2)
         pygame.display.flip()
 
-    def convert_coords(self,lat,lon):
+    def convert_coords(self,lat : float,lon : float) -> tuple[float,float]:
         min_lat,max_lat = 50.977795,52.164555833333
         min_lon,max_lon = 0.89348333333333,-1.4849486111111,
         x = ((lon - min_lon) / (max_lon - min_lon)) * self.screen.get_width()
@@ -110,17 +130,17 @@ class Bot:
                     self.landing_order.append(plane)
                     return False
 
-    def accept_plane(self, plane) -> None:
+    def accept_plane(self, plane: Plane) -> None:
         self.planes.append(plane)
         self.update_landing_order()  
-        plane.mode = PlaneMode.HEADING
+        #plane.mode = PlaneMode.HEADING
         for p in self.landing_order:
             print(p.callsign)
             print(self.get_distance_to_td(p))
         
         #$CQEGLL_N_APP:@94835:SC:QFA8P:H180
 
-    def get_distance_to_td(self, plane) -> float:
+    def get_distance_to_td(self, plane : Plane) -> float:
         if plane.ils:
             return haversine(plane.lat,plane.lon,self.thd[0],self.thd[1]) / KM_TO_NM
         if plane.base:
@@ -136,7 +156,7 @@ class Bot:
 
     
 
-    def get_coordinates_pbd(self,lat, lon, bearing, distance_nautical_miles):
+    def get_coordinates_pbd(self,lat : float, lon : float, bearing : float, distance_nautical_miles : float) -> tuple[float,float]:
         
         distance_km = distance_nautical_miles * 1.852
 
@@ -160,13 +180,13 @@ class Bot:
 
         return lat2_deg, lon2_deg
     
-    def vector(self):
+    def vector(self) -> None:
         for i,plane in enumerate(self.landing_order):
             if not plane.base:
                 if plane.lat > self.thd[0]: # north
-                    targetHeading = (self.rhed + 90)%360
-                else:
                     targetHeading = (self.rhed - 90)%360
+                else:
+                    targetHeading = (self.rhed + 90)%360
             elif plane.base:
                     targetHeading = self.rhed
                 
@@ -176,13 +196,17 @@ class Bot:
             turn_radius = plane.speed / turn_rate_rad
             angle_rad = radians(turn_angle)
             distance = turn_radius * tan(angle_rad / 2) # d = r * tan(θ / 2)
-            print(distance)
-            if haversine(plane.lat,plane.lon,plane.base_intercept[0],plane.base_intercept[1])/KM_TO_NM < distance + 0.1 and not plane.base:
+            print(f"Distance from turn: {distance} turn to {targetHeading}")
+            if abs(haversine(plane.lat,plane.lon,plane.base_intercept[0],plane.base_intercept[1])/KM_TO_NM) < distance + 0.1 and not plane.base:
                 plane.base = True
+                               
                 plane.targetHeading = targetHeading
             
-            if plane.base and not plane.ils and haversine(plane.lat,plane.lon,self.base_start[0],self.base_start[1])/KM_TO_NM < distance + 0.1:
+            if plane.base and not plane.ils and abs(haversine(plane.lat,plane.lon,self.base_start[0],self.base_start[1])/KM_TO_NM) < distance + 0.1:
                 plane.ils = True
+                runwayData = loadRunwayData(plane.flightPlan.destination)[ACTIVE_RUNWAYS[plane.flightPlan.destination]]
+                plane.clearedILS = runwayData
+                plane.mode = PlaneMode.ILS
                 plane.targetHeading = targetHeading
 
             print(plane.callsign)
@@ -200,15 +224,16 @@ class Bot:
                     if plane.lat > self.thd[0]: # north
                         base_len = diff+current_base_length
                         if diff+current_base_length < 1:
-                            base_len = 1
+                            base_len = 2
                         plane.base_intercept = self.get_coordinates_pbd(self.base_start[0],self.base_start[1],(self.rhed + 90)%360,base_len)
 
                     else:
                         base_len = diff+current_base_length
                         if diff+current_base_length < 1:
-                            base_len = 1
+                            base_len = 2
                         plane.base_intercept = self.get_coordinates_pbd(self.base_start[0],self.base_start[1],(self.rhed - 90)%360,diff+base_len)
-            plane.targetHeading = headingFromTo((plane.lat,plane.lon),plane.base_intercept)
+            if not (plane.base or plane.ils):    
+                plane.targetHeading = headingFromTo((plane.lat,plane.lon),plane.base_intercept)
           
 
         self.update_pygame()
