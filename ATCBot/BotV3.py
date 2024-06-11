@@ -3,18 +3,31 @@ import neat
 import os
 import sys
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-os.chdir(parent_dir)
 sys.path.append(parent_dir)
 import main
-from Constants import ACTIVE_RUNWAYS,MASTER_CONTROLLER,OTHER_CONTROLLERS,RADAR_UPDATE_RATE
+from Constants import ACTIVE_RUNWAYS,RADAR_UPDATE_RATE
+from globalVars import FIXES
 from sfparser import loadRunwayData
 from PlaneMode import PlaneMode
-from globalVars import planes, planeSocks,otherControllerSocks
 import math
 from shapely.geometry import Point,Polygon
 import util
 import time
 import pickle
+from Trainer_Plane import Plane
+import random
+from prettytable import PrettyTable
+
+ROUTES = [["NOVMA","OCK"],
+          ["ODVIK","BIG"],
+          ["BRAIN","LAM"],
+          ["COWLY","BNN"]]
+
+table = PrettyTable()
+
+# Add column names
+table.field_names = ["Latitude", "Longitude", "Altitude", "Speed", "Heading","TargetHeading","Mode"]
+
 
 class Bot:
     def __init__(self,airport):
@@ -34,39 +47,33 @@ class Bot:
 
         self.simulating = True
         self.start_time = None
+        self.seen_planes = 1
+        self.active_planes = []
 
 
     def train_ai(self,genome,config): # put in main.py??
 
-        global planes, planeSocks, window, ACTIVE_RUNWAYS, ACTIVE_CONTROLLERS
-
-        masterCallsign = MASTER_CONTROLLER
-
-        controllerSock: util.ControllerSocket = util.ControllerSocket.StartController(masterCallsign)
-        controllerSock.setblocking(False)
-
-        for controller in OTHER_CONTROLLERS:
-            otherControllerSocks.append(util.ControllerSocket.StartController(controller[0]))
-            otherControllerSocks[-1].setblocking(False)
-
-        for plane in planes:
-            planeSocks.append(util.PlaneSocket.StartPlane(plane, masterCallsign, controllerSock))
-
-        main.stdArrival(masterCallsign, controllerSock, "EGLL", 0.8, [
-        ["NOVMA DCT OCK", 8000, "EGLL_N_APP"],
-        ["ODVIK DCT BIG", 8000, "EGLL_N_APP"],
-        ["BRAIN DCT LAM", 8000, "EGLL_N_APP"],
-        ["COWLY DCT BNN", 8000, "EGLL_N_APP"],
-        ], 0.2)
-
-
         net1 = neat.nn.FeedForwardNetwork.create(genome,config)
+        start_time = time.time()
+        route = random.choice(ROUTES)
+        lat,lon = FIXES[route[0]]
+        head = util.headingFromTo((lat,lon),FIXES[route[-1]])
+        self.active_planes.append(Plane("TRN101",1000,8000,head,250,lat,lon,0,PlaneMode.HEADING,route[-1]))
         while self.simulating:
+            table.clear_rows()
             # run the sim and see
-            print(len(planes))
-            if len(planes) >= 1:
-                self.start_time = time.time()
-            for plane in planes:
+            if time.time() - start_time > 80 / 100:
+                route = random.choice(ROUTES)
+                lat,lon = FIXES[route[0]]
+                head = util.headingFromTo((lat,lon),FIXES[route[-1]])
+                self.active_planes.append(Plane("TRN101",1000,8000,head,250,lat,lon,0,PlaneMode.HEADING,route[-1]))
+
+                
+                self.seen_planes += 1
+                start_time = time.time()
+
+            for plane in self.active_planes:
+                table.add_row([plane.lat, plane.lon, plane.altitude, plane.speed, plane.heading,plane.targetHeading,plane.mode])
                 if plane.distance_travelled > 5:
                     input_nodes = [-1] * 57
 
@@ -77,7 +84,7 @@ class Bot:
                     input_nodes[4] = plane.heading
                     input_nodes[5] = self.airport[0]
                     input_nodes[6] = self.airport[1]
-                    for i,p in enumerate(planes):
+                    for i,p in enumerate(self.active_planes):
                         if i >= 10:
                             break
                         if p != plane:
@@ -88,12 +95,9 @@ class Bot:
                             input_nodes[offset + 3] = p.speed
                             input_nodes[offset + 4] = p.heading
 
-
-
                     output = net1.activate(tuple(input_nodes)) # pop in the thingys
                     given_inst = False
                     
-
                     if given_inst:
                         plane.instructions += 1
 
@@ -121,7 +125,7 @@ class Bot:
                     plane.targetSpeed = (speed_desc * 5) + 125
                     
                     if output[-1] >= 0.75: # CL/APP
-                        runwayData = loadRunwayData(plane.flightPlan.destination)[ACTIVE_RUNWAYS[plane.flightPlan.destination]]
+                        runwayData = loadRunwayData("EGLL")["27R"] # TODO get better
                         plane.clearedILS = runwayData
                         plane.mode = PlaneMode.ILS
 
@@ -129,12 +133,12 @@ class Bot:
                         if not plane.left_rma and not self.RMA_POLYGON.contains(Point(plane.lat,plane.lon)):
                             plane.left_rma = True
 
-                    for p in planes:
-                        landed = False
-                        if math.isclose((util.haversine(plane.lat,plane.lon,self.airport[0],self.airport[1]) / 1.852),0.1,abs_tol=0.1):
-                            self.planes.append(plane)
-                            landed = True
-                            distances = []
+                    landed = False
+                    distances = [30]
+                    if math.isclose((util.haversine(plane.lat,plane.lon,self.airport[0],self.airport[1]) / 1.852),0.1,abs_tol=0.1) and plane.altitude < 300 and plane.mode == PlaneMode.ILS:
+                        self.planes.append(plane)
+                        landed = True
+                    for p in self.active_planes:
                         if p != plane:
                             if landed and p.mode == PlaneMode.ILS:
                                 distances.append(abs(util.haversine(p.lat,p.lon,self.airport[0],self.airport[1])))
@@ -145,25 +149,26 @@ class Bot:
 
                         if landed:
                             plane.dist_from_behind = min(distances)
-                            index = planes.index(plane)
-                            planes.remove(plane)
-                            sock = planeSocks.pop(index)
-                            sock.esSend("#DP" + plane.callsign, "SERVER")
-                            sock.close()
+                            self.active_planes.pop(self.active_planes.index(plane))
 
                         if util.haversine(plane.lat,plane.lon,self.airport[0],self.airport[1]) / 1.852 >= 60 and plane.heading != 0:
                             self.simulating = False
                             genome.fitness -= 100
 
+            
+            for plane in self.active_planes:
+                plane.calculatePosition()
+                
+            os.system("cls" if os.name == "nt" else "clear")
+            print(table)
 
-            if self.start_time != None:
-                if (time.time() - self.start_time)*100 >= 1800: # half an hours runtime
-                    self.simulating = False
-            main.positionLoop(controllerSock)
-            time.sleep(RADAR_UPDATE_RATE)
+            if self.seen_planes >= 24:
+                self.simulating = False
+            
+            time.sleep(5/100)
+            
 
-
-        self.planes.extend(planes.copy())
+        self.planes.extend(self.active_planes.copy())
         self.calc_fitness(genome)
 
     def calc_fitness(self,genome):
@@ -226,10 +231,7 @@ def eval_genomes(genomes,config):
         genome1.fitness = 0
         bot = Bot((51.477697222222, -0.43554333333333))
         bot.train_ai(genome1,config)
-        otherControllerSocks = []
-        planes = []
-        planeSocks = []
-        time.sleep(60) # wait for planes to clear
+        print(f"GENONE {i + 1} DONE")
 
 
 

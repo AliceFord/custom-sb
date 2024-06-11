@@ -1,11 +1,7 @@
 import json
-import msvcrt
 import random
 import select
-import threading
-import sys
 import time
-from math import isclose
 from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import QTableWidgetItem
 import keyboard
@@ -13,18 +9,17 @@ from Route import Route
 import re
 from pynput.keyboard import Key, Listener
 import pyttsx3
-import subprocess
+
 from uiTest import MainWindow
 from sfparser import loadRunwayData, loadStarAndFixData
 from FlightPlan import FlightPlan
 from Plane import Plane
 from PlaneMode import PlaneMode
 from globalVars import FIXES, planes, planeSocks, window, otherControllerSocks, messagesToSpeak, currentSpeakingAC
-from Constants import ACTIVE_CONTROLLERS,BOT_CONTROLLERS, ACTIVE_RUNWAYS, HIGH_DESCENT_RATE, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, OTHER_CONTROLLERS, RADAR_UPDATE_RATE, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE, TRANSITION_LEVEL
+from Constants import ACTIVE_CONTROLLERS, ACTIVE_RUNWAYS, HIGH_DESCENT_RATE, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, OTHER_CONTROLLERS, RADAR_UPDATE_RATE, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE, TRANSITION_LEVEL
 import util
 import taxiCoordGen
 import sessionparser
-from ATCBot.BotV2 import Bot
 
 
 class _TTS:   # https://stackoverflow.com/questions/56032027/pyttsx3-runandwait-method-gets-stuck
@@ -306,13 +301,16 @@ def parseCommand(command: str = None):
 # PLANE SPAWNING
 
 def spawnRandomEveryNSeconds(nSeconds, variance, data):
+    if len(otherControllerSocks) == 0:
+        return
     choice = random.choice(data)
-    util.PausableTimer(random.randint(nSeconds * (1 - variance), nSeconds * (1 + variance)) , spawnRandomEveryNSeconds, args=(nSeconds, variance, data))
+    util.PausableTimer(random.uniform(nSeconds * (1 - variance), nSeconds * (1 + variance)) , spawnRandomEveryNSeconds, args=(nSeconds, variance, data))
     spawnEveryNSeconds(nSeconds, choice["masterCallsign"], choice["controllerSock"], choice["method"], *choice["args"], callsign=None, spawnOne=True, **choice["kwargs"])
 
 
 def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, callsign=None, spawnOne=False, **kwargs):
     global planes, planeSocks
+
     fp: FlightPlan = kwargs["flightPlan"]
     dest = fp.destination
     
@@ -388,15 +386,16 @@ def positionLoop(controllerSock: util.ControllerSocket):
     controllerSock.esSend("%" + MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, "3", "100", "7", "51.14806", "-0.19028", "0")
 
     for i, otherControllerSock in enumerate(otherControllerSocks):  # update controller pos
-        otherControllerSock.esSend("%" + OTHER_CONTROLLERS[i][0], OTHER_CONTROLLERS[i][1], "3", "100", "7", "51.14806", "-0.19028", "0")
-
+        try:
+            otherControllerSock.esSend("%" + OTHER_CONTROLLERS[i][0], OTHER_CONTROLLERS[i][1], "3", "100", "7", "51.14806", "-0.19028", "0")
+        except Exception as e: # hhhhm
+            print(e)
     dc = 0  # display counter
     for i, plane in enumerate(planes):  # update plane pos
         try:
             planeSocks[i].sendall(plane.positionUpdateText())  # position update
         except Exception as e:
-            print(e)
-            # probably means we've just killed them. If not then lol
+            print(e)  # probably means we've just killed them. If not then lol
 
         # if plane.currentlyWithData is None:  # We only know who they are if they are with us
         #     print(plane.callsign, end=", ")
@@ -412,7 +411,7 @@ def positionLoop(controllerSock: util.ControllerSocket):
     messageMonitor(controllerSock)
 
     t1 = time.time()
-    print("Position Loop took", str(t1 - t0), "seconds")
+    #print("Position Loop took", str(t1 - t0), "seconds")
 
 
 def messageMonitor(controllerSock: util.ControllerSocket) -> None:
@@ -436,7 +435,6 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                     callsign = message.split(":")[2]
                     if fromController not in ACTIVE_CONTROLLERS:  # this caused pain
                         continue
-
                     if toController in ACTIVE_CONTROLLERS:  # don't auto accept if they're a human!
                         continue
                     controllerSock.esSend("$CQ" + MASTER_CONTROLLER, "@94835", "HT", callsign, toController)
@@ -454,7 +452,6 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                     for plane in planes:
                         if plane.callsign == callsign:
                             index = planes.index(plane)
-
                             plane.currentlyWithData = None
                             # window.aircraftTable.setRowCount(sum([1 for plane in planes if plane.currentlyWithData is None]))
                             break
@@ -576,7 +573,7 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
         # print()
 
     t1 = time.time()
-    print("Message Monitor took", str(t1 - t0), "seconds")
+    #print("Message Monitor took", str(t1 - t0), "seconds")
 
 
 def cellClicked(row, _col):
@@ -669,7 +666,7 @@ def main():
 
     # for holdFix in llHoldFixes:
     #     for alt in range(8000, 13000 + 1 * 1000, 1000):
-    #         plane = Plane.requestFromFix(util.callsignGen(planes, 5), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGLL", holdFix), currentlyWithData=(masterCallsign, holdFix))
+    #         plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGLL", holdFix), currentlyWithData=(masterCallsign, holdFix))
     #         plane.holdFix = holdFix
     #         planes.append(plane)
 
@@ -714,8 +711,8 @@ def main():
     # util.PausableTimer(random.randint(1, 5), spawnEveryNSeconds, args=(60 * 5, masterCallsign, controllerSock, "ARR", "BOGNA"), kwargs={"speed": 250, "altitude": 13000, "flightPlan": FlightPlan.arrivalPlan("BOGNA DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")})
     # util.PausableTimer(random.randint(120, 168), spawnEveryNSeconds, args=(60 * 5, masterCallsign, controllerSock, "ARR", "LYD"), kwargs={"speed": 250, "altitude": 13000, "flightPlan": FlightPlan.arrivalPlan("LYD DCT TIMBA"), "currentlyWithData": (masterCallsign, "TIMBA")})
 
-    #HEATHROW INT
-    stdArrival(masterCallsign, controllerSock, "EGLL", 75/100, [
+    # HEATHROW INT
+    stdArrival(masterCallsign, controllerSock, "EGLL", 0.75, [
         ["NOVMA DCT OCK", 8000, "EGLL_N_APP"],
         ["ODVIK DCT BIG", 8000, "EGLL_N_APP"],
         ["BRAIN DCT LAM", 8000, "EGLL_N_APP"],
@@ -929,19 +926,19 @@ def main():
     # ])
 
     # SS
-    # stdArrival(masterCallsign, controllerSock, "EGSS", 100, [  # SS arrivals
-    #     ["BOMBO DCT BKY DCT BUSTA DCT LOREL", 9000,"ESSEX_APP"],
-    #     ["BPK DCT BKY DCT BUSTA DCT LOREL", 9000,"ESSEX_APP"],
-    #     ["LOFFO DCT ABBOT", 9000,"ESSEX_APP"],
-    #     ["CLN DCT ABBOT", 9000,"ESSEX_APP"],
-    #     ["LAPRA DCT ABBOT", 9000,"ESSEX_APP"]
+    # stdArrival(masterCallsign, controllerSock, "EGSS", 95, [  # SS arrivals
+    #     ["BOMBO DCT BKY DCT BUSTA DCT LOREL", 9000],
+    #     ["BPK DCT BKY DCT BUSTA DCT LOREL", 9000],
+    #     ["LOFFO DCT ABBOT", 9000],
+    #     ["CLN DCT ABBOT", 9000],
+    #     ["LAPRA DCT ABBOT", 9000]
     # ])
 
-    # stdArrival(masterCallsign, controllerSock, "EGGW", 120, [  # GW arrivals
-    #     ["OXDUF DCT COCCU DCT JUMZI DCT ZAGZO", 9000,"ESSEX_APP"],
-    #     ["WOBUN DCT EDCOX DCT JUMZI DCT ZAGZO", 9000,"ESSEX_APP"],
-    #     ["LOFFO DCT ABBOT", 9000,"ESSEX_APP"],
-    #     ["CLN DCT ABBOT", 9000,"ESSEX_APP"],
+    # stdArrival(masterCallsign, controllerSock, "EGGW", 110, [  # GW arrivals
+    #     ["OXDUF DCT COCCU DCT JUMZI DCT ZAGZO", 9000],
+    #     ["WOBUN DCT EDCOX DCT JUMZI DCT ZAGZO", 9000],
+    #     ["LOFFO DCT ABBOT", 9000],
+    #     ["CLN DCT ABBOT", 9000],
     # ])
 
     # NX
@@ -1088,14 +1085,9 @@ def main():
     # keyboardHandlerThread.daemon = True
     # keyboardHandlerThread.start()
 
-    running = True
-    loop_time = time.time()
-    while running:  # block forver
-        if time.time() - loop_time >= RADAR_UPDATE_RATE:
-            positionLoop(controllerSock)
-            loop_time = time.time()
-
-        #time.sleep(RADAR_UPDATE_RATE)
+    while True:  # block forver
+        positionLoop(controllerSock)
+        time.sleep(RADAR_UPDATE_RATE)
 
 
     print("uh oh")
