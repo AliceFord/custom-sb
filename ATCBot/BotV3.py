@@ -226,6 +226,9 @@ def eval_genomes(genomes,config):
         genome1.fitness = 0
         bot = Bot((51.477697222222, -0.43554333333333))
         bot.train_ai(genome1,config)
+        otherControllerSocks = []
+        planes = []
+        planeSocks = []
         time.sleep(60) # wait for planes to clear
 
 
