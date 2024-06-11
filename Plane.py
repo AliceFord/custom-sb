@@ -41,6 +41,7 @@ class Plane:
 
         self.masterSocketHandleData: tuple[util.EsSocket, str] = None
         self.clearedILS = None
+        
 
         self.currentSector = util.whichSector(self.lat, self.lon, self.altitude)
 
@@ -48,6 +49,18 @@ class Plane:
 
         self.dieOnReaching2K = False
         self.lvlCoords = None
+
+        # bot stuff
+        self.instructions = 0
+        self.left_rma = False
+        self.intercept_dist = None
+        self.altitude_at_intercept = None
+        self.close_calls = 0
+        self.dist_from_behind = None
+        self.distance_travelled = 0
+        self.climbed = False
+        self.sped_up = False
+        self.vectored_out_rma = False # was it given ints outside the rma 
 
         if AUTO_ASSUME:
             if self.mode == PlaneMode.FLIGHTPLAN or self.mode == PlaneMode.HEADING:  # take aircraft
@@ -61,6 +74,7 @@ class Plane:
 
     def calculatePosition(self):
         deltaT = (time.time() - self.lastTime) * timeMultiplier
+        
         self.lastTime = time.time()
 
         tas = self.speed * (1 + (self.altitude / 1000) * 0.02)  # true airspeed
@@ -144,7 +158,11 @@ class Plane:
             deltaLat, deltaLon = util.deltaLatLonCalc(self.lat, tas, self.heading, deltaT)
 
             distanceOut = util.haversine(self.lat, self.lon, self.clearedILS[1][0], self.clearedILS[1][1]) / 1.852  # nautical miles
+            if self.intercept_dist == None:
+                self.intercept_dist = distanceOut
             requiredAltitude = math.tan(math.radians(3)) * distanceOut * 6076  # feet
+            if self.altitude_at_intercept == None:
+                self.altitude_at_intercept = self.altitude
 
             if distanceOut < 4:
                 if self.speed > 125:
@@ -388,7 +406,9 @@ class Plane:
 
     def positionUpdateText(self, calculatePosition=True) -> bytes:
         if calculatePosition:
+            prev_lat,prev_lon = self.lat,self.lon
             self.calculatePosition()
+            self.distance_travelled += abs(util.haversine(prev_lat,prev_lon,self.lat,self.lon) / 1.852)
         displayHeading = self.heading
         if self.stand is not None or self.mode == PlaneMode.GROUND_READY:  # if we're pushing, display heading is 180 degrees off
             displayHeading += 180

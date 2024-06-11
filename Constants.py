@@ -11,7 +11,7 @@ DESCENT_RATE = -2000  # ft / min
 HIGH_DESCENT_RATE = -3000  # ft / min
 
 
-RADAR_UPDATE_RATE = 5
+RADAR_UPDATE_RATE = 5 / 100
 
 CCAMS_SQUAWKS = list(range(1410, 1478)) + list(range(2001, 2078)) + list(range(2201, 2278)) + list(range(2701, 2738))  # realistically way way more
 
