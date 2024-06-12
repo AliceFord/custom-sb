@@ -54,15 +54,15 @@ class Bot:
     def train_ai(self,genome,config): # put in main.py??
 
         net1 = neat.nn.FeedForwardNetwork.create(genome,config)
-        start_time = time.time()
         route = random.choice(ROUTES)
         lat,lon = FIXES[route[0]]
         head = util.headingFromTo((lat,lon),FIXES[route[-1]])
         self.active_planes.append(Plane("TRN101",1000,8000,head,250,lat,lon,0,PlaneMode.HEADING,route[-1]))
+        loop_counter = 0 # each loop is 5s
         while self.simulating:
             table.clear_rows()
             # run the sim and see
-            if time.time() - start_time > 80 / 100:
+            if loop_counter > 16:
                 route = random.choice(ROUTES)
                 lat,lon = FIXES[route[0]]
                 head = util.headingFromTo((lat,lon),FIXES[route[-1]])
@@ -70,10 +70,13 @@ class Bot:
 
                 
                 self.seen_planes += 1
-                start_time = time.time()
 
             for plane in self.active_planes:
                 table.add_row([plane.lat, plane.lon, plane.altitude, plane.speed, plane.heading,plane.targetHeading,plane.mode])
+                dists = [(p,abs(util.haversine(p.lat,p.lon,plane.lat,plane.lon))) for p in self.active_planes]
+                dists = sorted(dists, key=lambda x: x[-1])
+                inputs = [[p.lat,p.lon,p.altitude,p.speed,p.heading] for p in self.active_planes]
+                inputs = [i for li in inputs for i in li]
                 if plane.distance_travelled > 5:
                     input_nodes = [-1] * 57
 
@@ -84,16 +87,9 @@ class Bot:
                     input_nodes[4] = plane.heading
                     input_nodes[5] = self.airport[0]
                     input_nodes[6] = self.airport[1]
-                    for i,p in enumerate(self.active_planes):
-                        if i >= 10:
-                            break
-                        if p != plane:
-                            offset = (i*5) + 7
-                            input_nodes[offset] = p.lat
-                            input_nodes[offset + 1] = p.lon
-                            input_nodes[offset + 2] = p.altitude
-                            input_nodes[offset + 3] = p.speed
-                            input_nodes[offset + 4] = p.heading
+                    input_nodes[7:] = inputs[:50]
+
+                    input_nodes.extend([-1] *( 57 - len(input_nodes)))
 
                     output = net1.activate(tuple(input_nodes)) # pop in the thingys
                     given_inst = False
@@ -149,7 +145,10 @@ class Bot:
 
                         if landed:
                             plane.dist_from_behind = min(distances)
-                            self.active_planes.pop(self.active_planes.index(plane))
+                            try:
+                                self.active_planes.pop(self.active_planes.index(plane))
+                            except Exception as e:
+                                print(e)
 
                         if util.haversine(plane.lat,plane.lon,self.airport[0],self.airport[1]) / 1.852 >= 60 and plane.heading != 0:
                             self.simulating = False
@@ -159,8 +158,10 @@ class Bot:
             for plane in self.active_planes:
                 plane.calculatePosition()
                 
-            os.system("cls" if os.name == "nt" else "clear")
-            print(table)
+
+            loop_counter += 1
+            # os.system("cls" if os.name == "nt" else "clear")
+            # print(table)
 
             if self.seen_planes >= 24:
                 self.simulating = False
@@ -236,8 +237,8 @@ def eval_genomes(genomes,config):
 
 
 def run_neat(config):
-    # p = neat.Checkpointer.restore_checkpoint("neat-checkpoint-2")
-    p = neat.Population(config)
+    p = neat.Checkpointer.restore_checkpoint("neat-checkpoint-5")
+    #p = neat.Population(config)
     p.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
