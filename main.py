@@ -324,8 +324,8 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
 
     fp.aircraftType = aircraft_type
     timeWiggle = 0
-    if method == "ARR":
-        timeWiggle = random.randint(-15, 15)
+    # if method == "ARR":
+    #     timeWiggle = random.randint(-15, 15)
 
     if not spawnOne:
         util.PausableTimer(nSeconds + timeWiggle, spawnEveryNSeconds, args=(nSeconds, masterCallsign, controllerSock, method, *args), kwargs=kwargs)
@@ -587,14 +587,14 @@ def stdArrival(masterCallsign, controllerSock, ad, delay, planLvlData, variance=
     for currentData in planLvlData:
         route, lvl, ctrl = currentData
         parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": [route.split(" ")[0]], "kwargs": {"speed": (350 if lvl >= 10000 else 250), "altitude": lvl, "flightPlan": FlightPlan.arrivalPlan(ad, route), "currentlyWithData": (masterCallsign, route.split(" ")[2]), "firstController": ctrl}})
-    util.PausableTimer(random.randint(5, 40), spawnRandomEveryNSeconds, args=(delay, variance, parsedData))
+    util.PausableTimer(1, spawnRandomEveryNSeconds, args=(delay, variance, parsedData))
 
 def stdDeparture(masterCallsign, controllerSock, ad, delay, planLvlData):
     parsedData = []
     for currentData in planLvlData:
         route, arrAd = currentData
         parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": [ad], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, ad, 1130, 1130, 25000, arrAd, Route(route, ad))}})
-    util.PausableTimer(random.randint(5, 40), spawnRandomEveryNSeconds, args=(delay, 0, parsedData))
+    util.PausableTimer(1, spawnRandomEveryNSeconds, args=(delay, 0, parsedData))
 
 
 def keyboardHandler():
@@ -712,12 +712,19 @@ def main():
     # util.PausableTimer(random.randint(120, 168), spawnEveryNSeconds, args=(60 * 5, masterCallsign, controllerSock, "ARR", "LYD"), kwargs={"speed": 250, "altitude": 13000, "flightPlan": FlightPlan.arrivalPlan("LYD DCT TIMBA"), "currentlyWithData": (masterCallsign, "TIMBA")})
 
     # HEATHROW INT
-    stdArrival(masterCallsign, controllerSock, "EGLL", 0.75, [
+    stdArrival(masterCallsign, controllerSock, "EGLL", 75/100, [
         ["NOVMA DCT OCK", 8000, "EGLL_N_APP"],
         ["ODVIK DCT BIG", 8000, "EGLL_N_APP"],
         ["BRAIN DCT LAM", 8000, "EGLL_N_APP"],
         ["COWLY DCT BNN", 8000, "EGLL_N_APP"],
-    ], 0.2)
+    ])
+
+    # stdArrival(masterCallsign, controllerSock, "EGLL", 75/100, [
+    #     ["MODMI DCT OCK", 8000, "EGLL_N_APP"],
+    #     ["PAWDE DCT BIG", 8000, "EGLL_N_APP"],
+    #     ["UMLAT DCT LAM", 8000, "EGLL_N_APP"],
+    #     ["ODUKU DCT BNN", 8000, "EGLL_N_APP"],
+    # ])
 
 
     # AA INT
