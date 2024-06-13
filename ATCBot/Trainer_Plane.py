@@ -46,6 +46,9 @@ class Plane:
         self.sped_up = False
         self.vectored_out_rma = False # was it given ints outside the rma
         self.prev_lat,self.prev_lon = None,None
+        self.start_distance = None
+        self.maxd = None
+        self.d_clappd = None
 
 
     def calculatePosition(self):
