@@ -21,7 +21,7 @@ from sfparser import loadRunwayData, loadStarAndFixData
 from FlightPlan import FlightPlan
 from Plane import Plane
 from PlaneMode import PlaneMode
-from globalVars import FIXES, planes, planeSocks, window, otherControllerSocks, messagesToSpeak, currentSpeakingAC
+from globalVars import FIXES, planes, planeSocks, window, otherControllerSocks, messagesToSpeak, currentSpeakingAC, saveNow
 from Constants import ACTIVE_CONTROLLERS, ACTIVE_RUNWAYS, HIGH_DESCENT_RATE, KILL_ALL_ON_HANDOFF, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, OTHER_CONTROLLERS, RADAR_UPDATE_RATE, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE, TRANSITION_LEVEL
 import util
 import taxiCoordGen
@@ -308,7 +308,7 @@ def parseCommand(command: str = None):
 
 def spawnRandomEveryNSeconds(nSeconds, variance, data):
     choice = random.choice(data)
-    util.PausableTimer(random.randint(nSeconds * (1 - variance), nSeconds * (1 + variance)) , spawnRandomEveryNSeconds, args=(nSeconds, variance, data))
+    util.PausableTimer(random.uniform(nSeconds * (1 - variance), nSeconds * (1 + variance)) , spawnRandomEveryNSeconds, args=(nSeconds, variance, data))
     spawnEveryNSeconds(nSeconds, choice["masterCallsign"], choice["controllerSock"], choice["method"], *choice["args"], callsign=None, spawnOne=True, **choice["kwargs"])
 
 
@@ -323,8 +323,8 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
                 return  # nonono bug
 
     timeWiggle = 0
-    if method == "ARR":
-        timeWiggle = random.randint(-15, 15)
+    # if method == "ARR":
+    #     timeWiggle = random.randint(-15, 15)
 
     if not spawnOne:
         util.PausableTimer(nSeconds + timeWiggle, spawnEveryNSeconds, args=(nSeconds, masterCallsign, controllerSock, method, *args), kwargs=kwargs)
@@ -411,11 +411,11 @@ def positionLoop(controllerSock: util.ControllerSocket):
     messageMonitor(controllerSock)
 
     t1 = time.time()
-    print("Position Loop took", str(t1 - t0), "seconds")
+    # print("Position Loop took", str(t1 - t0), "seconds")
 
 
 def messageMonitor(controllerSock: util.ControllerSocket) -> None:
-    global window  # PAUSING WON'T WORK ATM
+    global window, saveNow  # PAUSING WON'T WORK ATM
     # t = threading.Timer(RADAR_UPDATE_RATE, messageMonitor, args=[controllerSock])  # regular timer as should never be paused
     # t.daemon = True
     # t.start()
@@ -569,9 +569,17 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                     parseCommand(f"{cs} sq {sq}")
                 elif message.startswith("#TM"):
                     cs = message.split(":")[2]
-                    for plane in planes:
-                        if plane.callsign == cs:
-                            parseCommand(f"{cs} c 30")
+                    save = ""
+                    try:
+                        save = cs.split(", ")[1]
+                    except IndexError:
+                        pass
+                    if save == "save":
+                        saveNow = True
+                    else:
+                        for plane in planes:
+                            if plane.callsign == cs:
+                                parseCommand(f"{cs} c 30")
                 else:
                     pass
                     # print(message)
@@ -579,7 +587,7 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
         # print()
 
     t1 = time.time()
-    print("Message Monitor took", str(t1 - t0), "seconds")
+    # print("Message Monitor took", str(t1 - t0), "seconds")
 
 
 def cellClicked(row, _col):
@@ -598,12 +606,14 @@ def stdArrival(masterCallsign, controllerSock, ad, delay, planLvlData, variance=
             spd = 450
         elif lvl > 10000:
             spd = 350
+        elif lvl < 5000:
+            spd = 220
 
         if withMaster:
             parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": [route.split(" ")[0]], "kwargs": {"speed": spd, "altitude": lvl, "flightPlan": FlightPlan.arrivalPlan(ad, route), "currentlyWithData": (masterCallsign, route.split(" ")[2]), "firstController": ctrl}})
         else:
             parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": [route.split(" ")[0]], "kwargs": {"speed": spd, "altitude": lvl, "flightPlan": FlightPlan.arrivalPlan(ad, route), "firstController": ctrl}})
-    util.PausableTimer(random.randint(5, delay), spawnRandomEveryNSeconds, args=(delay, variance, parsedData))
+    util.PausableTimer(random.uniform(0, delay), spawnRandomEveryNSeconds, args=(delay, variance, parsedData))
 
 def stdDeparture(masterCallsign, controllerSock, ad, delay, planLvlData):
     parsedData = []
@@ -614,7 +624,7 @@ def stdDeparture(masterCallsign, controllerSock, ad, delay, planLvlData):
         if not arrAd.startswith("EG"):
             cruiseLvl = 36000
         parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": [ad], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, ad, 1130, 1130, cruiseLvl, arrAd, Route(route, ad))}})
-    util.PausableTimer(random.randint(5, delay), spawnRandomEveryNSeconds, args=(delay, 0, parsedData))
+    util.PausableTimer(random.uniform(0, delay), spawnRandomEveryNSeconds, args=(delay, 0, parsedData))
 
 
 def stdTransit(masterCallsign, controllerSock, delay, data, withMaster=True):
@@ -628,11 +638,11 @@ def stdTransit(masterCallsign, controllerSock, delay, data, withMaster=True):
             spd = 350
 
         if withMaster:
-            parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": [route.split(" ")[0]], "kwargs": {"speed": spd, "altitude": inLvl, "flightPlan": FlightPlan("I", "B738", 250, depAd, 1130, 1130, filedLvl, arrAd, Route(route, arrAd)), "currentlyWithData": (masterCallsign, route.split(" ")[2]), "firstController": ctrl}})
+            parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": [route.split(" ")[0]], "kwargs": {"speed": spd, "altitude": inLvl, "flightPlan": FlightPlan("I", "B738", 250, depAd, 1130, 1130, filedLvl, arrAd, Route(route, depAd, arrAd)), "currentlyWithData": (masterCallsign, route.split(" ")[2]), "firstController": ctrl}})
         else:
-            parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": [route.split(" ")[0]], "kwargs": {"speed": spd, "altitude": inLvl, "flightPlan": FlightPlan("I", "B738", 250, depAd, 1130, 1130, filedLvl, arrAd, Route(route, arrAd)), "firstController": ctrl}})
+            parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": [route.split(" ")[0]], "kwargs": {"speed": spd, "altitude": inLvl, "flightPlan": FlightPlan("I", "B738", 250, depAd, 1130, 1130, filedLvl, arrAd, Route(route, depAd, arrAd)), "firstController": ctrl}})
 
-    util.PausableTimer(random.randint(5, delay), spawnRandomEveryNSeconds, args=(delay, 0, parsedData))
+    util.PausableTimer(random.uniform(0, delay), spawnRandomEveryNSeconds, args=(delay, 0, parsedData))
 
 
 def keyboardHandler():
@@ -653,13 +663,13 @@ def keyboardHandler():
         
 
 def main():
-    global planes, planeSocks, window, ACTIVE_RUNWAYS, ACTIVE_CONTROLLERS
+    global planes, planeSocks, window, ACTIVE_RUNWAYS, ACTIVE_CONTROLLERS, saveNow
     # SETUP PLANES
 
     masterCallsign = MASTER_CONTROLLER
 
     # shelving savestates\2024-06-04_21-05-55.242111.bak
-    with shelve.open("savestates/2024-06-07_21-10-09.233405") as f:
+    with shelve.open("savestates/2024-06-25_20-30-19.355626") as f:
         for plane in f.values():
             plane.lastTime = time.time()
             planes.append(plane)
@@ -694,15 +704,13 @@ def main():
 
 
     # GATTERS IN THE HOLD
-    # for alt in range(8000, 12000 + 1000, 1000):
-    #     plane = Plane.requestFromFix(util.callsignGen(), "TIMBA", squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("TIMBA"), currentlyWithData=(masterCallsign, "TIMBA"))
-    #     plane.holdFix = "TIMBA"
-    #     planes.append(plane)
+    # llHoldFixes = ["TIMBA", "WILLO"]
 
-    # for alt in range(8000, 12000 + 1000, 1000):
-    #     plane = Plane.requestFromFix(util.callsignGen(), "WILLO", squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("WILLO"), currentlyWithData=(masterCallsign, "WILLO"))
-    #     plane.holdFix = "WILLO"
-    #     planes.append(plane)
+    # for holdFix in llHoldFixes:
+    #     for alt in range(8000, 8000 + 1 * 1000, 1000):
+    #         plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGKK", holdFix), currentlyWithData=(masterCallsign, holdFix))
+    #         plane.holdFix = holdFix
+    #         planes.append(plane)
 
     # HEATHROW IN THE HOLD
 
@@ -755,12 +763,21 @@ def main():
     # util.PausableTimer(random.randint(1, 5), spawnEveryNSeconds, args=(60 * 5, masterCallsign, controllerSock, "ARR", "BOGNA"), kwargs={"speed": 250, "altitude": 13000, "flightPlan": FlightPlan.arrivalPlan("BOGNA DCT WILLO"), "currentlyWithData": (masterCallsign, "WILLO")})
     # util.PausableTimer(random.randint(120, 168), spawnEveryNSeconds, args=(60 * 5, masterCallsign, controllerSock, "ARR", "LYD"), kwargs={"speed": 250, "altitude": 13000, "flightPlan": FlightPlan.arrivalPlan("LYD DCT TIMBA"), "currentlyWithData": (masterCallsign, "TIMBA")})
 
+    # stdArrival(masterCallsign, controllerSock, "EGKK", 75, [  # PE arrivals
+    #     ["BOGNA DCT WILLO", 9000, "EGKK_APP"],
+    #     ["LYD DCT TIMBA", 9000, "EGKK_APP"]
+    # ], withMaster=False)
+
+    # stdDeparture(masterCallsign, controllerSock, "EGKK", 130, [
+    #     ["SFD4Z/08R SFD M605 XIDIL", "LFPG"]
+    # ])
+
     # HEATHROW INT
-    # stdArrival(masterCallsign, controllerSock, "EGLL", 75, [
-    #     ["NOVMA DCT OCK", 11000, "EGLL_N_APP"],
-    #     ["ODVIK DCT BIG", 11000, "EGLL_N_APP"],
-    #     ["BRAIN DCT LAM", 11000, "EGLL_N_APP"],
-    #     ["COWLY DCT BNN", 11000, "EGLL_N_APP"],
+    # stdArrival(masterCallsign, controllerSock, "EGLL", 75/5, [
+    #     ["NOVMA DCT OCK", 4000, "EGLL_N_APP"],
+    #     ["ODVIK DCT BIG", 4000, "EGLL_N_APP"],
+    #     ["BRAIN DCT LAM", 4000, "EGLL_N_APP"],
+    #     ["COWLY DCT BNN", 4000, "EGLL_N_APP"],
     # ])
 
 
@@ -948,18 +965,20 @@ def main():
     #     ["SABER DCT BRASO DCT WESUL DCT LAM", 16000, "LTC_N_CTR"]
     # ])
 
-    # stdArrival(masterCallsign, controllerSock, "EGSS", 100, [  # SS arrivals
-    #     ["AVANT DCT HAZEL DCT SILVA DCT BOMBO DCT BKY DCT BUSTA DCT LOREL", 13000, "LTC_N_CTR"],
-    #     ["ROGBI DCT FINMA DCT BOMBO DCT BKY DCT BUSTA DCT LOREL", 15000, "LTC_N_CTR"],
-    #     ["VATON DCT BPK DCT BKY DCT BUSTA DCT LOREL", 16000, "LTC_N_CTR"],
-    # ])
+    stdArrival(masterCallsign, controllerSock, "EGSS", 90, [  # SS arrivals
+        ["HAZEL DCT SILVA DCT BOMBO DCT BKY DCT BUSTA DCT LOREL", 13000, "LTC_N_CTR"],  # AVANT DCT 
+        ["ROGBI DCT FINMA DCT BOMBO DCT BKY DCT BUSTA DCT LOREL", 15000, "LTC_N_CTR"],
+        ["LOFFO DCT ABBOT", 9000, "LTC_N_CTR"],
+        ["VATON DCT BPK DCT BKY DCT BUSTA DCT LOREL", 16000, "LTC_N_CTR"],
+    ])
 
-    # stdArrival(masterCallsign, controllerSock, "EGGW", 100, [  # GW arrivals
-    #     ["AVANT DCT HAZEL DCT SILVA DCT WOBUN DCT EDCOX DCT JUMZI DCT ZAGZO", 13000, "LTC_N_CTR"],
-    #     ["ROGBI DCT FINMA DCT WOBUN DCT EDCOX DCT JUMZI DCT ZAGZO", 15000, "LTC_N_CTR"],
-    #     ["VATON DCT OZZOT DCT BPK DCT ILLOC DCT OXDUF DCT COCCU DCT JUMZI DCT ZAGZO", 16000, "LTC_N_CTR"],
-    #     ["MUCTE DCT OFJES DCT UDDIZ DCT COCCU DCT JUMZI DCT ZAGZO", 14000, "LTC_N_CTR"],
-    # ])
+    stdArrival(masterCallsign, controllerSock, "EGGW", 75, [  # GW arrivals
+        ["AVANT DCT HAZEL DCT SILVA DCT WOBUN DCT EDCOX DCT JUMZI DCT ZAGZO", 13000, "LTC_N_CTR"],
+        ["ROGBI DCT FINMA DCT WOBUN DCT EDCOX DCT JUMZI DCT ZAGZO", 15000, "LTC_N_CTR"],
+        ["VATON DCT OZZOT DCT BPK DCT ILLOC DCT OXDUF DCT COCCU DCT JUMZI DCT ZAGZO", 16000, "LTC_N_CTR"],
+        ["MUCTE DCT OFJES DCT UDDIZ DCT COCCU DCT JUMZI DCT ZAGZO", 14000, "LTC_N_CTR"],
+        ["CLN DCT ABBOT", 9000, "LTC_N_CTR"],
+    ])
 
     # stdDeparture(masterCallsign, controllerSock, "EGKK", 90, [  # KK departures
     #     ["HARDY1X/26L HARDY M605 XIDIL", "LFPG"],
@@ -980,15 +999,15 @@ def main():
     #     ["BPK7F/27R BPK Q295 BRAIN M197 REDFA", "EHAM"]
     # ])
 
-    # stdDeparture(masterCallsign, controllerSock, "EGSS", 180, [  # SS departures
-    #     ["DET2R/22 DET M604 LYD M189 WAFFU UM605 XIDIL", "LFPG"],
-    #     ["NUGBO1R/22 NUGBO M183 SILVA P86 SAWPE", "EGGD"]
-    # ])
+    stdDeparture(masterCallsign, controllerSock, "EGSS", 100, [  # SS departures
+        ["DET2R/22 DET M604 LYD M189 WAFFU UM605 XIDIL", "LFPG"],
+        ["NUGBO1R/22 NUGBO M183 SILVA P86 SAWPE", "EGGD"]
+    ])
 
-    # stdDeparture(masterCallsign, controllerSock, "EGGW", 180, [  # GW departures
-    #     ["DET3Y/25 DET DCT TIMBA", "EGKK"],
-    #     ["RODNI1B/25 RODNI N27 ICTAM", "EGGD"],
-    # ])
+    stdDeparture(masterCallsign, controllerSock, "EGGW", 100, [  # GW departures
+        ["DET3Y/25 DET DCT TIMBA", "EGKK"],
+        ["RODNI1B/25 RODNI N27 ICTAM", "EGGD"],
+    ])
 
     # SS
     # stdArrival(masterCallsign, controllerSock, "EGSS", 85, [  # SS arrivals
@@ -1222,14 +1241,14 @@ def main():
 
     # AC W
 
-    # stdTransit(masterCallsign, controllerSock, 600, [  # east to west (south)
+    # stdTransit(masterCallsign, controllerSock, 400, [  # east to west (south)
     #     ["EGLL", "KJFK", 26000, 36000, "OSNUG DCT ADKIK DCT JOMZA DCT LULOX", "LON_W_CTR"],
     #     ["EGLL", "KJFK", 26000, 36000, "OSNUG DCT ADKIK DCT JOMZA DCT GAPLI", "LON_W_CTR"],
     #     ["EGLL", "KJFK", 26000, 36000, "OSNUG DCT ADKIK DCT FONZU DCT LESLU", "LON_W_CTR"],
     #     ["EGLL", "KJFK", 26000, 36000, "OSNUG DCT ADKIK DCT FONZU DCT LEDGO", "LON_W_CTR"],
     #     ["EGLL", "KJFK", 26000, 36000, "OSNUG DCT ADKIK DCT MOPAT", "LON_W_CTR"],
     # ], withMaster=False)
-    # stdTransit(masterCallsign, controllerSock, 600, [  # east to west (north)
+    # stdTransit(masterCallsign, controllerSock, 400, [  # east to west (north)
     #     ["EGLL", "EIDW", 15000, 36000, "CPT DCT DIDZA L9 BUCGO DCT OFSOX DCT BANBA", "LON_W_CTR"],
     #     ["EGLL", "EIDW", 15000, 36000, "CPT DCT DIDZA L9 BUCGO DCT FELCA DCT OFSOX DCT ENJEX", "LON_W_CTR"],
     #     ["EGLL", "EIDW", 15000, 36000, "CPT DCT DIDZA L9 BUCGO DCT FELCA DCT OFSOX DCT SLANY", "LON_W_CTR"],
@@ -1237,7 +1256,7 @@ def main():
     #     ["EGLL", "EIDW", 15000, 36000, "CPT DCT DIDZA N14 OKTAD DCT MEDOG DCT VATRY", "LON_W_CTR"],
     #     ["EGLL", "EIDW", 15000, 36000, "CPT DCT DIDZA N14 OKTAD DCT MEDOG DCT LANON DCT LIPGO", "LON_W_CTR"],
     # ], withMaster=False)
-    # stdTransit(masterCallsign, controllerSock, 600, [  # east to west (upper)
+    # stdTransit(masterCallsign, controllerSock, 400, [  # east to west (upper)
     #     ["EHAM", "KJFK", 36000, 36000, "SAWPE DCT OZZIL DCT ZIPWE DCT ADHAV DCT SLANY", "LON_W_CTR"],
     #     ["EHAM", "KJFK", 36000, 36000, "OKSAW DCT FELCA DCT FADZU DCT SLANY", "LON_W_CTR"],
     #     ["EHAM", "KJFK", 36000, 36000, "ADKIK DCT MOPAT", "LON_W_CTR"],
@@ -1245,7 +1264,7 @@ def main():
     #     ["EHAM", "KJFK", 36000, 36000, "ENHAQ DCT DCT GAJIT DCT GAPLI", "LON_W_CTR"],
     #     ["EHAM", "KJFK", 36000, 36000, "DIDZA DCT CESQA DCT BIBPE DCT MEDOG DCT LANON DCT LIPGO", "LON_W_CTR"],
     # ], withMaster=False)
-    # stdTransit(masterCallsign, controllerSock, 600, [  # south to west (south)
+    # stdTransit(masterCallsign, controllerSock, 400, [  # south to west (south)
     #     ["EDDM", "EIDW", 36000, 36000, "LIZAD DCT LULOX", "LON_W_CTR"],
     #     ["EDDM", "EIDW", 36000, 36000, "LIZAD DCT ARKIL", "LON_W_CTR"],
     #     ["EDDM", "EIDW", 36000, 36000, "LIZAD DCT BOGMI N160 LEDGO", "LON_W_CTR"],
@@ -1253,15 +1272,14 @@ def main():
     #     ["EDDM", "EIDW", 36000, 36000, "NOZHU DCT BOXHE DCT SHIRI DCT UNFIT DCT PENWU DCT NICXI DCT OFSOX DCT SLANY", "LON_W_CTR"],
     #     ["EDDM", "EIDW", 36000, 36000, "NOZHU DCT BOXHE DCT SHIRI DCT UNFIT DCT PENWU DCT NICXI DCT VATRY", "LON_W_CTR"],
     # ], withMaster=False)
-    # stdTransit(masterCallsign, controllerSock, 600, [  # south to north
+    # stdTransit(masterCallsign, controllerSock, 400, [  # south to north
     #     ["EGJJ", "EIDW", 20000, 36000, "SKESO DCT LIFOX P16 FIMCA N22 BHD N864 TIGWE L9 SLANY", "LON_W_CTR"],
     #     ["EGJJ", "EIDW", 20000, 36000, "SKESO DCT LIFOX P16 FIMCA N22 BHD N864 TIGWE L9 NICXI M17 VATRY", "LON_W_CTR"],
     #     ["EGJJ", "EGCC", 20000, 36000, "SKESO DCT SKERY L22 EMWIP P16 FIMCA DCT TOJAQ DCT EPACE DCT ACCOP DCT MOCQO P16 AXCIS", "LON_W_CTR"],
-    #     ["EGJJ", "EGCC", 20000, 36000, "SKESO DCT SKERY L22 EMWIP P16 FIMCA DCT TOJAQ DCT UNFIT DCT PENWU DCT NICXI DCT VATRY", "LON_W_CTR"],
     # ], withMaster=False)
     
 
-    # stdTransit(masterCallsign, controllerSock, 600, [  # west to east (upper)
+    # stdTransit(masterCallsign, controllerSock, 140, [  # west to east (upper)
     #     ["KJFK", "EHAM", 35000, 35000, "BAKUR DCT GUBJE DCT GISOK DCT TACQI DCT FONZU DCT DAWLY L149 BIGNO", "LON_W_CTR"],
     #     ["KJFK", "EHAM", 35000, 35000, "BAKUR DCT TIKCA DCT BIGNO", "LON_W_CTR"],
     #     ["KJFK", "EHAM", 35000, 35000, "BAKUR DCT TIKCA DCT PEWBI DCT OXLOW M140 SAM Y8 GWC UN859 SITET", "LON_W_CTR"],
@@ -1277,7 +1295,7 @@ def main():
     #     ["KJFK", "EHAM", 35000, 35000, "GAPLI DCT GAJIT DCT ENHAQ M197 REDFA", "LON_W_CTR"],
     #     ["KJFK", "EHAM", 35000, 35000, "AMPOP DCT SIDDI DCT DAWLY DCT GIBSO L620 SAM M140 DVR UL9 KONAN", "LON_W_CTR"],
     # ], withMaster=False)
-    # stdTransit(masterCallsign, controllerSock, 240, [  # west to east (upper)
+    # stdTransit(masterCallsign, controllerSock, 140, [  # west to east (upper)
     #     ["KJFK", "EGJJ", 35000, 35000, "BAKUR DCT GUBJE DCT GISOK DCT TACQI DCT FONZU DCT DAWLY DCT ABBEW N90 ENHEL N862 SKERY", "LON_W_CTR"],
     #     ["KJFK", "EGJJ", 35000, 35000, "BAKUR DCT GUBJE DCT GISOK DCT TACQI DCT FONZU DCT DAWLY DCT KLAKI L149 BIGNO", "LON_W_CTR"],
     #     ["KJFK", "EGLL", 35000, 35000, "LULOX DCT SIDDI DCT DAWLY DCT ELRIP DCT OTMET", "LON_W_CTR"],
@@ -1285,35 +1303,33 @@ def main():
     #     ["KJFK", "EGBB", 35000, 35000, "GAPLI DCT PEWBI DCT INFEC DCT ICOSA DCT ZIPWE L180 FIGZI", "LON_W_CTR"],
     # ], withMaster=False)
 
-    stdArrival(masterCallsign, controllerSock, "EGFF", 80, [  # FF arrivals from north
-        ["KARNO DCT ALHUP DCT LUCSA N862 WEVBE", 29000, "LON_W_CTR"],
-        ["AMPOP DCT SIDDI DCT TOJAQ", 30000, "LON_W_CTR"],
-        ["GAPLI DCT SIDDI DCT TOJAQ", 32000, "LON_W_CTR"],
-        ["ENJEX DCT ADHAV DCT AGCAT Q63 BAJJA", 30000, "LON_W_CTR"],
-        ["ROVUS DCT ICTAM", 26000, "LON_W_CTR"],
-        ["ROVUS DCT ICTAM", 26000, "LON_W_CTR"],
-    ], withMaster=False)
-    stdArrival(masterCallsign, controllerSock, "EGGD", 80, [  # FF arrivals from north
-        ["KARNO DCT ALHUP DCT LUCSA N862 WEVBE", 29000, "LON_W_CTR"],
-        ["AMPOP DCT SIDDI DCT TOJAQ", 30000, "LON_W_CTR"],
-        ["GAPLI DCT SIDDI DCT TOJAQ", 32000, "LON_W_CTR"],
-        ["ENJEX DCT ADHAV DCT AGCAT Q63 BAJJA", 30000, "LON_W_CTR"],
-        ["ROVUS DCT ICTAM", 22000, "LON_W_CTR"],
-        ["ROVUS DCT ICTAM", 22000, "LON_W_CTR"],
-    ], withMaster=False)
+    # stdTransit(masterCallsign, controllerSock, 150, [
+    #     ["KJFK", "EGFF", 29000, 35000, "KARNO DCT ALHUP DCT LUCSA N862 WEVBE WEVBE1C", "LON_W_CTR"],
+    #     ["KJFK", "EGFF", 30000, 35000, "AMPOP DCT SIDDI DCT TOJAQ TOJAQ1C", "LON_W_CTR"],
+    #     ["KJFK", "EGFF", 32000, 32000, "GAPLI DCT SIDDI DCT TOJAQ TOJAQ1C", "LON_W_CTR"],
+    #     ["KJFK", "EGFF", 30000, 30000, "ENJEX DCT ADHAV DCT AGCAT Q63 BAJJA BAJJA1C", "LON_W_CTR"],
+    #     ["EGLL", "EGFF", 26000, 26000, "LINDY DCT ICTAM ICTAM1C", "LON_W_CTR"],
+    # ], withMaster=False)
+    # stdTransit(masterCallsign, controllerSock, 150, [
+    #     ["KJFK", "EGGD", 29000, 35000, "KARNO DCT ALHUP DCT LUCSA N862 WEVBE WEVBE1B", "LON_W_CTR"],
+    #     ["KJFK", "EGGD", 30000, 35000, "AMPOP DCT SIDDI DCT TOJAQ TOJAQ1B", "LON_W_CTR"],
+    #     ["KJFK", "EGGD", 32000, 32000, "GAPLI DCT SIDDI DCT TOJAQ TOJAQ1B", "LON_W_CTR"],
+    #     ["KJFK", "EGGD", 30000, 30000, "ENJEX DCT ADHAV DCT AGCAT Q63 BAJJA BAJJA1B", "LON_W_CTR"],
+    #     ["EGLL", "EGGD", 26000, 26000, "OCK DCT ICTAM ICTAM1B", "LON_W_CTR"],
+    # ], withMaster=False)
 
-    stdDeparture(masterCallsign, controllerSock, "EGFF", 120, [
-        ["EXMOR1B/12 EXMOR N92 DAWLY DCT JOZMA DCT GAPLI", "KJFK"],
-        ["BCN1B/12 BCN P4 FELCA DCT NICXI DCT OFSOX DCT ENJEX", "KJFK"],
-        ["BCN1B/12 BCN P69 DIZIM N864 AVTIC N38 NOKIN P17 POL N601 INPIP", "EGPH"],
-        ["LEKCI1B/12 LEKCI P4 HAWFA L607 KONAN", "EHAM"]
-    ])
-    stdDeparture(masterCallsign, controllerSock, "EGGD", 120, [
-        ["EXMOR1Z/09 EXMOR N92 DAWLY DCT JOZMA DCT GAPLI", "KJFK"],
-        ["BCN1Z/09 BCN P4 FELCA DCT NICXI DCT OFSOX DCT ENJEX", "KJFK"],
-        ["BCN1Z/09 BCN P69 DIZIM N864 AVTIC N38 NOKIN P17 POL N601 INPIP", "EGPH"],
-        ["YORQI1Z/09 YORQI L607 BIG L9 KONAN", "EHAM"]
-    ])
+    # stdDeparture(masterCallsign, controllerSock, "EGFF", 250, [
+    #     ["EXMOR1B/12 EXMOR N92 DAWLY DCT JOZMA DCT GAPLI", "KJFK"],
+    #     ["BCN1B/12 BCN P4 FELCA DCT NICXI DCT OFSOX DCT ENJEX", "KJFK"],
+    #     ["BCN1B/12 BCN P69 DIZIM N864 AVTIC N38 NOKIN P17 POL N601 INPIP", "EGPH"],
+    #     ["LEKCI1B/12 LEKCI P4 HAWFA L607 KONAN", "EHAM"]
+    # ])
+    # stdDeparture(masterCallsign, controllerSock, "EGGD", 250, [
+    #     ["EXMOR1Z/09 EXMOR N92 DAWLY DCT JOZMA DCT GAPLI", "KJFK"],
+    #     ["BCN1Z/09 BCN P4 FELCA DCT NICXI DCT OFSOX DCT ENJEX", "KJFK"],
+    #     ["BCN1Z/09 BCN P69 DIZIM N864 AVTIC N38 NOKIN P17 POL N601 INPIP", "EGPH"],
+    #     ["YORQI1Z/09 YORQI L607 BIG L9 KONAN", "EHAM"]
+    # ])
 
 
 
@@ -1407,7 +1423,7 @@ def main():
         positionLoop(controllerSock)
 
         k += 1
-        if (k * RADAR_UPDATE_RATE) % (5 * 60) == 0 or k == 5:
+        if (k * RADAR_UPDATE_RATE) % (5 * 60) == 0 or saveNow:
             # shelve planes
             savestateName = "savestates/" + str(datetime.datetime.now()).replace(" ", "_").replace(":", "-")
             with shelve.open(savestateName) as savestate:

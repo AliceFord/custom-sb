@@ -1,17 +1,20 @@
-from sfparser import loadSidAndFixData
+import re
+from sfparser import loadSidAndFixData, loadStarAndFixData
 from globalVars import ATS_DATA, FIXES
 from Constants import ACTIVE_RUNWAYS
 
 
 class Route:
-    def __init__(self, route: str, depAD: str):
+    def __init__(self, route: str, depAD: str, arrAD: str = None):
         self.route = route
         self.initial = True
         self.fixes = []
         self.depAD = depAD
+        self.arrAD = arrAD
         self.initialiseFixesFromRoute()
 
     def initialiseFixesFromRoute(self):
+        global FIXES
         fixAirways = self.route.split(" ")
 
         if self.depAD.startswith("EG"):
@@ -27,6 +30,20 @@ class Route:
                     fixAirways.pop(0)
             except KeyError:
                 pass
+
+        addToEnd = []
+
+        if self.arrAD is not None and self.arrAD.startswith("EG"):
+            try:
+                if (m := re.match(r"([A-Z]{3,5}\d[A-Z])", fixAirways[-1])):
+                    starData, extraFixes = loadStarAndFixData(self.arrAD)
+                    FIXES.update(extraFixes)
+                    addToEnd.extend(starData[m.group(1)][ACTIVE_RUNWAYS[self.arrAD]].split(" "))
+                    addToEnd.pop(0)
+            except KeyError:
+                pass
+
+        
 
         prevWpt = None
         prevRoute = None
@@ -68,6 +85,8 @@ class Route:
                 else:
                     prevRoute = None
 
+        self.fixes.extend(addToEnd)
+
         # for i in range(0, len(fixAirways), 2):
         #     initialFix = fixAirways[i]
 
@@ -82,8 +101,8 @@ class Route:
         return self.route
 
     @classmethod
-    def duplicate(cls, route, depAD):
-        return cls(route.route, depAD)
+    def duplicate(cls, route, depAD, arrAD=None):
+        return cls(route.route, depAD, arrAD)
 
 
 if __name__ == "__main__":
