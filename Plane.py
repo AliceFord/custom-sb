@@ -147,13 +147,16 @@ class Plane:
             distanceOut = util.haversine(self.lat, self.lon, self.clearedILS[1][0], self.clearedILS[1][1]) / 1.852  # nautical miles
             requiredAltitude = math.tan(math.radians(3)) * distanceOut * 6076  # feet
 
+            if self.speed > self.targetSpeed:
+                self.speed -= 1.5 * deltaT
+                self.speed = round(self.speed, 0)
+
             if distanceOut < 4:
                 if self.speed > 125:
                     self.speed -= 0.75 * deltaT
                 if self.speed < 125:
                     self.speed = 125 
-                
-                self.speed = round(self.speed, 0)
+                            
 
             if self.altitude > requiredAltitude:
                 if self.altitude - requiredAltitude > 1000:  # Joined ILS too high

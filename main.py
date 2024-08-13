@@ -714,11 +714,19 @@ def main():
 
     # HEATHROW IN THE HOLD
 
-    llHoldFixes = ["BIG", "OCK", "BNN", "LAM"]
+    # llHoldFixes = ["BIG", "OCK", "BNN", "LAM"]
+
+    # for holdFix in llHoldFixes:
+    #     for alt in range(8000, 10000 + 1 * 1000, 1000):
+    #         plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGLL", holdFix), currentlyWithData=(masterCallsign, holdFix))
+    #         plane.holdFix = holdFix
+    #         planes.append(plane)
+
+    llHoldFixes = ["ROSUN", "MIRSI", "DAYNE"]
 
     for holdFix in llHoldFixes:
-        for alt in range(8000, 10000 + 1 * 1000, 1000):
-            plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGLL", holdFix), currentlyWithData=(masterCallsign, holdFix))
+        for alt in range(7000, 9000 + 1 * 1000, 1000):
+            plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGCC", holdFix), currentlyWithData=(masterCallsign, holdFix))
             plane.holdFix = holdFix
             planes.append(plane)
 
@@ -1386,20 +1394,20 @@ def main():
     # CC
     # stdArrival(masterCallsign, controllerSock, "EGCC", 75, [
     #     ["TNT DCT QUSHI DCT DAYNE", 7000, "EGCC_S_APP"],
-    #     ["TNT DCT QUSHI DCT DAYNE", 7000, "EGCC_S_APP"],
+    #     # ["TNT DCT QUSHI DCT DAYNE", 7000, "EGCC_S_APP"],
     #     ["WAL DCT MIRSI", 7000, "EGCC_S_APP"],
-    #     ["WAL DCT MIRSI", 7000, "EGCC_S_APP"],
+    #     # ["WAL DCT MIRSI", 7000, "EGCC_S_APP"],
     #     ["DIZZE DCT ROSUN", 8000, "EGCC_S_APP"],
-    #     ["GOLES DCT POL DCT BURNI DCT ROSUN", 11000, "EGCC_S_APP"],
+    #     # ["GOLES DCT POL DCT BURNI DCT ROSUN", 11000, "EGCC_S_APP"],
     # ])
-    # stdTransit(masterCallsign, controllerSock, 75, [
-    #     ["EGKK", "EGCC", 7000, 36000, "TNT DCT QUSHI DCT DAYNE", "EGCC_S_APP"],
-    #     ["EGKK", "EGCC", 7000, 36000, "TNT DCT QUSHI DCT DAYNE", "EGCC_S_APP"],
-    #     ["KJFK", "EGCC", 7000, 36000, "WAL DCT MIRSI", "EGCC_S_APP"],
-    #     ["KJFK", "EGCC", 7000, 36000, "WAL DCT MIRSI", "EGCC_S_APP"],
-    #     ["EGPH", "EGCC", 8000, 36000, "DIZZE DCT ROSUN", "EGCC_S_APP"],
-    #     ["EGPH", "EGCC", 11000, 36000, "GOLES DCT POL DCT BURNI DCT ROSUN", "EGCC_S_APP"],
-    # ], withMaster=False)
+    stdTransit(masterCallsign, controllerSock, 75, [
+        ["EGKK", "EGCC", 10000, 36000, "QUSHI DCT DAYNE", "EGCC_S_APP"],
+        # ["EGKK", "EGCC", 7000, 36000, "TNT DCT QUSHI DCT DAYNE", "EGCC_S_APP"],
+        ["KJFK", "EGCC", 10000, 36000, "WAL DCT MIRSI", "EGCC_S_APP"],
+        # ["KJFK", "EGCC", 7000, 36000, "WAL DCT MIRSI", "EGCC_S_APP"],
+        ["EGPH", "EGCC", 10000, 36000, "DIZZE DCT ROSUN", "EGCC_S_APP"],
+        # ["EGPH", "EGCC", 11000, 36000, "GOLES DCT POL DCT BURNI DCT ROSUN", "EGCC_S_APP"],
+    ], withMaster=False)
 
 
 
