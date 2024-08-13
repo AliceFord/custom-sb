@@ -314,14 +314,16 @@ def spawnRandomEveryNSeconds(nSeconds, variance, data):
 
 def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, callsign=None, spawnOne=False, **kwargs):
     global planes, planeSocks
+    fp: FlightPlan = kwargs["flightPlan"]
+    dest = fp.destination
 
     if callsign is None:
-        callsign = util.callsignGen()
+        callsign,aircraft_type = util.callsignGen(dest,[plane.callsign for plane in planes])
     else:
         for plane in planes:
             if plane.callsign == callsign:
                 return  # nonono bug
-
+    fp.aircraftType = aircraft_type
     timeWiggle = 0
     # if method == "ARR":
     #     timeWiggle = random.randint(-15, 15)
@@ -329,7 +331,6 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
     if not spawnOne:
         util.PausableTimer(nSeconds + timeWiggle, spawnEveryNSeconds, args=(nSeconds, masterCallsign, controllerSock, method, *args), kwargs=kwargs)
 
-    fp: FlightPlan = kwargs["flightPlan"]
     kwargs.pop("flightPlan")
 
     hdg = -1
@@ -669,10 +670,10 @@ def main():
     masterCallsign = MASTER_CONTROLLER
 
     # shelving savestates\2024-06-04_21-05-55.242111.bak
-    with shelve.open("savestates/2024-06-25_20-30-19.355626") as f:
-        for plane in f.values():
-            plane.lastTime = time.time()
-            planes.append(plane)
+    # with shelve.open("savestates/2024-06-25_20-30-19.355626") as f:
+    #     for plane in f.values():
+    #         plane.lastTime = time.time()
+    #         planes.append(plane)
 
     # planes.append(Plane.requestFromFix("EZY1", "SAM", squawk=util.squawkGen(), speed=250, altitude=5000, flightPlan=FlightPlan("I", "B738", 250, "EGHI", 1130, 1130, 37000, "EGBB", Route("SAM DCT NORRY Q41 SILVA"))))
 

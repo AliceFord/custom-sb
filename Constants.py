@@ -11,6 +11,41 @@ RADAR_UPDATE_RATE = 5 # per second
 
 CCAMS_SQUAWKS = list(range(1410, 1478)) + list(range(2001, 2078)) + list(range(2201, 2278)) + list(range(2701, 2738))  # realistically way way more
 
+FLEET = {
+    "RYR" : ["B738", "B38M","A320"],
+    "BAW" : ["A319","A320", "A321", "A20N", "A21N", "A35K", "A388", "B772", "B788", "B789", "B78X"],
+    "SHT" : ["A320"],
+    "EFW" : ["A320"],
+    "EZY" : ["A319","A320","A321","A20N","A21N"],
+    "EJU" : ["A319","A320","A321","A20N","A21N"],
+    "EZS" : ["A319","A320","A321","A20N","A21N"],
+    "WZZ" : ["A320","A321","A20N","A21N"],
+    "DLH" : ["A320", "A20N"],
+    "EIN" : ["A320", "A20N", "A333"],
+    "AFR" : ["A318", "A319", "A320", "A321", "A332", "A333", "A388", "B772", "B77W", "B789"],
+    "KLM" : ["B737", "B738", "B739", "B744", "B772", "B77W", "B789", "B78X", "A332", "A333"],
+    "UAE" : ["A388", "B77W"],
+    "AAL" : ["A319", "A320", "A321", "A332", "A333", "B738", "B752", "B763", "B772", "B77W", "B788", "B789"],
+    "UAL" : ["A319", "A320", "B738", "B739", "B752", "B763", "B772", "B77W", "B788", "B789", "B78X"],
+    "SWA" : ["B737", "B738"],
+    "QFA" : ["A332", "A333", "A388", "B738", "B789", "B78X"],
+    "ANA" : ["B772", "B773", "B77W", "B788", "B789", "B78X", "A321", "A332", "A333"],
+    "JAL" : ["B772", "B773", "B77W", "B788", "B789", "B78X", "A321"],
+    "TUI" : ["B737", "B738", "B38M", "E190", "B763", "B788", "E195"],
+    "TOM" : ["B738", "B38M", "B763", "B788","B789"]
+}
+
+AIRPORTS = {
+    "EGLL": ["BAW", "SHT", "DLH", "EIN", "AFR", "KLM", "UAE", "AAL", "UAL", "QFA", "ANA", "JAL"],
+    "EGKK": ["RYR", "BAW", "EFW", "EZY", "EZS", "EJU", "WZZ", "DLH", "EIN", "UAE", "TOM"],
+    "EGCC": ["RYR", "BAW", "EZY", "EZS", "EJU", "WZZ", "DLH", "EIN", "UAE", "TOM", "SHT"],
+    "EGPH": ["RYR", "BAW", "EZY", "EZS", "EJU", "WZZ", "DLH", "EIN", "UAE", "TOM"],
+    "EGPF": ["RYR", "BAW", "EZY", "EZS", "EJU", "WZZ", "DLH", "EIN", "UAE", "TOM"],
+    "EGGW": ["RYR", "EZY", "WZZ"],
+    "EGSS": ["RYR", "EZY", "WZZ", "DLH", "EIN", "UAE", "TOM"],
+}
+
+
 # ACTIVE_AERODROMES = ["EGLL"]
 # ACTIVE_RUNWAYS = {"EGLL": "27R"}
 # ACTIVE_CONTROLLERS = ["EGLL_N_APP", "EGLL_S_APP", "EGLL_F_APP"]
