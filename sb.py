@@ -55,6 +55,7 @@ class ControllerHandler:
             return 1  # forward message to other controllers
 
         elif message[0].startswith("$CQ" + self.callsign):
+            print(message)
             if message[2] == "IP":
                 self.sock.sendall(esConvert("$CR" + self.server, self.callsign, "ATC", "Y", self.callsign))
                 return 0

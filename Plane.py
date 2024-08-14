@@ -147,13 +147,16 @@ class Plane:
             distanceOut = util.haversine(self.lat, self.lon, self.clearedILS[1][0], self.clearedILS[1][1]) / 1.852  # nautical miles
             requiredAltitude = math.tan(math.radians(3)) * distanceOut * 6076  # feet
 
+            if self.speed > self.targetSpeed:
+                self.speed -= 1.5 * deltaT
+                self.speed = round(self.speed, 0)
+
             if distanceOut < 4:
                 if self.speed > 125:
                     self.speed -= 0.75 * deltaT
                 if self.speed < 125:
                     self.speed = 125 
-                
-                self.speed = round(self.speed, 0)
+                            
 
             if self.altitude > requiredAltitude:
                 if self.altitude - requiredAltitude > 1000:  # Joined ILS too high
@@ -166,16 +169,67 @@ class Plane:
             self.lon = round(self.lon, 5)
         elif self.mode == PlaneMode.HEADING:
             if self.holdStartTime is not None:
-                # NEW LOGIC: JUST ORBIT!
-                if self.turnDir == "L":
-                    self.heading -= TURN_RATE * deltaT
-                else:
-                    self.heading += TURN_RATE * deltaT
-                self.targetHeading = self.heading
-                # if time.time() - self.holdStartTime >= 30:  # 30 sec hold legs
-                #     self.holdStartTime = time.time()
-                #     self.targetHeading += 180
-                #     self.targetHeading = self.targetHeading % 360
+                # JUST ORBIT LOGIC:
+                # if self.turnDir == "L":
+                #     self.heading -= TURN_RATE * deltaT
+                # else:
+                #     self.heading += TURN_RATE * deltaT
+                # self.targetHeading = self.heading
+                if self.heading != self.targetHeading:
+                    self.holdStartTime = time.time()
+
+                elif time.time() - self.holdStartTime >= 60:  # 60 sec hold legs
+                    print("TURN!")
+                    self.holdStartTime = time.time()
+
+                    holdPos = FIXES[self.holdFix]
+
+                    if util.haversine(self.lat, self.lon, holdPos[0], holdPos[1]) < 0.5:  # 0.5nm from fix
+                        if self.holdFix == "BIG":  # please don't do this
+                            self.heading = 302
+                            self.turnDir = "R"
+                        elif self.holdFix == "LAM":
+                            self.heading = 262
+                            self.turnDir = "L"
+                        elif self.holdFix == "BNN":
+                            self.heading = 116
+                            self.turnDir = "R"
+                        elif self.holdFix == "OCK":
+                            self.heading = 328
+                            self.turnDir = "R"
+                        elif self.holdFix == "TIMBA":
+                            self.heading = 307
+                            self.turnDir = "R"
+                        elif self.holdFix == "WILLO":
+                            self.heading = 284
+                            self.turnDir = "L"
+                        elif self.holdFix == "JACKO":
+                            self.heading = 264
+                            self.turnDir = "L"
+                        elif self.holdFix == "GODLU":
+                            self.heading = 309
+                            self.turnDir = "R"
+                        elif self.holdFix == "DAYNE":
+                            self.heading = 311
+                            self.turnDir = "R"
+                        elif self.holdFix == "ROSUN":
+                            self.heading = 172
+                            self.turnDir = "R"
+                        elif self.holdFix == "MIRSI":
+                            self.heading = 61
+                            self.turnDir = "R"
+                        else:
+                            self.heading = 307
+                            self.turnDir = "R"
+
+                        self.targetHeading = self.heading
+
+                        self.lat = holdPos[0]
+                        self.lon = holdPos[1]
+                    
+                    self.targetHeading += 180
+                    self.targetHeading = self.targetHeading % 360
+
             if self.targetHeading != self.heading:  # turns
                 if TURN_RATE * deltaT > abs(self.targetHeading - self.heading):
                     self.heading = self.targetHeading
@@ -355,7 +409,8 @@ class Plane:
                     return
 
         if activateHoldMode:
-            self.holdStartTime = time.time()
+            self.holdStartTime = time.time() - 60  # !!!! DODGY !!!
+            self.heading = 307
             self.targetHeading = 307
             self.mode = PlaneMode.HEADING
             self.turnDir = "R"
@@ -383,8 +438,19 @@ class Plane:
             elif self.holdFix == "GODLU":
                 self.heading = 309
                 self.turnDir = "R"
+            elif self.holdFix == "DAYNE":
+                self.heading = 311
+                self.turnDir = "R"
+            elif self.holdFix == "ROSUN":
+                self.heading = 172
+                self.turnDir = "R"
+            elif self.holdFix == "MIRSI":
+                self.heading = 61
+                self.turnDir = "R"
             else:
-                print("Hold fix not found")
+                print("Hold fix not found", self.holdFix)
+
+            self.targetHeading = self.heading
 
 
     def positionUpdateText(self, calculatePosition=True) -> bytes:
@@ -402,7 +468,7 @@ class Plane:
         try:
             coords = FIXES[fix]
         except KeyError:
-            print("Fix not found")
+            print("Fix not found", fix)
             coords = (51.15487, -0.16454)
         
         return cls(callsign, squawk, altitude, heading, speed, coords[0], coords[1], vertSpeed, PlaneMode.FLIGHTPLAN, flightPlan, currentlyWithData, firstController=firstController)
