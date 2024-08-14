@@ -1,6 +1,7 @@
 import math
 import shelve
 import time
+import random
 
 from FlightPlan import FlightPlan
 from Route import Route
@@ -9,7 +10,7 @@ from sfparser import loadRunwayData
 import taxiCoordGen
 from PlaneMode import PlaneMode
 from globalVars import FIXES, GROUND_POINTS, STANDS, timeMultiplier, otherControllerSocks, planes, planeSocks, window
-from Constants import ACTIVE_AERODROMES, AUTO_ASSUME, DESCENT_RATE, HIGH_DESCENT_RATE, TURN_RATE, ACTIVE_CONTROLLERS
+from Constants import ACTIVE_AERODROMES, AUTO_ASSUME, DESCENT_RATE, HIGH_DESCENT_RATE, TURN_RATE, ACTIVE_CONTROLLERS, VREF_TABLE,AIRPORT_ELEVATIONS, AIRCRAFT_PERFORMACE
 
 
 class Plane:
@@ -39,6 +40,10 @@ class Plane:
         self.turnDir = None
         self.holdFix = None
         self.holdStartTime = None
+
+        self.aircraftType = self.flightPlan.aircraftType
+        self.vref = random.choice(list(VREF_TABLE[self.aircraftType]))
+        self.oldAlt, self.oldHead = None, None
 
         self.masterSocketHandleData: tuple[util.EsSocket, str] = None
         self.clearedILS = None
@@ -71,6 +76,16 @@ class Plane:
         
         # if self.altitude < 10000 and self.targetSpeed > 250:
         #     self.targetSpeed = 250
+        if self.altitude != self.targetAltitude:
+            sorted_alts = sorted(AIRCRAFT_PERFORMACE[self.aircraftType])
+            for alt in sorted_alts:
+                if int(alt)*100 < self.altitude:
+                    break
+
+            if self.targetAltitude > self.altitude: #climb
+                self.vertSpeed = int(AIRCRAFT_PERFORMACE[self.aircraftType][alt][7])
+            elif self.targetAltitude < self.altitude: #desc
+                self.vertSpeed = int(AIRCRAFT_PERFORMACE[self.aircraftType][alt][8])
 
         if self.dieOnReaching2K and self.altitude <= 2000:  # time to die
             index = planes.index(self)
@@ -127,8 +142,6 @@ class Plane:
             self.altitude += self.vertSpeed * (deltaT / 60)
             self.altitude = round(self.altitude, 0)
 
-        if self.altitude < 10000 and self.vertSpeed == HIGH_DESCENT_RATE:
-            self.vertSpeed = DESCENT_RATE
 
         if self.vertSpeed > 0 and self.altitude >= self.targetAltitude:
             self.vertSpeed = 0
@@ -145,23 +158,41 @@ class Plane:
             deltaLat, deltaLon = util.deltaLatLonCalc(self.lat, tas, self.heading, deltaT)
 
             distanceOut = util.haversine(self.lat, self.lon, self.clearedILS[1][0], self.clearedILS[1][1]) / 1.852  # nautical miles
-            requiredAltitude = math.tan(math.radians(3)) * distanceOut * 6076  # feet
+            requiredAltitude = (math.tan(math.radians(3)) * distanceOut * 6076) + AIRPORT_ELEVATIONS[self.flightPlan.destination]  # feet
 
             if self.speed > self.targetSpeed:
                 self.speed -= 1.5 * deltaT
                 self.speed = round(self.speed, 0)
 
             if distanceOut < 4:
-                if self.speed > 125:
+                if self.speed > self.vref:
                     self.speed -= 0.75 * deltaT
-                if self.speed < 125:
-                    self.speed = 125 
+                if self.speed < self.vref:
+                    self.speed = self.vref
                             
 
             if self.altitude > requiredAltitude:
                 if self.altitude - requiredAltitude > 1000:  # Joined ILS too high
-                    print("GOAROUND")  # TODO
-                self.altitude = requiredAltitude
+                    print("GOAROUND")
+                    self.mode = PlaneMode.HEADING
+                    self.clearedILS = None
+                    self.targetAltitude = 3000
+                    self.targetHeading = self.heading
+                    self.targetSpeed = 220
+                else:
+                    self.altitude = requiredAltitude
+            
+            if self.targetHeading != self.oldHead:
+                self.mode = PlaneMode.HEADING
+                self.clearedILS = None
+                self.targetAltitude = 3000
+                self.targetSpeed = 220
+            if self.targetAltitude != self.oldAlt: # manual g/a
+                self.mode = PlaneMode.HEADING
+                self.clearedILS = None
+                self.targetHeading = self.heading
+                self.targetSpeed = 220
+            
 
             self.lat += deltaLat
             self.lat = round(self.lat, 5)
@@ -250,6 +281,8 @@ class Plane:
                 if (hdgToRunway < self.clearedILS[0] < newHdgToRunway) or (hdgToRunway > self.clearedILS[0] > newHdgToRunway):
                     self.mode = PlaneMode.ILS
                     self.heading = self.clearedILS[0]
+                    self.oldAlt = self.targetAltitude
+                    self.oldHead = self.targetHeading
 
             self.lat += deltaLat
             self.lat = round(self.lat, 5)

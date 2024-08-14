@@ -22,7 +22,7 @@ from FlightPlan import FlightPlan
 from Plane import Plane
 from PlaneMode import PlaneMode
 from globalVars import FIXES, planes, planeSocks, window, otherControllerSocks, messagesToSpeak, currentSpeakingAC, saveNow
-from Constants import ACTIVE_CONTROLLERS, ACTIVE_RUNWAYS, HIGH_DESCENT_RATE, KILL_ALL_ON_HANDOFF, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, OTHER_CONTROLLERS, RADAR_UPDATE_RATE, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE, TRANSITION_LEVEL
+from Constants import ACTIVE_CONTROLLERS, ACTIVE_RUNWAYS, HIGH_DESCENT_RATE, KILL_ALL_ON_HANDOFF, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, OTHER_CONTROLLERS, RADAR_UPDATE_RATE, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE, TRANSITION_LEVEL, AIRCRAFT_PERFORMACE
 import util
 import taxiCoordGen
 import sessionparser
@@ -91,10 +91,7 @@ def parseCommand(command: str = None):
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Cannot descend while on the ground")
                 plane.targetAltitude = int(text.split(" ")[2]) * 100
-                if plane.altitude > 10000:
-                    plane.vertSpeed = HIGH_DESCENT_RATE
-                else:
-                    plane.vertSpeed = DESCENT_RATE
+                plane.vertSpeed = DESCENT_RATE
 
                 if plane.targetAltitude >= TRANSITION_LEVEL:
                     messagesToSpeak.append(f"Descend flight level {' '.join(list(str(plane.targetAltitude // 100)))}")
@@ -611,9 +608,9 @@ def stdArrival(masterCallsign, controllerSock, ad, delay, planLvlData, variance=
             spd = 220
 
         if withMaster:
-            parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": [route.split(" ")[0]], "kwargs": {"speed": spd, "altitude": lvl, "flightPlan": FlightPlan.arrivalPlan(ad, route), "currentlyWithData": (masterCallsign, route.split(" ")[2]), "firstController": ctrl}})
+            parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": [route.split(" ")[0]], "kwargs": {"speed": spd, "altitude": lvl, "flightPlan": FlightPlan.arrivalPlan(ad, route,"A20N"), "currentlyWithData": (masterCallsign, route.split(" ")[2]), "firstController": ctrl}})
         else:
-            parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": [route.split(" ")[0]], "kwargs": {"speed": spd, "altitude": lvl, "flightPlan": FlightPlan.arrivalPlan(ad, route), "firstController": ctrl}})
+            parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": [route.split(" ")[0]], "kwargs": {"speed": spd, "altitude": lvl, "flightPlan": FlightPlan.arrivalPlan(ad, route,"A20N"), "firstController": ctrl}})
     util.PausableTimer(random.uniform(0, delay), spawnRandomEveryNSeconds, args=(delay, variance, parsedData))
 
 def stdDeparture(masterCallsign, controllerSock, ad, delay, planLvlData):
@@ -715,21 +712,23 @@ def main():
 
     # HEATHROW IN THE HOLD
 
-    # llHoldFixes = ["BIG", "OCK", "BNN", "LAM"]
-
-    # for holdFix in llHoldFixes:
-    #     for alt in range(8000, 10000 + 1 * 1000, 1000):
-    #         plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGLL", holdFix), currentlyWithData=(masterCallsign, holdFix))
-    #         plane.holdFix = holdFix
-    #         planes.append(plane)
-
-    llHoldFixes = ["ROSUN", "MIRSI", "DAYNE"]
+    llHoldFixes = ["BIG", "OCK", "BNN", "LAM"]
 
     for holdFix in llHoldFixes:
-        for alt in range(7000, 9000 + 1 * 1000, 1000):
-            plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGCC", holdFix), currentlyWithData=(masterCallsign, holdFix))
+        for alt in range(8000, 10000 + 1 * 1000, 1000):
+            cs,ac = util.callsignGen("EGLL",[plane.callsign for plane in planes])
+            plane = Plane.requestFromFix(cs, holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGLL", holdFix,ac), currentlyWithData=(masterCallsign, holdFix))
             plane.holdFix = holdFix
             planes.append(plane)
+
+    # llHoldFixes = ["ROSUN", "MIRSI", "DAYNE"]
+
+    # for holdFix in llHoldFixes:
+    #     for alt in range(7000, 9000 + 1 * 1000, 1000):
+    #         callsign,ac_type = util.callsignGen("EGCC",[plane.callsign for plane in planes])
+    #         plane = Plane.requestFromFix(callsign, holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGCC", holdFix), currentlyWithData=(masterCallsign, holdFix))
+    #         plane.holdFix = holdFix
+    #         planes.append(plane)
 
     # LC IN THE HOLD
 
@@ -787,12 +786,12 @@ def main():
     # ])
 
     # HEATHROW INT
-    # stdArrival(masterCallsign, controllerSock, "EGLL", 75, [
-    #     ["NOVMA DCT OCK", 11000, "EGLL_N_APP"],
-    #     ["ODVIK DCT BIG", 11000, "EGLL_N_APP"],
-    #     ["BRAIN DCT LAM", 11000, "EGLL_N_APP"],
-    #     ["COWLY DCT BNN", 11000, "EGLL_N_APP"],
-    # ])
+    stdArrival(masterCallsign, controllerSock, "EGLL", 75, [
+        ["NOVMA DCT OCK", 11000, "EGLL_N_APP"],
+        ["ODVIK DCT BIG", 11000, "EGLL_N_APP"],
+        ["BRAIN DCT LAM", 11000, "EGLL_N_APP"],
+        ["COWLY DCT BNN", 11000, "EGLL_N_APP"],
+    ])
 
 
     # AA INT
@@ -1523,6 +1522,22 @@ def main():
 
     controllerSock.close()
 
+def get_perf() -> dict[str:dict[str:list[str]]]:
+    plane = ""
+    perf : dict[str:dict[str:list[str]]] = {}
+    with open("AircraftPerformace.txt","r")as f:
+        data = f.read().splitlines()
+    for line in data:
+        if line.startswith("PERFAC"):
+            plane = line.split(":")[1]
+            perf[plane] = {}
+        if line.startswith("PERFLINE"):
+            line = line.split(":")
+            perf[plane][line[1]] = line[2:]
+    return perf
+            
+
 
 if __name__ == "__main__":
+    AIRCRAFT_PERFORMACE = get_perf()
     main()

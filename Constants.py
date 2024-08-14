@@ -11,6 +11,38 @@ RADAR_UPDATE_RATE = 5 # per second
 
 CCAMS_SQUAWKS = list(range(1410, 1478)) + list(range(2001, 2078)) + list(range(2201, 2278)) + list(range(2701, 2738))  # realistically way way more
 
+AIRCRAFT_PERFORMACE : dict[str:dict[str:list[str]]]= {}
+
+
+VREF_TABLE = {
+    "B738": range(135, 155),  # Boeing 737-800
+    "B38M": range(140, 160),  # Boeing 737 MAX 8
+    "A320": range(130, 150),  # Airbus A320
+    "A319": range(125, 145),  # Airbus A319
+    "A321": range(135, 155),  # Airbus A321
+    "A20N": range(130, 150),  # Airbus A320neo
+    "A21N": range(135, 155),  # Airbus A321neo
+    "A35K": range(150, 170),  # Airbus A350-1000
+    "A388": range(155, 175),  # Airbus A380-800
+    "B772": range(145, 165),  # Boeing 777-200
+    "B788": range(140, 160),  # Boeing 787-8
+    "B789": range(145, 165),  # Boeing 787-9
+    "B78X": range(150, 170),  # Boeing 787-10
+    "A318": range(125, 135),  # Airbus A318
+    "A332": range(145, 165),  # Airbus A330-200
+    "A333": range(150, 170),  # Airbus A330-300
+    "B77W": range(150, 170),  # Boeing 777-300ER
+    "B737": range(130, 150),  # Boeing 737-700
+    "B739": range(135, 155),  # Boeing 737-900
+    "B744": range(155, 175),  # Boeing 747-400
+    "B752": range(135, 150),  # Boeing 757-200
+    "B763": range(140, 160),  # Boeing 767-300
+    "B773": range(150, 170),  # Boeing 777-300
+    "E190": range(125, 140),  # Embraer E190
+    "E195": range(130, 145),  # Embraer E195
+}
+
+
 FLEET = {
     "RYR" : ["B738", "B38M","A320"],
     "BAW" : ["A319","A320", "A321", "A20N", "A21N", "A35K", "A388", "B772", "B788", "B789", "B78X"],
@@ -45,12 +77,28 @@ AIRPORTS = {
     "EGSS": ["RYR", "EZY", "WZZ", "DLH", "EIN", "UAE", "TOM"],
 }
 
+AIRPORT_ELEVATIONS = {
+    "EGLL": 83, 
+    "EGKK": 202,
+    "EGCC": 257,
+    "EGPH": 135,
+    "EGNX": 306,
+    "EGGD": 622,
+    "EGGW": 526,
+    "EGSS": 348,
+    "EGPF": 26, 
+    "EGAA": 268,
+    "EGNT": 266,
+    "EGMC": 49, 
+    "EGNM": 681,
+}
 
-# ACTIVE_AERODROMES = ["EGLL"]
-# ACTIVE_RUNWAYS = {"EGLL": "09L"}
-# ACTIVE_CONTROLLERS = ["EGLL_N_APP", "EGLL_S_APP", "EGLL_F_APP"]
-# MASTER_CONTROLLER = "LON_D_CTR"
-# MASTER_CONTROLLER_FREQ = "34905"
+
+ACTIVE_AERODROMES = ["EGLL"]
+ACTIVE_RUNWAYS = {"EGLL": "27R"}
+ACTIVE_CONTROLLERS = ["EGLL_N_APP", "EGLL_S_APP", "EGLL_F_APP"]
+MASTER_CONTROLLER = "LON_D_CTR"
+MASTER_CONTROLLER_FREQ = "34905"
 
 # ACTIVE_AERODROMES = ["EGPF"]
 # ACTIVE_RUNWAYS = {"EGPF": "05"}
@@ -136,11 +184,11 @@ AIRPORTS = {
 # MASTER_CONTROLLER = "LON_NE_CTR"
 # MASTER_CONTROLLER_FREQ = "28130"
 
-ACTIVE_AERODROMES = ["EGCC"]
-ACTIVE_RUNWAYS = {"EGCC": "23R"}
-ACTIVE_CONTROLLERS = ["EGCC_S_APP", "EGCC_N_APP", "EGCC_F_APP"]
-MASTER_CONTROLLER = "LON_M_CTR"
-MASTER_CONTROLLER_FREQ = "20025"
+# ACTIVE_AERODROMES = ["EGCC"]
+# ACTIVE_RUNWAYS = {"EGCC": "23R"}
+# ACTIVE_CONTROLLERS = ["EGCC_S_APP", "EGCC_N_APP", "EGCC_F_APP"]
+# MASTER_CONTROLLER = "LON_M_CTR"
+# MASTER_CONTROLLER_FREQ = "20025"
 
 
 INACTIVE_SECTORS = [
