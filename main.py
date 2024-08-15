@@ -22,7 +22,7 @@ from FlightPlan import FlightPlan
 from Plane import Plane
 from PlaneMode import PlaneMode
 from globalVars import FIXES, planes, planeSocks, window, otherControllerSocks, messagesToSpeak, currentSpeakingAC, saveNow
-from Constants import ACTIVE_CONTROLLERS, ACTIVE_RUNWAYS, HIGH_DESCENT_RATE, KILL_ALL_ON_HANDOFF, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, OTHER_CONTROLLERS, RADAR_UPDATE_RATE, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE, TRANSITION_LEVEL, AIRCRAFT_PERFORMACE
+from Constants import ACTIVE_CONTROLLERS, ACTIVE_RUNWAYS, HIGH_DESCENT_RATE, KILL_ALL_ON_HANDOFF, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, OTHER_CONTROLLERS, RADAR_UPDATE_RATE, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE, TRANSITION_LEVEL, AIRCRAFT_PERFORMACE,VREF_TABLE
 import util
 import taxiCoordGen
 import sessionparser
@@ -1522,22 +1522,8 @@ def main():
 
     controllerSock.close()
 
-def get_perf() -> dict[str:dict[str:list[str]]]:
-    plane = ""
-    perf : dict[str:dict[str:list[str]]] = {}
-    with open("AircraftPerformace.txt","r")as f:
-        data = f.read().splitlines()
-    for line in data:
-        if line.startswith("PERFAC"):
-            plane = line.split(":")[1]
-            perf[plane] = {}
-        if line.startswith("PERFLINE"):
-            line = line.split(":")
-            perf[plane][line[1]] = line[2:]
-    return perf
-            
+
 
 
 if __name__ == "__main__":
-    AIRCRAFT_PERFORMACE = get_perf()
     main()

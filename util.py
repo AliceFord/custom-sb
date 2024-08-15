@@ -113,6 +113,23 @@ def whichSector(lat: float, lon: float, alt: int) -> str:
         
     return sectorOut
 
+def pbd(lat: float, lon: float, bearing: int, dist: int):
+    lat_rad = math.radians(lat)
+    lon_rad = math.radians(lon)
+    bearing_rad = math.radians(bearing)
+    
+    R = 3440.065
+    
+    dest_lat_rad = math.asin(math.sin(lat_rad) * math.cos(dist / R) +
+                             math.cos(lat_rad) * math.sin(dist / R) * math.cos(bearing_rad))
+    
+    dest_lon_rad = lon_rad + math.atan2(math.sin(bearing_rad) * math.sin(dist / R) * math.cos(lat_rad),
+                                        math.cos(dist / R) - math.sin(lat_rad) * math.sin(dest_lat_rad))
+    
+    dest_lat = math.degrees(dest_lat_rad)
+    dest_lon = math.degrees(dest_lon_rad)
+    
+    return dest_lat, dest_lon
 
 def otherControllerIndex(callsign: str) -> int:
     for i, controller in enumerate(OTHER_CONTROLLERS):
@@ -216,4 +233,10 @@ class PausableTimer(threading.Thread):
 
 
 if __name__ == "__main__":
-    print(whichSector(*sfCoordsToNormalCoords(*"N052.24.50.722:W001.15.26.594".split(":")), 5000))
+    #print(whichSector(*sfCoordsToNormalCoords(*"N052.24.50.722:W001.15.26.594".split(":")), 5000))
+    start_lat, start_lon = 51.47767, -0.43328
+    bearing = 269-180
+    for i in range(-5,20):
+        print(pbd(start_lat, start_lon, bearing, i))
+
+

@@ -2,7 +2,6 @@ import math
 import shelve
 import time
 import random
-
 from FlightPlan import FlightPlan
 from Route import Route
 import util
@@ -78,14 +77,14 @@ class Plane:
         #     self.targetSpeed = 250
         if self.altitude != self.targetAltitude:
             sorted_alts = sorted(AIRCRAFT_PERFORMACE[self.aircraftType])
-            for alt in sorted_alts:
-                if int(alt)*100 < self.altitude:
+            for alt in sorted_alts: # TODO optimise
+                if self.altitude < int(alt)*100:
                     break
-
             if self.targetAltitude > self.altitude: #climb
-                self.vertSpeed = int(AIRCRAFT_PERFORMACE[self.aircraftType][alt][7])
+                self.vertSpeed = int(AIRCRAFT_PERFORMACE[self.aircraftType][alt][-2])
             elif self.targetAltitude < self.altitude: #desc
-                self.vertSpeed = int(AIRCRAFT_PERFORMACE[self.aircraftType][alt][8])
+                self.vertSpeed = int(AIRCRAFT_PERFORMACE[self.aircraftType][alt][-1]) * -1
+
 
         if self.dieOnReaching2K and self.altitude <= 2000:  # time to die
             index = planes.index(self)
@@ -279,7 +278,20 @@ class Plane:
                 hdgToRunway = util.headingFromTo((self.lat, self.lon), self.clearedILS[1])
                 newHdgToRunway = util.headingFromTo((self.lat + deltaLat, self.lon + deltaLon), self.clearedILS[1])
                 if (hdgToRunway < self.clearedILS[0] < newHdgToRunway) or (hdgToRunway > self.clearedILS[0] > newHdgToRunway):
+                    print("CLAPP")
+                    new_dist_to_runway = abs(util.haversine(self.lat+deltaLat, self.lon+deltaLon, self.clearedILS[1][0],self.clearedILS[1][1]))  / 1.852 # in NM
+                    print(f"{self.callsign} predicted at {new_dist_to_runway}")
+                    itx_lat,itx_lon = util.pbd(self.clearedILS[1][0],self.clearedILS[1][1], (self.clearedILS[0]+180)%360,new_dist_to_runway)
+                    print(f"THD at {self.clearedILS}")
+                    print(f"{self.callsign} at {self.lat}, {self.lon}")
+                    print(f"{self.callsign} intercept at {itx_lat,itx_lon}")
+                    print(f"new lat,lon, {deltaLat}, {deltaLon}")
+                    diff = abs(util.haversine(self.lat+deltaLat, self.lon+deltaLon,itx_lat,itx_lon)) / 1.852
+                    new_dist_to_runway -= diff
+                    print(f"{self.callsign} intercepted at {new_dist_to_runway}")
+                    self.lat,self.lon = util.pbd(self.clearedILS[1][0],self.clearedILS[1][1], (self.clearedILS[0]+180)%360,new_dist_to_runway)
                     self.mode = PlaneMode.ILS
+                    
                     self.heading = self.clearedILS[0]
                     self.oldAlt = self.targetAltitude
                     self.oldHead = self.targetHeading
