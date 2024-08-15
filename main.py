@@ -221,8 +221,16 @@ def parseCommand(command: str = None):
                 
                 try:
 
-                    runwayData = loadRunwayData(plane.flightPlan.destination)[ACTIVE_RUNWAYS[plane.flightPlan.destination]]
-                    plane.clearedILS = runwayData
+                    runwayData = loadRunwayData(plane.flightPlan.destination)
+                    runway = ACTIVE_RUNWAYS[plane.flightPlan.destination]
+                    recip = str((int(runway[:2]) + 180) % 180)
+                    if len(runway) == 3:
+                        side = "L" if runway[-1] == "R" else "L"
+                    recip += side
+                    recip = runwayData[recip]
+                    plane.clearedILS = runwayData[ACTIVE_RUNWAYS[plane.flightPlan.destination]]
+                    
+                    plane.runwayHeading = util.headingFromTo(plane.clearedILS[1], recip[1])
 
                     messagesToSpeak.append(f"Cleared ILS runway {ACTIVE_RUNWAYS[plane.flightPlan.destination]}")
                 except FileNotFoundError:

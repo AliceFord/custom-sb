@@ -46,6 +46,7 @@ class Plane:
 
         self.masterSocketHandleData: tuple[util.EsSocket, str] = None
         self.clearedILS = None
+        self.runwayHeading = None
 
         self.currentSector = util.whichSector(self.lat, self.lon, self.altitude)
 
@@ -277,11 +278,11 @@ class Plane:
             if self.clearedILS is not None:
                 hdgToRunway = util.headingFromTo((self.lat, self.lon), self.clearedILS[1])
                 newHdgToRunway = util.headingFromTo((self.lat + deltaLat, self.lon + deltaLon), self.clearedILS[1])
-                if (hdgToRunway < self.clearedILS[0] < newHdgToRunway) or (hdgToRunway > self.clearedILS[0] > newHdgToRunway):
+                if (hdgToRunway < self.runwayHeading < newHdgToRunway) or (hdgToRunway > self.runwayHeading > newHdgToRunway):
                     print("CLAPP")
                     new_dist_to_runway = abs(util.haversine(self.lat+deltaLat, self.lon+deltaLon, self.clearedILS[1][0],self.clearedILS[1][1]))  / 1.852 # in NM
                     print(f"{self.callsign} predicted at {new_dist_to_runway}")
-                    itx_lat,itx_lon = util.pbd(self.clearedILS[1][0],self.clearedILS[1][1], (self.clearedILS[0]+180)%360,new_dist_to_runway)
+                    itx_lat,itx_lon = util.pbd(self.clearedILS[1][0],self.clearedILS[1][1], (self.runwayHeading+180)%360,new_dist_to_runway)
                     print(f"THD at {self.clearedILS}")
                     print(f"{self.callsign} at {self.lat}, {self.lon}")
                     print(f"{self.callsign} intercept at {itx_lat,itx_lon}")
@@ -289,10 +290,10 @@ class Plane:
                     diff = abs(util.haversine(self.lat+deltaLat, self.lon+deltaLon,itx_lat,itx_lon)) / 1.852
                     new_dist_to_runway -= diff
                     print(f"{self.callsign} intercepted at {new_dist_to_runway}")
-                    self.lat,self.lon = util.pbd(self.clearedILS[1][0],self.clearedILS[1][1], (self.clearedILS[0]+180)%360,new_dist_to_runway)
+                    self.lat,self.lon = util.pbd(self.clearedILS[1][0],self.clearedILS[1][1], (self.runwayHeading+180)%360,new_dist_to_runway)
                     self.mode = PlaneMode.ILS
                     
-                    self.heading = self.clearedILS[0]
+                    self.heading = self.runwayHeading
                     self.oldAlt = self.targetAltitude
                     self.oldHead = self.targetHeading
 
