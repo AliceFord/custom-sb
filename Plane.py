@@ -178,7 +178,7 @@ class Plane:
                 if self.heading != self.targetHeading:
                     self.holdStartTime = time.time()
 
-                elif time.time() - self.holdStartTime >= 60:  # 60 sec hold legs
+                elif time.time() - self.holdStartTime >= 55:  # 60 sec hold legs
                     print("TURN!")
                     self.holdStartTime = time.time()
 
