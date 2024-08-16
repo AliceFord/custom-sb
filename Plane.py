@@ -275,6 +275,9 @@ class Plane:
             deltaLat, deltaLon = util.deltaLatLonCalc(self.lat, tas, self.heading, deltaT)
             snap = False
             if self.clearedILS is not None:
+                print(self.clearedILS)
+                print(self.callsign)
+                print(self.runwayHeading)
                 hdgToRunway = util.headingFromTo((self.lat, self.lon), self.clearedILS[1])
                 newHdgToRunway = util.headingFromTo((self.lat + deltaLat, self.lon + deltaLon), self.clearedILS[1])
                 if (hdgToRunway < self.runwayHeading < newHdgToRunway) or (hdgToRunway > self.runwayHeading > newHdgToRunway):

@@ -225,7 +225,7 @@ def parseCommand(command: str = None):
                     if len(recip) == 1:
                         recip = "0" + recip
                     if len(runway) == 3:
-                        side = "L" if runway[-1] == "R" else "L"
+                        side = "L" if runway[-1] == "R" else "R"
                         recip += side
                     recip = runwayData[recip]
                     plane.clearedILS = runwayData[ACTIVE_RUNWAYS[plane.flightPlan.destination]]
@@ -917,12 +917,12 @@ def main():
 
     # Arrivals
     # PH every  mins
-    stdArrival(masterCallsign, controllerSock, "EGPH", 100, [  # KK arrivals
-        ["HAVEN DCT TARTN", 8000, "EGPH_APP"],
-        ["ESKDO DCT TARTN", 8000, "EGPH_APP"],
-        ["TLA DCT TARTN", 8000, "EGPH_APP"],  # !
-        ["PTH DCT GRICE DCT STIRA", 8000, "EGPH_APP"],
-    ])
+    # stdArrival(masterCallsign, controllerSock, "EGPH", 100, [  # KK arrivals
+    #     ["HAVEN DCT TARTN", 8000, "EGPH_APP"],
+    #     ["ESKDO DCT TARTN", 8000, "EGPH_APP"],
+    #     ["TLA DCT TARTN", 8000, "EGPH_APP"],  # !
+    #     ["PTH DCT GRICE DCT STIRA", 8000, "EGPH_APP"],
+    # ])
     # # PF every 3 mins
     # stdArrival(masterCallsign, controllerSock, "EGPF", 90, [  # KK arrivals
     #     ["NELSA DCT RIBEL", 26000, "STC_CTR"],
@@ -978,9 +978,6 @@ def main():
     #     ["ROTNO DCT ETVAX DCT TIGER DCT BIG", 18000, "LTC_SE_CTR"],
     #     ["BEGTO DCT HAZEL DCT OCK", 13000, "LTC_SW_CTR"],
     #     ["CAWZE DCT SIRIC DCT NIGIT DCT OCK", 14000, "LTC_SW_CTR"],
-
-    #     ["SOPIT DCT WCO DCT BNN", 15000, "LTC_N_CTR"],
-    #     ["SABER DCT BRASO DCT WESUL DCT LAM", 16000, "LTC_N_CTR"]
     # ])
 
     # stdArrival(masterCallsign, controllerSock, "EGSS", 90, [  # SS arrivals
@@ -1409,14 +1406,14 @@ def main():
     #     ["DIZZE DCT ROSUN", 8000, "EGCC_S_APP"],
     #     # ["GOLES DCT POL DCT BURNI DCT ROSUN", 11000, "EGCC_S_APP"],
     # ])
-    stdTransit(masterCallsign, controllerSock, 75, [
-        ["EGKK", "EGCC", 10000, 36000, "QUSHI DCT DAYNE", "EGCC_S_APP"],
-        # ["EGKK", "EGCC", 7000, 36000, "TNT DCT QUSHI DCT DAYNE", "EGCC_S_APP"],
-        ["KJFK", "EGCC", 10000, 36000, "WAL DCT MIRSI", "EGCC_S_APP"],
-        # ["KJFK", "EGCC", 7000, 36000, "WAL DCT MIRSI", "EGCC_S_APP"],
-        ["EGPH", "EGCC", 10000, 36000, "DIZZE DCT ROSUN", "EGCC_S_APP"],
-        # ["EGPH", "EGCC", 11000, 36000, "GOLES DCT POL DCT BURNI DCT ROSUN", "EGCC_S_APP"],
-    ], withMaster=False)
+    # stdTransit(masterCallsign, controllerSock, 75, [
+    #     ["EGKK", "EGCC", 10000, 36000, "QUSHI DCT DAYNE", "EGCC_S_APP"],
+    #     # ["EGKK", "EGCC", 7000, 36000, "TNT DCT QUSHI DCT DAYNE", "EGCC_S_APP"],
+    #     ["KJFK", "EGCC", 10000, 36000, "WAL DCT MIRSI", "EGCC_S_APP"],
+    #     # ["KJFK", "EGCC", 7000, 36000, "WAL DCT MIRSI", "EGCC_S_APP"],
+    #     ["EGPH", "EGCC", 10000, 36000, "DIZZE DCT ROSUN", "EGCC_S_APP"],
+    #     # ["EGPH", "EGCC", 11000, 36000, "GOLES DCT POL DCT BURNI DCT ROSUN", "EGCC_S_APP"],
+    # ], withMaster=False)
 
 
 
