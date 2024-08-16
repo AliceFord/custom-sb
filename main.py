@@ -214,29 +214,38 @@ def parseCommand(command: str = None):
 
                 messagesToSpeak.append(f"{text.split(' ')[2]} arrival")
             case "ils":
+                print("ILS")
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Cannot assign ILS approach while on the ground")
                 if plane.mode == PlaneMode.FLIGHTPLAN:
                     raise CommandErrorException("Need headings to intercept")
-                
+                print("Pass")
                 try:
-
+                    print("TRY")
                     runwayData = loadRunwayData(plane.flightPlan.destination)
                     runway = ACTIVE_RUNWAYS[plane.flightPlan.destination]
-                    recip = str((int(runway[:2]) + 180) % 180)
+                    recip = str((int(runway[:2]) + 18) % 36)
+                    if len (recip) == 1:
+                        recip = "0" + recip
                     if len(runway) == 3:
                         side = "L" if runway[-1] == "R" else "L"
+                    print("here")
                     recip += side
+                    print(recip)
                     recip = runwayData[recip]
+                    print(f"{runway}, {recip}")
                     plane.clearedILS = runwayData[ACTIVE_RUNWAYS[plane.flightPlan.destination]]
-                    
+                    print(f"{plane.callsign} cleared {plane.clearedILS}")
                     plane.runwayHeading = util.headingFromTo(plane.clearedILS[1], recip[1])
 
                     messagesToSpeak.append(f"Cleared ILS runway {ACTIVE_RUNWAYS[plane.flightPlan.destination]}")
+
                 except FileNotFoundError:
-                    pass
+                    print("F")
                 except KeyError:
-                    pass
+                    print("K")
+                except Exception as e:
+                    print(e)
             case "lvl":
                 lvlFix = text.split(" ")[2]
                 plane.lvlCoords = FIXES[lvlFix]

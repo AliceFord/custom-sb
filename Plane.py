@@ -210,7 +210,6 @@ class Plane:
                     self.holdStartTime = time.time()
 
                 elif time.time() - self.holdStartTime >= 60:  # 60 sec hold legs
-                    print("TURN!")
                     self.holdStartTime = time.time()
 
                     holdPos = FIXES[self.holdFix]
@@ -274,33 +273,26 @@ class Plane:
                 self.heading = (self.heading + 360) % 360
 
             deltaLat, deltaLon = util.deltaLatLonCalc(self.lat, tas, self.heading, deltaT)
-
+            snap = False
             if self.clearedILS is not None:
                 hdgToRunway = util.headingFromTo((self.lat, self.lon), self.clearedILS[1])
                 newHdgToRunway = util.headingFromTo((self.lat + deltaLat, self.lon + deltaLon), self.clearedILS[1])
                 if (hdgToRunway < self.runwayHeading < newHdgToRunway) or (hdgToRunway > self.runwayHeading > newHdgToRunway):
-                    print("CLAPP")
                     new_dist_to_runway = abs(util.haversine(self.lat+deltaLat, self.lon+deltaLon, self.clearedILS[1][0],self.clearedILS[1][1]))  / 1.852 # in NM
-                    print(f"{self.callsign} predicted at {new_dist_to_runway}")
                     itx_lat,itx_lon = util.pbd(self.clearedILS[1][0],self.clearedILS[1][1], (self.runwayHeading+180)%360,new_dist_to_runway)
-                    print(f"THD at {self.clearedILS}")
-                    print(f"{self.callsign} at {self.lat}, {self.lon}")
-                    print(f"{self.callsign} intercept at {itx_lat,itx_lon}")
-                    print(f"new lat,lon, {deltaLat}, {deltaLon}")
                     diff = abs(util.haversine(self.lat+deltaLat, self.lon+deltaLon,itx_lat,itx_lon)) / 1.852
                     new_dist_to_runway -= diff
-                    print(f"{self.callsign} intercepted at {new_dist_to_runway}")
                     self.lat,self.lon = util.pbd(self.clearedILS[1][0],self.clearedILS[1][1], (self.runwayHeading+180)%360,new_dist_to_runway)
                     self.mode = PlaneMode.ILS
-                    
                     self.heading = self.runwayHeading
                     self.oldAlt = self.targetAltitude
                     self.oldHead = self.targetHeading
-
-            self.lat += deltaLat
-            self.lat = round(self.lat, 5)
-            self.lon += deltaLon
-            self.lon = round(self.lon, 5)
+                    snap = True
+            if not snap:
+                self.lat += deltaLat
+                self.lat = round(self.lat, 5)
+                self.lon += deltaLon
+                self.lon = round(self.lon, 5)
 
             nextSector = util.whichSector(self.lat, self.lon, self.altitude)
             # if AUTO_ASSUME:
