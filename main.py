@@ -214,28 +214,21 @@ def parseCommand(command: str = None):
 
                 messagesToSpeak.append(f"{text.split(' ')[2]} arrival")
             case "ils":
-                print("ILS")
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Cannot assign ILS approach while on the ground")
                 if plane.mode == PlaneMode.FLIGHTPLAN:
                     raise CommandErrorException("Need headings to intercept")
-                print("Pass")
                 try:
-                    print("TRY")
                     runwayData = loadRunwayData(plane.flightPlan.destination)
                     runway = ACTIVE_RUNWAYS[plane.flightPlan.destination]
                     recip = str((int(runway[:2]) + 18) % 36)
-                    if len (recip) == 1:
+                    if len(recip) == 1:
                         recip = "0" + recip
                     if len(runway) == 3:
                         side = "L" if runway[-1] == "R" else "L"
-                    print("here")
-                    recip += side
-                    print(recip)
+                        recip += side
                     recip = runwayData[recip]
-                    print(f"{runway}, {recip}")
                     plane.clearedILS = runwayData[ACTIVE_RUNWAYS[plane.flightPlan.destination]]
-                    print(f"{plane.callsign} cleared {plane.clearedILS}")
                     plane.runwayHeading = util.headingFromTo(plane.clearedILS[1], recip[1])
 
                     messagesToSpeak.append(f"Cleared ILS runway {ACTIVE_RUNWAYS[plane.flightPlan.destination]}")
@@ -729,14 +722,14 @@ def main():
 
     # HEATHROW IN THE HOLD
 
-    llHoldFixes = ["BIG", "OCK", "BNN", "LAM"]
+    # llHoldFixes = ["BIG", "OCK", "BNN", "LAM"]
 
-    for holdFix in llHoldFixes:
-        for alt in range(8000, 10000 + 1 * 1000, 1000):
-            cs,ac = util.callsignGen("EGLL",[plane.callsign for plane in planes])
-            plane = Plane.requestFromFix(cs, holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGLL", holdFix,ac), currentlyWithData=(masterCallsign, holdFix))
-            plane.holdFix = holdFix
-            planes.append(plane)
+    # for holdFix in llHoldFixes:
+    #     for alt in range(8000, 10000 + 1 * 1000, 1000):
+    #         cs,ac = util.callsignGen("EGLL",[plane.callsign for plane in planes])
+    #         plane = Plane.requestFromFix(cs, holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGLL", holdFix,ac), currentlyWithData=(masterCallsign, holdFix))
+    #         plane.holdFix = holdFix
+    #         planes.append(plane)
 
     # llHoldFixes = ["ROSUN", "MIRSI", "DAYNE"]
 
@@ -803,12 +796,12 @@ def main():
     # ])
 
     # HEATHROW INT
-    stdArrival(masterCallsign, controllerSock, "EGLL", 75, [
-        ["NOVMA DCT OCK", 11000, "EGLL_N_APP"],
-        ["ODVIK DCT BIG", 11000, "EGLL_N_APP"],
-        ["BRAIN DCT LAM", 11000, "EGLL_N_APP"],
-        ["COWLY DCT BNN", 11000, "EGLL_N_APP"],
-    ])
+    # stdArrival(masterCallsign, controllerSock, "EGLL", 75, [
+    #     ["NOVMA DCT OCK", 11000, "EGLL_N_APP"],
+    #     ["ODVIK DCT BIG", 11000, "EGLL_N_APP"],
+    #     ["BRAIN DCT LAM", 11000, "EGLL_N_APP"],
+    #     ["COWLY DCT BNN", 11000, "EGLL_N_APP"],
+    # ])
 
 
     # AA INT
@@ -908,8 +901,8 @@ def main():
 
     # EDI
     # util.PausableTimer(5, spawnRandomEveryNSeconds, args=(120, [
-    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["HAVEN"], "kwargs": {"speed": 250, "altitude": 8000, "flightPlan": FlightPlan.arrivalPlan("EGPH", "HAVEN DCT TARTN"), "currentlyWithData": (masterCallsign, "TARTN")}},
-    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["PTH"], "kwargs": {"speed": 250, "altitude": 8000, "flightPlan": FlightPlan.arrivalPlan("EGPH", "PTH DCT GRICE"), "currentlyWithData": (masterCallsign, "GRICE")}}
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["HAVEN"], "kwargs": {"speed": 250, "altitude": 8000, "flightPlan": FlightPlan.arrivalPlan("EGPH", "HAVEN DCT TARTN","B738"), "currentlyWithData": (masterCallsign, "TARTN")}},
+    #     {"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": ["PTH"], "kwargs": {"speed": 250, "altitude": 8000, "flightPlan": FlightPlan.arrivalPlan("EGPH", "PTH DCT GRICE","B738"), "currentlyWithData": (masterCallsign, "GRICE")}}
     # ]))
 
     # PF
@@ -924,13 +917,12 @@ def main():
 
     # Arrivals
     # PH every  mins
-    # stdArrival(masterCallsign, controllerSock, "EGPH", 90, [  # KK arrivals
-    #     ["ABEVI DCT INPIP", 26000, "STC_CTR"],
-    #     ["ABEVI DCT INPIP", 26000, "STC_CTR"],
-    #     ["ABEVI DCT INPIP", 26000, "STC_CTR"],  # !
-    #     ["DIGBI DCT AGPED", 26000, "STC_CTR"],
-    #     ["BLACA DCT TUNSO", 17000, "STC_CTR"]
-    # ])
+    stdArrival(masterCallsign, controllerSock, "EGPH", 100, [  # KK arrivals
+        ["HAVEN DCT TARTN", 8000, "EGPH_APP"],
+        ["ESKDO DCT TARTN", 8000, "EGPH_APP"],
+        ["TLA DCT TARTN", 8000, "EGPH_APP"],  # !
+        ["PTH DCT GRICE DCT STIRA", 8000, "EGPH_APP"],
+    ])
     # # PF every 3 mins
     # stdArrival(masterCallsign, controllerSock, "EGPF", 90, [  # KK arrivals
     #     ["NELSA DCT RIBEL", 26000, "STC_CTR"],
