@@ -722,13 +722,13 @@ def main():
     #         plane.holdFix = holdFix
     #         planes.append(plane)
 
-    # llHoldFixes = ["ROSUN", "MIRSI", "DAYNE"]
+    llHoldFixes = ["ROSUN", "MIRSI", "DAYNE"]
 
-    # for holdFix in llHoldFixes:
-    #     for alt in range(7000, 9000 + 1 * 1000, 1000):
-    #         plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGCC", holdFix), currentlyWithData=(masterCallsign, holdFix))
-    #         plane.holdFix = holdFix
-    #         planes.append(plane)
+    for holdFix in llHoldFixes:
+        for alt in range(7000, 9000 + 1 * 1000, 1000):
+            plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGCC", holdFix), currentlyWithData=(masterCallsign, holdFix))
+            plane.holdFix = holdFix
+            planes.append(plane)
 
     # LC IN THE HOLD
 
@@ -955,31 +955,31 @@ def main():
     # ])
 
     # LTC-S
-    stdArrival(masterCallsign, controllerSock, "EGKK", 90, [  # KK arrivals
-        ["KUNAV DCT AMDUT DCT SFD DCT WILLO", 16000, "LTC_CTR"],
-        ["TEBRA DCT ABTUM DCT ARNUN DCT LARCK DCT TIMBA", 14000, "LTC_CTR"],
-        ["KONAN DCT KONAN DCT ARNUN DCT LARCK DCT TIMBA", 12000, "LTC_CTR"],  # !
-        ["AVANT DCT GWC DCT HOLLY DCT WILLO", 13000, "LTC_CTR"],
-        ["CAWZE DCT SIRIC DCT NIGIT DCT MID DCT TUFOZ DCT HOLLY DCT WILLO", 14000, "LTC_CTR"],
-        ["DISIT DCT KIDLI DCT MID DCT TUFOZ DCT HOLLY DCT WILLO", 15000, "LTC_CTR"]
-    ])
+    # stdArrival(masterCallsign, controllerSock, "EGKK", 90, [  # KK arrivals
+    #     ["KUNAV DCT AMDUT DCT SFD DCT WILLO", 16000, "LTC_CTR"],
+    #     ["TEBRA DCT ABTUM DCT ARNUN DCT LARCK DCT TIMBA", 14000, "LTC_CTR"],
+    #     ["KONAN DCT KONAN DCT ARNUN DCT LARCK DCT TIMBA", 12000, "LTC_CTR"],  # !
+    #     ["AVANT DCT GWC DCT HOLLY DCT WILLO", 13000, "LTC_CTR"],
+    #     ["CAWZE DCT SIRIC DCT NIGIT DCT MID DCT TUFOZ DCT HOLLY DCT WILLO", 14000, "LTC_CTR"],
+    #     ["DISIT DCT KIDLI DCT MID DCT TUFOZ DCT HOLLY DCT WILLO", 15000, "LTC_CTR"]
+    # ])
 
-    stdArrival(masterCallsign, controllerSock, "EGLL", 100, [  # LL arrivals
-        ["ROTNO DCT ETVAX DCT TIGER DCT BIG", 18000, "LTC_CTR"],
-        ["ROTNO DCT ETVAX DCT TIGER DCT BIG", 18000, "LTC_CTR"],
-        ["BEGTO DCT HAZEL DCT OCK", 13000, "LTC_CTR"],
-        ["CAWZE DCT SIRIC DCT NIGIT DCT OCK", 14000, "LTC_CTR"],
+    # stdArrival(masterCallsign, controllerSock, "EGLL", 100, [  # LL arrivals
+    #     ["ROTNO DCT ETVAX DCT TIGER DCT BIG", 18000, "LTC_CTR"],
+    #     ["ROTNO DCT ETVAX DCT TIGER DCT BIG", 18000, "LTC_CTR"],
+    #     ["BEGTO DCT HAZEL DCT OCK", 13000, "LTC_CTR"],
+    #     ["CAWZE DCT SIRIC DCT NIGIT DCT OCK", 14000, "LTC_CTR"],
 
-        ["SOPIT DCT WCO DCT BNN", 15000, "LTC_CTR"],
-        ["SABER DCT BRASO DCT WESUL DCT LAM", 16000, "LTC_CTR"]
-    ])
+    #     ["SOPIT DCT WCO DCT BNN", 15000, "LTC_CTR"],
+    #     ["SABER DCT BRASO DCT WESUL DCT LAM", 16000, "LTC_CTR"]
+    # ])
 
-    stdArrival(masterCallsign, controllerSock, "EGSS", 100, [  # SS arrivals
-        ["HAZEL DCT SILVA DCT BOMBO DCT BKY DCT BUSTA DCT LOREL", 13000, "LTC_CTR"],  # AVANT DCT 
-        ["ROGBI DCT FINMA DCT BOMBO DCT BKY DCT BUSTA DCT LOREL", 15000, "LTC_CTR"],
-        ["LOFFO DCT ABBOT", 9000, "LTC_CTR"],
-        ["VATON DCT BPK DCT BKY DCT BUSTA DCT LOREL", 16000, "LTC_CTR"],
-    ])
+    # stdArrival(masterCallsign, controllerSock, "EGSS", 100, [  # SS arrivals
+    #     ["HAZEL DCT SILVA DCT BOMBO DCT BKY DCT BUSTA DCT LOREL", 13000, "LTC_CTR"],  # AVANT DCT 
+    #     ["ROGBI DCT FINMA DCT BOMBO DCT BKY DCT BUSTA DCT LOREL", 15000, "LTC_CTR"],
+    #     ["LOFFO DCT ABBOT", 9000, "LTC_CTR"],
+    #     ["VATON DCT BPK DCT BKY DCT BUSTA DCT LOREL", 16000, "LTC_CTR"],
+    # ])
 
     # stdArrival(masterCallsign, controllerSock, "EGGW", 75, [  # GW arrivals
     #     ["AVANT DCT HAZEL DCT SILVA DCT WOBUN DCT EDCOX DCT JUMZI DCT ZAGZO", 13000, "LTC_N_CTR"],
@@ -989,29 +989,29 @@ def main():
     #     ["CLN DCT ABBOT", 9000, "LTC_N_CTR"],
     # ])
 
-    stdDeparture(masterCallsign, controllerSock, "EGKK", 120, [  # KK departures
-        ["HARDY1X/26L HARDY M605 XIDIL", "LFPG"],
-        ["NOVMA1X/26L NOVMA L620 NIBDA N14 HEKXA Q63 SAWPE", "EGGD"],
-        ["NOVMA1X/26L NOVMA L620 GIBSO", "EGTE"],
-        ["MIMFO1M/26L MIMFO Y312 DVR L9 KONAN", "EHAM"],
-        ["LAM6M/26L LAM UN57 WELIN T420 ELVOS", "EGCC"],
-        ["FRANE1M/26L FRANE M604 GASBA M189 CLN DCT BANEM", "EGSH"]
-    ])
+    # stdDeparture(masterCallsign, controllerSock, "EGKK", 120, [  # KK departures
+    #     ["HARDY1X/26L HARDY M605 XIDIL", "LFPG"],
+    #     ["NOVMA1X/26L NOVMA L620 NIBDA N14 HEKXA Q63 SAWPE", "EGGD"],
+    #     ["NOVMA1X/26L NOVMA L620 GIBSO", "EGTE"],
+    #     ["MIMFO1M/26L MIMFO Y312 DVR L9 KONAN", "EHAM"],
+    #     ["LAM6M/26L LAM UN57 WELIN T420 ELVOS", "EGCC"],
+    #     ["FRANE1M/26L FRANE M604 GASBA M189 CLN DCT BANEM", "EGSH"]
+    # ])
 
-    stdDeparture(masterCallsign, controllerSock, "EGLL", 120, [  # LL departures
-        ["MAXIT1F/27R MAXIT Y803 MID L612 BOGNA DCT HARDY M605 XIDIL", "LFPG"],
-        ["CPT3F/27R CPT Q63 SAWPE", "EGGD"],
-        ["GOGSI2F/27R GOGSI N621 SAM DCT GIBSO", "EGTE"],
-        ["DET2F/27R L6 DVR UL9 KONAN", "EHAM"],
+    # stdDeparture(masterCallsign, controllerSock, "EGLL", 120, [  # LL departures
+    #     ["MAXIT1F/27R MAXIT Y803 MID L612 BOGNA DCT HARDY M605 XIDIL", "LFPG"],
+    #     ["CPT3F/27R CPT Q63 SAWPE", "EGGD"],
+    #     ["GOGSI2F/27R GOGSI N621 SAM DCT GIBSO", "EGTE"],
+    #     ["DET2F/27R L6 DVR UL9 KONAN", "EHAM"],
 
-        ["UMLAT1F/27R UMLAT T418 WELIN T420 ELVOS", "EGCC"],
-        ["BPK7F/27R BPK Q295 BRAIN M197 REDFA", "EHAM"]
-    ])
+    #     ["UMLAT1F/27R UMLAT T418 WELIN T420 ELVOS", "EGCC"],
+    #     ["BPK7F/27R BPK Q295 BRAIN M197 REDFA", "EHAM"]
+    # ])
 
-    stdDeparture(masterCallsign, controllerSock, "EGSS", 120, [  # SS departures
-        ["DET2R/22 DET M604 LYD M189 WAFFU UM605 XIDIL", "LFPG"],
-        ["NUGBO1R/22 NUGBO M183 SILVA P86 SAWPE", "EGGD"]
-    ])
+    # stdDeparture(masterCallsign, controllerSock, "EGSS", 120, [  # SS departures
+    #     ["DET2R/22 DET M604 LYD M189 WAFFU UM605 XIDIL", "LFPG"],
+    #     ["NUGBO1R/22 NUGBO M183 SILVA P86 SAWPE", "EGGD"]
+    # ])
 
     # stdDeparture(masterCallsign, controllerSock, "EGGW", 100, [  # GW departures
     #     ["DET3Y/25 DET DCT TIMBA", "EGKK"],
@@ -1400,14 +1400,30 @@ def main():
     #     ["DIZZE DCT ROSUN", 8000, "EGCC_S_APP"],
     #     # ["GOLES DCT POL DCT BURNI DCT ROSUN", 11000, "EGCC_S_APP"],
     # ])
+    stdTransit(masterCallsign, controllerSock, 80, [
+        ["EGKK", "EGCC", 11000, 36000, "QUSHI DCT DAYNE", "EGCC_S_APP"],
+        ["KJFK", "EGCC", 11000, 36000, "WAL DCT MIRSI", "EGCC_S_APP"],
+        ["EGPH", "EGCC", 11000, 36000, "DIZZE DCT ROSUN", "EGCC_S_APP"],
+    ], withMaster=False)
     # stdTransit(masterCallsign, controllerSock, 75, [
-    #     ["EGKK", "EGCC", 10000, 36000, "QUSHI DCT DAYNE", "EGCC_S_APP"],
-    #     # ["EGKK", "EGCC", 7000, 36000, "TNT DCT QUSHI DCT DAYNE", "EGCC_S_APP"],
-    #     ["KJFK", "EGCC", 10000, 36000, "WAL DCT MIRSI", "EGCC_S_APP"],
-    #     # ["KJFK", "EGCC", 7000, 36000, "WAL DCT MIRSI", "EGCC_S_APP"],
-    #     ["EGPH", "EGCC", 10000, 36000, "DIZZE DCT ROSUN", "EGCC_S_APP"],
-    #     # ["EGPH", "EGCC", 11000, 36000, "GOLES DCT POL DCT BURNI DCT ROSUN", "EGCC_S_APP"],
+    #     ["EGKK", "EGCC", 20000, 36000, "ELVOS DCT TNT DCT QUSHI DCT DAYNE", "EGCC_S_APP"],
+    #     ["EGKK", "EGCC", 20000, 36000, "LESTA DCT TNT DCT QUSHI DCT DAYNE", "EGCC_S_APP"],
+    #     ["KJFK", "EGCC", 17000, 36000, "MALUD DCT WAL DCT MIRSI", "EGCC_S_APP"],
+    #     ["KJFK", "EGCC", 27000, 36000, "MAKUX DCT SOSIM DCT GIGTO DCT IBRAR DCT WAL DCT MIRSI", "EGCC_S_APP"],
+    #     ["KJFK", "EGCC", 20000, 36000, "AXCIS DCT MONTY DCT REXAM DCT WAL DCT MIRSI", "EGCC_S_APP"],
+    #     ["EGPH", "EGCC", 20000, 36000, "LAKEY DCT DIZZE DCT ROSUN", "EGCC_S_APP"],
+    #     ["EGPH", "EGCC", 25000, 36000, "TILNI DCT GASKO DCT BEGAM DCT SETEL DCT ROSUN", "EGCC_S_APP"],
+    #     ["EGPH", "EGCC", 29000, 36000, "OTBED DCT GOLES DCT POL DCT BURNI DCT ROSUN", "EGCC_S_APP"],
+    #     ["EGPH", "EGCC", 29000, 36000, "LISBO DCT FIZED DCT GOLES DCT POL DCT BURNI DCT ROSUN", "EGCC_S_APP"]
     # ], withMaster=False)
+    # stdDeparture(masterCallsign, controllerSock, "EGCC", 100, [  # NT departures
+    #     ["SANBA1R/23R SANBA N859 KIDLI", "EGKK"],
+    #     ["EKLAD1R/23R EKLAD Y53 WAL L10 PENIL L28 LELDO M145 BAGSO", "EIDW"],
+    #     ["POL5R/23R POL N601 INPIP", "EGPH"],
+    #     ["POL5R/23R POL N601 INPIP", "EGPH"],
+    #     ["SONEX1R/23R SONEX DCT MAMUL L60 OTBED Y70 SUPEL", "EGSH"],
+    #     ["SONEX1R/23R SONEX DCT MAMUL L60 OTBED Y70 SUPEL", "EGSH"],
+    # ])
 
 
 
