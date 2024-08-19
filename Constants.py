@@ -9,8 +9,7 @@ HIGH_DESCENT_RATE = -3000  # ft / min
 
 RADAR_UPDATE_RATE = 5 # per second
 
-CCAMS_SQUAWKS = list(range(1410, 1478)) + list(range(2001, 2078)) + list(range(2201, 2278)) + list(range(2701, 2738))  # realistically way way more
-
+CCAMS_SQUAWKS = list(range(201,277)) + list(range(301,377)) + list(range(470,477)) + list(range(501,577)) + list(range(730,767)) + list(range(1070,1077)) + list(range(1140,1176)) + list(range(1410,1477)) + list(range(2001,2077)) + list(range(2150,2177)) + list(range(2201,2277)) + list(range(2701,2737)) + list(range(3201,3277)) + list(range(3370,3377)) + list(range(3401,3477)) + list(range(3510,3537)) + list(range(4215,4247)) + list(range(4430,4477)) + list(range(4701,4777)) + list(range(5013,5017)) + list(range(5201,5270)) + list(range(5401,5477)) + list(range(5660,5664)) + list(range(5565,5676)) + list(range(6201,6257)) + list(range(6301,6377)) + list(range(6460,6467)) + list(range(6470,6477)) + list(range(7014,7017)) + list(range(7020,7027)) + list(range(7201,7267)) + list(range(7270,7277)) + list(range(7301,7327)) + list(range(7501,7507)) + list(range(7536,7537)) + list(range(7570,7577)) + list(range(7601,7617)) + list(range(7620,7677)) + list(range(7701,7775)) + list(range(1250,1257)) + list(range(6001,6037))
 
 
 VREF_TABLE = {

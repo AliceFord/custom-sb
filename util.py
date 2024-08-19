@@ -38,7 +38,7 @@ def callsignGen(dest,planes,attempts=5):
         else:
             callsign += random.choice(list(FLEET.keys()))
         ac_type = random.choice(FLEET[callsign])
-        callsign += random.choice(string.digits) 
+        callsign += random.choice(string.digits[1:]) 
         callsign += random.choice(string.digits) if random.random() < 0.5 else ""
         callsign += random.choice(string.ascii_uppercase) if random.random() < 0.5 else ""
         callsign += random.choice(string.ascii_uppercase) if random.random() < 0.5 else ""
@@ -233,10 +233,14 @@ class PausableTimer(threading.Thread):
 
 
 if __name__ == "__main__":
-    #print(whichSector(*sfCoordsToNormalCoords(*"N052.24.50.722:W001.15.26.594".split(":")), 5000))
+    print(whichSector(*sfCoordsToNormalCoords(*"N052.24.50.722:W001.15.26.594".split(":")), 5000))
     start_lat, start_lon = 51.47767, -0.43328
     bearing = 269-180
     for i in range(-5,20):
         print(pbd(start_lat, start_lon, bearing, i))
+
+    for _ in range(100):
+        print(callsignGen("EGKK",[])[0])
+    
 
 
