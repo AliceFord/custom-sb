@@ -8,8 +8,8 @@ import socket
 # sock.bind(("127.0.0.1", "12345"))
 # sock.listen(5)
 
-serverIP = "6.tcp.eu.ngrok.io"
-serverPort = 15435
+serverIP = "0.tcp.eu.ngrok.io"
+serverPort = 19541
 
 # serverIP = input("Enter the server IP: ")
 # serverPort = int(input("Enter the server port: "))

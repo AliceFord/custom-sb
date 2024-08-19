@@ -742,6 +742,14 @@ def main():
 
     # LC IN THE HOLD
 
+    llHoldFixes = ["ROSUN", "MIRSI", "DAYNE"]
+
+    for holdFix in llHoldFixes:
+        for alt in range(7000, 9000 + 1 * 1000, 1000):
+            cs,ac_type = util.callsignGen("EGCC",[plane.callsign for plane in planes])
+            plane = Plane.requestFromFix(cs, holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGCC", holdFix,ac_type), currentlyWithData=(masterCallsign, holdFix))
+            plane.holdFix = holdFix
+            planes.append(plane)
 
     # llHoldFixes = ["PIGOT", "ROKUP"]
 
@@ -1428,6 +1436,27 @@ def main():
     # util.PausableTimer(random.randint(1, 1), spawnEveryNSeconds, args=(180, masterCallsign, controllerSock, "GPT", "J(1)_Z"), kwargs={"flightPlan": FlightPlan("I", "B738", 250, "EHAM", 1130, 1130, 36000, "EGSS", Route("CLN"))})
 
     # From acData
+
+
+    stdTransit(masterCallsign, controllerSock, 75, [
+        ["EGKK", "EGCC", 20000, 36000, "ELVOS DCT TNT DCT QUSHI DCT DAYNE", "EGCC_S_APP"],
+        ["EGKK", "EGCC", 20000, 36000, "LESTA DCT TNT DCT QUSHI DCT DAYNE", "EGCC_S_APP"],
+        ["KJFK", "EGCC", 17000, 36000, "MALUD DCT WAL DCT MIRSI", "EGCC_S_APP"],
+        ["KJFK", "EGCC", 27000, 36000, "MAKUX DCT SOSIM DCT GIGTO DCT IBRAR DCT WAL DCT MIRSI", "EGCC_S_APP"],
+        ["KJFK", "EGCC", 20000, 36000, "AXCIS DCT MONTY DCT REXAM DCT WAL DCT MIRSI", "EGCC_S_APP"],
+        ["EGPH", "EGCC", 20000, 36000, "LAKEY DCT DIZZE DCT ROSUN", "EGCC_S_APP"],
+        ["EGPH", "EGCC", 25000, 36000, "TILNI DCT GASKO DCT BEGAM DCT SETEL DCT ROSUN", "EGCC_S_APP"],
+        ["EGPH", "EGCC", 29000, 36000, "OTBED DCT GOLES DCT POL DCT BURNI DCT ROSUN", "EGCC_S_APP"],
+        ["EGPH", "EGCC", 29000, 36000, "LISBO DCT FIZED DCT GOLES DCT POL DCT BURNI DCT ROSUN", "EGCC_S_APP"]
+    ], withMaster=False)
+    stdDeparture(masterCallsign, controllerSock, "EGCC", 50, [  # NT departures
+        ["SANBA1R/23R SANBA N859 KIDLI", "EGKK"],
+        ["EKLAD1R/23R EKLAD Y53 WAL L10 PENIL L28 LELDO M145 BAGSO", "EIDW"],
+        ["POL5R/23R POL N601 INPIP", "EGPH"],
+        ["POL5R/23R POL N601 INPIP", "EGPH"],
+        ["SONEX1R/23R SONEX DCT MAMUL L60 OTBED Y70 SUPEL", "EGSH"],
+        ["SONEX1R/23R SONEX DCT MAMUL L60 OTBED Y70 SUPEL", "EGSH"],
+    ])
 
     FROM_ACDATA = False
 
