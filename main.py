@@ -1100,25 +1100,20 @@ def main():
     # ])
 
     # #SS
-    # stdArrival(masterCallsign, controllerSock, "EGSS", 85, [  # SS arrivals
-    #     ["BOMBO DCT BKY DCT BUSTA DCT LOREL", 8000, "ESSEX_APP"],
-    #     ["BKY DCT BUSTA DCT LOREL", 12000, "ESSEX_APP"],
-    #     ["LOFFO DCT ABBOT", 8000, "ESSEX_APP"],
-    #     ["CLN DCT ABBOT", 8000, "ESSEX_APP"],
-    #     ["LAPRA DCT ABBOT", 8000, "ESSEX_APP"]
-    # ])
+    stdArrival(masterCallsign, controllerSock, "EGSS", 85, [  # SS arrivals
+        ["BOMBO DCT BKY DCT BUSTA DCT LOREL", 8000, "ESSEX_APP"],
+        ["BKY DCT BUSTA DCT LOREL", 12000, "ESSEX_APP"],
+        ["LOFFO DCT ABBOT", 8000, "ESSEX_APP"],
+        ["CLN DCT ABBOT", 8000, "ESSEX_APP"],
+        ["LAPRA DCT ABBOT", 8000, "ESSEX_APP"]
+    ])
 
-    # stdArrival(masterCallsign, controllerSock, "EGGW", 85, [  # GW arrivals
-    #     ["WOBUN DCT EDCOX JUMZI DCT ZAGZO", 11000, "ESSEX_APP"],
-    #     ["LOFFO DCT ABBOT", 9000, "ESSEX_APP"],
-    #     ["CLN DCT ABBOT", 9000, "ESSEX_APP"],
-    # ])
-    # stdArrival(masterCallsign, controllerSock, "EGGW", 85, [  # GW arrivals
-    #     ["OXDUF DCT COCCU DCT JUMZI DCT ZAGZO", 9000, "EGGW_APP"],
-    #     ["WOBUN DCT EDCOX DCT JUMZI DCT ZAGZO", 9000, "EGGW_APP"],
-    #     ["LOFFO DCT ABBOT", 9000, "EGSS_APP"],
-    #     ["CLN DCT ABBOT", 9000, "EGSS_APP"],
-    # ])
+    stdArrival(masterCallsign, controllerSock, "EGGW", 85, [  # GW arrivals
+        ["WOBUN DCT EDCOX JUMZI DCT ZAGZO", 11000, "ESSEX_APP"],
+        ["LOFFO DCT ABBOT", 9000, "ESSEX_APP"],
+        ["CLN DCT ABBOT", 9000, "ESSEX_APP"],
+    ])
+
 
     # TCN+TCE+SS+GW
     # stdArrival(masterCallsign, controllerSock, "EGSS", 200, [  # SS arrivals TCN

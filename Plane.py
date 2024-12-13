@@ -8,7 +8,7 @@ import util
 from sfparser import loadRunwayData
 import taxiCoordGen
 from PlaneMode import PlaneMode
-from globalVars import FIXES, GROUND_POINTS, STANDS, timeMultiplier, otherControllerSocks, planes, planeSocks, window
+from globalVars import FIXES, GROUND_POINTS, STANDS, otherControllerSocks, planes, planeSocks, window
 from Constants import ACTIVE_AERODROMES, AUTO_ASSUME, DESCENT_RATE, HIGH_DESCENT_RATE, TURN_RATE, ACTIVE_CONTROLLERS, VREF_TABLE,AIRPORT_ELEVATIONS, AIRCRAFT_PERFORMACE, timeMultiplier
 from shapely.geometry import LineString
 
