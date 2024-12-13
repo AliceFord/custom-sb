@@ -10,7 +10,7 @@ import taxiCoordGen
 from PlaneMode import PlaneMode
 from globalVars import FIXES, GROUND_POINTS, STANDS, timeMultiplier, otherControllerSocks, planes, planeSocks, window
 from Constants import ACTIVE_AERODROMES, AUTO_ASSUME, DESCENT_RATE, HIGH_DESCENT_RATE, TURN_RATE, ACTIVE_CONTROLLERS, VREF_TABLE,AIRPORT_ELEVATIONS, AIRCRAFT_PERFORMACE
-
+from shapely.geometry import LineString
 
 class Plane:
     def __init__(self, callsign: str, squawk: int, altitude: int, heading: int, speed: float, lat: float, lon: float, vertSpeed: float, mode: PlaneMode, flightPlan: FlightPlan, currentlyWithData: tuple[str, str], firstController=None, stand=None):  # onGround?
@@ -248,6 +248,12 @@ class Plane:
                         elif self.holdFix == "MIRSI":
                             self.heading = 61
                             self.turnDir = "R"
+                        elif self.holdFix == "TARTN":
+                            self.heading = 15
+                            self.turnDir = "L"
+                        elif self.holdFix == "STIRA":
+                            self.heading = 233
+                            self.turnDir = "R"
                         else:
                             self.heading = 307
                             self.turnDir = "R"
@@ -275,22 +281,47 @@ class Plane:
             deltaLat, deltaLon = util.deltaLatLonCalc(self.lat, tas, self.heading, deltaT)
             snap = False
             if self.clearedILS is not None:
-                print(self.clearedILS)
-                print(self.callsign)
-                print(self.runwayHeading)
                 hdgToRunway = util.headingFromTo((self.lat, self.lon), self.clearedILS[1])
                 newHdgToRunway = util.headingFromTo((self.lat + deltaLat, self.lon + deltaLon), self.clearedILS[1])
+                angleDiff = (self.runwayHeading - self.heading)%360
+                print(f"{self.callsign}, angle diff {angleDiff}")
+                if angleDiff >180:
+                    angleDiff-=360
+                angleToTurn = abs(angleDiff)
+                timeToTurn = angleToTurn / TURN_RATE
+                if self.speed != self.targetSpeed:
+                    distanceToTurn = self.targetSpeed * (timeToTurn / 3600) # overshoot rather than undershoot
+                else:
+                    distanceToTurn = self.speed * (timeToTurn / 3600)
+                print(distanceToTurn)
+                headingLine = LineString([(self.lat,self.lon),util.pbd(self.lat,self.lon,self.heading,100)])
+                runwayLine = LineString([self.clearedILS[1],util.pbd(self.clearedILS[1][0],self.clearedILS[1][1], (self.runwayHeading+180)%360,100)])
+                if headingLine.intersects(runwayLine):
+                    intersection_point = headingLine.intersection(runwayLine)
+                    distToRun = util.haversine(self.lat,self.lon,intersection_point.y,intersection_point.x)/1.852
+                    if distanceToTurn < distToRun:
+                        disToMove = util.haversine(self.lat,self.lon,self.lat+deltaLat,self.lon+deltaLon)
+                        if distToRun - disToMove < distanceToTurn:
+                            if abs(angleDiff) > 20:
+                                if angleDiff > 0:
+                                    self.targetHeading = (self.runwayHeading + 20)%360
+                                else:
+                                    self.targetHeading = (self.runwayHeading - 20)%360
+                            self.targetHeading = self.runwayHeading
+
                 if (hdgToRunway < self.runwayHeading < newHdgToRunway) or (hdgToRunway > self.runwayHeading > newHdgToRunway):
                     new_dist_to_runway = abs(util.haversine(self.lat+deltaLat, self.lon+deltaLon, self.clearedILS[1][0],self.clearedILS[1][1]))  / 1.852 # in NM
                     itx_lat,itx_lon = util.pbd(self.clearedILS[1][0],self.clearedILS[1][1], (self.runwayHeading+180)%360,new_dist_to_runway)
                     diff = abs(util.haversine(self.lat+deltaLat, self.lon+deltaLon,itx_lat,itx_lon)) / 1.852
                     new_dist_to_runway -= diff
+
                     self.lat,self.lon = util.pbd(self.clearedILS[1][0],self.clearedILS[1][1], (self.runwayHeading+180)%360,new_dist_to_runway)
                     self.mode = PlaneMode.ILS
                     self.heading = self.runwayHeading
                     self.oldAlt = self.targetAltitude
                     self.oldHead = self.targetHeading
                     snap = True
+
             if not snap:
                 self.lat += deltaLat
                 self.lat = round(self.lat, 5)
@@ -487,6 +518,12 @@ class Plane:
                 self.turnDir = "R"
             elif self.holdFix == "MIRSI":
                 self.heading = 61
+                self.turnDir = "R"
+            elif self.holdFix == "TARTN":
+                self.heading = 15
+                self.turnDir = "L"
+            elif self.holdFix == "STIRA":
+                self.heading = 233
                 self.turnDir = "R"
             else:
                 print("Hold fix not found", self.holdFix)
