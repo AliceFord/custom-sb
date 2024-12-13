@@ -13,84 +13,6 @@ RADAR_UPDATE_RATE = 5 / timeMultiplier  # seconds
 CCAMS_SQUAWKS = list(range(201,277)) + list(range(301,377)) + list(range(470,477)) + list(range(501,577)) + list(range(730,767)) + list(range(1070,1077)) + list(range(1140,1176)) + list(range(1410,1477)) + list(range(2001,2077)) + list(range(2150,2177)) + list(range(2201,2277)) + list(range(2701,2737)) + list(range(3201,3277)) + list(range(3370,3377)) + list(range(3401,3477)) + list(range(3510,3537)) + list(range(4215,4247)) + list(range(4430,4477)) + list(range(4701,4777)) + list(range(5013,5017)) + list(range(5201,5270)) + list(range(5401,5477)) + list(range(5660,5664)) + list(range(5565,5676)) + list(range(6201,6257)) + list(range(6301,6377)) + list(range(6460,6467)) + list(range(6470,6477)) + list(range(7014,7017)) + list(range(7020,7027)) + list(range(7201,7267)) + list(range(7270,7277)) + list(range(7301,7327)) + list(range(7501,7507)) + list(range(7536,7537)) + list(range(7570,7577)) + list(range(7601,7617)) + list(range(7620,7677)) + list(range(7701,7775)) + list(range(1250,1257)) + list(range(6001,6037))
 
 
-VREF_TABLE = {
-    "B738": range(135, 155),  # Boeing 737-800
-    "B38M": range(140, 160),  # Boeing 737 MAX 8
-    "A320": range(130, 150),  # Airbus A320
-    "A319": range(125, 145),  # Airbus A319
-    "A321": range(135, 155),  # Airbus A321
-    "A20N": range(130, 150),  # Airbus A320neo
-    "A21N": range(135, 155),  # Airbus A321neo
-    "A35K": range(150, 170),  # Airbus A350-1000
-    "A388": range(155, 175),  # Airbus A380-800
-    "B772": range(145, 165),  # Boeing 777-200
-    "B788": range(140, 160),  # Boeing 787-8
-    "B789": range(145, 165),  # Boeing 787-9
-    "B78X": range(150, 170),  # Boeing 787-10
-    "A318": range(125, 135),  # Airbus A318
-    "A332": range(145, 165),  # Airbus A330-200
-    "A333": range(150, 170),  # Airbus A330-300
-    "B77W": range(150, 170),  # Boeing 777-300ER
-    "B737": range(130, 150),  # Boeing 737-700
-    "B739": range(135, 155),  # Boeing 737-900
-    "B744": range(155, 175),  # Boeing 747-400
-    "B752": range(135, 150),  # Boeing 757-200
-    "B763": range(140, 160),  # Boeing 767-300
-    "B773": range(150, 170),  # Boeing 777-300
-    "E190": range(125, 140),  # Embraer E190
-    "E195": range(130, 145),  # Embraer E195
-}
-
-
-FLEET = {
-    "RYR" : ["B738", "B38M","A320"],
-    "BAW" : ["A319","A320", "A321", "A20N", "A21N", "A35K", "A388", "B772", "B788", "B789", "B78X"],
-    "SHT" : ["A320"],
-    "EFW" : ["A320"],
-    "EZY" : ["A319","A320","A321","A20N","A21N"],
-    "EJU" : ["A319","A320","A321","A20N","A21N"],
-    "EZS" : ["A319","A320","A321","A20N","A21N"],
-    "WZZ" : ["A320","A321","A20N","A21N"],
-    "DLH" : ["A320", "A20N"],
-    "EIN" : ["A320", "A20N", "A333"],
-    "AFR" : ["A318", "A319", "A320", "A321", "A332", "A333", "A388", "B772", "B77W", "B789"],
-    "KLM" : ["B737", "B738", "B739", "B744", "B772", "B77W", "B789", "B78X", "A332", "A333"],
-    "UAE" : ["A388", "B77W"],
-    "AAL" : ["A319", "A320", "A321", "A332", "A333", "B738", "B752", "B763", "B772", "B77W", "B788", "B789"],
-    "UAL" : ["A319", "A320", "B738", "B739", "B752", "B763", "B772", "B77W", "B788", "B789", "B78X"],
-    "SWA" : ["B737", "B738"],
-    "QFA" : ["A332", "A333", "A388", "B738", "B789", "B78X"],
-    "ANA" : ["B772", "B773", "B77W", "B788", "B789", "B78X", "A321", "A332", "A333"],
-    "JAL" : ["B772", "B773", "B77W", "B788", "B789", "B78X", "A321"],
-    "TUI" : ["B737", "B738", "B38M", "E190", "B763", "B788", "E195"],
-    "TOM" : ["B738", "B38M", "B763", "B788","B789"]
-}
-
-AIRPORTS = {
-    "EGLL": ["BAW", "SHT", "DLH", "EIN", "AFR", "KLM", "UAE", "AAL", "UAL", "QFA", "ANA", "JAL"],
-    "EGKK": ["RYR", "BAW", "EFW", "EZY", "EZS", "EJU", "WZZ", "DLH", "EIN", "UAE", "TOM"],
-    "EGCC": ["RYR", "BAW", "EZY", "EZS", "EJU", "WZZ", "DLH", "EIN", "UAE", "TOM", "SHT"],
-    "EGPH": ["RYR", "BAW", "EZY", "EZS", "EJU", "WZZ", "DLH", "EIN", "UAE", "TOM"],
-    "EGPF": ["RYR", "BAW", "EZY", "EZS", "EJU", "WZZ", "DLH", "EIN", "UAE", "TOM"],
-    "EGGW": ["RYR", "EZY", "WZZ"],
-    "EGSS": ["RYR", "EZY", "WZZ", "DLH", "EIN", "UAE", "TOM"],
-}
-
-AIRPORT_ELEVATIONS = {
-    "EGLL": 83, 
-    "EGKK": 202,
-    "EGCC": 257,
-    "EGPH": 135,
-    "EGNX": 306,
-    "EGGD": 622,
-    "EGGW": 526,
-    "EGSS": 348,
-    "EGPF": 26, 
-    "EGAA": 268,
-    "EGNT": 266,
-    "EGMC": 49, 
-    "EGNM": 681,
-}
 
 # ACTIVE_AERODROMES = ["EGCC"]
 # ACTIVE_RUNWAYS = {"EGCC": "23R"}
@@ -319,6 +241,86 @@ AUTO_ASSUME = False  # ALL COMMENTED OUT WILL NOT WORK AT ALL
 TRANSITION_LEVEL = 6000
 
 KILL_ALL_ON_HANDOFF = True
+
+VREF_TABLE = {
+    "B738": range(135, 155),  # Boeing 737-800
+    "B38M": range(140, 160),  # Boeing 737 MAX 8
+    "A320": range(130, 150),  # Airbus A320
+    "A319": range(125, 145),  # Airbus A319
+    "A321": range(135, 155),  # Airbus A321
+    "A20N": range(130, 150),  # Airbus A320neo
+    "A21N": range(135, 155),  # Airbus A321neo
+    "A35K": range(150, 170),  # Airbus A350-1000
+    "A388": range(155, 175),  # Airbus A380-800
+    "B772": range(145, 165),  # Boeing 777-200
+    "B788": range(140, 160),  # Boeing 787-8
+    "B789": range(145, 165),  # Boeing 787-9
+    "B78X": range(150, 170),  # Boeing 787-10
+    "A318": range(125, 135),  # Airbus A318
+    "A332": range(145, 165),  # Airbus A330-200
+    "A333": range(150, 170),  # Airbus A330-300
+    "B77W": range(150, 170),  # Boeing 777-300ER
+    "B737": range(130, 150),  # Boeing 737-700
+    "B739": range(135, 155),  # Boeing 737-900
+    "B744": range(155, 175),  # Boeing 747-400
+    "B752": range(135, 150),  # Boeing 757-200
+    "B763": range(140, 160),  # Boeing 767-300
+    "B773": range(150, 170),  # Boeing 777-300
+    "E190": range(125, 140),  # Embraer E190
+    "E195": range(130, 145),  # Embraer E195
+}
+
+
+FLEET = {
+    "RYR" : ["B738", "B38M","A320"],
+    "BAW" : ["A319","A320", "A321", "A20N", "A21N", "A35K", "A388", "B772", "B788", "B789", "B78X"],
+    "SHT" : ["A320"],
+    "EFW" : ["A320"],
+    "EZY" : ["A319","A320","A321","A20N","A21N"],
+    "EJU" : ["A319","A320","A321","A20N","A21N"],
+    "EZS" : ["A319","A320","A321","A20N","A21N"],
+    "WZZ" : ["A320","A321","A20N","A21N"],
+    "DLH" : ["A320", "A20N"],
+    "EIN" : ["A320", "A20N", "A333"],
+    "AFR" : ["A318", "A319", "A320", "A321", "A332", "A333", "A388", "B772", "B77W", "B789"],
+    "KLM" : ["B737", "B738", "B739", "B744", "B772", "B77W", "B789", "B78X", "A332", "A333"],
+    "UAE" : ["A388", "B77W"],
+    "AAL" : ["A319", "A320", "A321", "A332", "A333", "B738", "B752", "B763", "B772", "B77W", "B788", "B789"],
+    "UAL" : ["A319", "A320", "B738", "B739", "B752", "B763", "B772", "B77W", "B788", "B789", "B78X"],
+    "SWA" : ["B737", "B738"],
+    "QFA" : ["A332", "A333", "A388", "B738", "B789", "B78X"],
+    "ANA" : ["B772", "B773", "B77W", "B788", "B789", "B78X", "A321", "A332", "A333"],
+    "JAL" : ["B772", "B773", "B77W", "B788", "B789", "B78X", "A321"],
+    "TUI" : ["B737", "B738", "B38M", "E190", "B763", "B788", "E195"],
+    "TOM" : ["B738", "B38M", "B763", "B788","B789"]
+}
+
+AIRPORTS = {
+    "EGLL": ["BAW", "SHT", "DLH", "EIN", "AFR", "KLM", "UAE", "AAL", "UAL", "QFA", "ANA", "JAL"],
+    "EGKK": ["RYR", "BAW", "EFW", "EZY", "EZS", "EJU", "WZZ", "DLH", "EIN", "UAE", "TOM"],
+    "EGCC": ["RYR", "BAW", "EZY", "EZS", "EJU", "WZZ", "DLH", "EIN", "UAE", "TOM", "SHT"],
+    "EGPH": ["RYR", "BAW", "EZY", "EZS", "EJU", "WZZ", "DLH", "EIN", "UAE", "TOM"],
+    "EGPF": ["RYR", "BAW", "EZY", "EZS", "EJU", "WZZ", "DLH", "EIN", "UAE", "TOM"],
+    "EGGW": ["RYR", "EZY", "WZZ"],
+    "EGSS": ["RYR", "EZY", "WZZ", "DLH", "EIN", "UAE", "TOM"],
+}
+
+AIRPORT_ELEVATIONS = {
+    "EGLL": 83, 
+    "EGKK": 202,
+    "EGCC": 257,
+    "EGPH": 135,
+    "EGNX": 306,
+    "EGGD": 622,
+    "EGGW": 526,
+    "EGSS": 348,
+    "EGPF": 26, 
+    "EGAA": 268,
+    "EGNT": 266,
+    "EGMC": 49, 
+    "EGNM": 681,
+}
+
 
 # Data from https://github.com/vatsimnetwork/euroscope-performance-data
 # PERFLINE = FL:climb speed:cruize speed:descent speed:climb Mach:cruize Mach:descent Mach:ROC:ROD
