@@ -33,6 +33,27 @@ def parseFixes(path=None):
         with open(fixesPath, "r") as f:
             lines = f.read().split("\n")
 
+        belgiumPath = r"data\Navaids\Fixes_Non-UK\FIXES_Belgium.txt"
+
+        with open(belgiumPath, "r") as f:
+            belgiumPath = f.read().split("\n")
+            for line in belgiumPath:
+                try:
+                    lines.append(line)
+                except IndexError:
+                    pass
+
+        netherlandsPath = r"data\Navaids\Fixes_Non-UK\FIXES_Netherlands.txt"
+
+        with open(netherlandsPath, "r") as f:
+            netherlandsPath = f.read().split("\n")
+            for line in netherlandsPath:
+                try:
+                    lines.append(line)
+                except IndexError:
+                    pass
+
+
         ciczPath = r"data\Navaids\FIXES_CICZ.txt"
 
         with open(ciczPath, "r") as f:
@@ -46,6 +67,16 @@ def parseFixes(path=None):
         vorPath = r"data\Navaids\VOR_UK.txt"
 
         with open(vorPath, "r") as f:
+            vorLines = f.read().split("\n")
+            for line in vorLines:
+                try:
+                    lines.append(" ".join([line.split(" ")[0], line.split(" ")[2], line.split(" ")[3]]))
+                except IndexError:
+                    pass
+
+        vorNonukPath = r"data\Navaids\VOR_Non-UK.txt"
+
+        with open(vorNonukPath, "r") as f:
             vorLines = f.read().split("\n")
             for line in vorLines:
                 try:

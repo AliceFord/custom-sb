@@ -8,9 +8,9 @@ import util
 from sfparser import loadRunwayData
 import taxiCoordGen
 from PlaneMode import PlaneMode
-from globalVars import FIXES, GROUND_POINTS, STANDS, timeMultiplier, otherControllerSocks, planes, planeSocks, window
+from globalVars import FIXES, GROUND_POINTS, STANDS, otherControllerSocks, planes, planeSocks, window
 from Constants import ACTIVE_AERODROMES, AUTO_ASSUME, DESCENT_RATE, HIGH_DESCENT_RATE, TURN_RATE, ACTIVE_CONTROLLERS
-
+import Constants
 
 class Plane:
     def __init__(self, callsign: str, squawk: int, altitude: int, heading: int, speed: float, lat: float, lon: float, vertSpeed: float, mode: PlaneMode, flightPlan: FlightPlan, currentlyWithData: tuple[str, str], firstController=None, stand=None):  # onGround?
@@ -61,7 +61,7 @@ class Plane:
         #         util.PausableTimer(11, controllerSock.esSend, args=["$CQ" + self.currentSector, "@94835", "IT", callsign])
 
     def calculatePosition(self):
-        deltaT = (time.time() - self.lastTime) * timeMultiplier
+        deltaT = (time.time() - self.lastTime) * Constants.timeMultiplier
         self.lastTime = time.time()
 
         tas = self.speed * (1 + (self.altitude / 1000) * 0.02)  # true airspeed
@@ -129,6 +129,12 @@ class Plane:
 
         if self.altitude < 10000 and self.vertSpeed == HIGH_DESCENT_RATE:
             self.vertSpeed = DESCENT_RATE
+
+        if self.altitude < 11000 and self.targetAltitude < 10000 and self.targetSpeed > 250:
+            self.targetSpeed = 250
+
+        if 10000 <= self.altitude <= 10500 and self.targetAltitude >= 10000 and self.targetSpeed <= 350:
+            self.targetSpeed = 350
 
         if self.vertSpeed > 0 and self.altitude >= self.targetAltitude:
             self.vertSpeed = 0
