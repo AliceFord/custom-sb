@@ -9,7 +9,7 @@ from sfparser import loadRunwayData
 import taxiCoordGen
 from PlaneMode import PlaneMode
 from globalVars import FIXES, GROUND_POINTS, STANDS, timeMultiplier, otherControllerSocks, planes, planeSocks, window
-from Constants import ACTIVE_AERODROMES, AUTO_ASSUME, DESCENT_RATE, HIGH_DESCENT_RATE, TURN_RATE, ACTIVE_CONTROLLERS, VREF_TABLE,AIRPORT_ELEVATIONS, AIRCRAFT_PERFORMACE
+from Constants import ACTIVE_AERODROMES, AUTO_ASSUME, DESCENT_RATE, HIGH_DESCENT_RATE, TURN_RATE, ACTIVE_CONTROLLERS, VREF_TABLE,AIRPORT_ELEVATIONS, AIRCRAFT_PERFORMACE, timeMultiplier
 from shapely.geometry import LineString
 
 class Plane:
@@ -143,6 +143,12 @@ class Plane:
             self.altitude = round(self.altitude, 0)
 
 
+        if self.altitude < 11000 and self.targetAltitude < 10000 and self.targetSpeed > 250:
+            self.targetSpeed = 250
+
+        if 10000 <= self.altitude <= 10500 and self.targetAltitude >= 10000 and self.targetSpeed <= 350:
+            self.targetSpeed = 350
+
         if self.vertSpeed > 0 and self.altitude >= self.targetAltitude:
             self.vertSpeed = 0
             self.altitude = self.targetAltitude
@@ -209,7 +215,8 @@ class Plane:
                 if self.heading != self.targetHeading:
                     self.holdStartTime = time.time()
 
-                elif time.time() - self.holdStartTime >= 60:  # 60 sec hold legs
+                elif time.time() - self.holdStartTime >= 55:  # 60 sec hold legs
+                    print("TURN!")
                     self.holdStartTime = time.time()
 
                     holdPos = FIXES[self.holdFix]

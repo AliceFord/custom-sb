@@ -17,8 +17,6 @@ otherControllerSocks = []
 planes: 'Plane' = []
 planeSocks = []
 window = None
-timeMultiplier: float = 1
-
 saveNow = False
 
 allocatedSquawks = []

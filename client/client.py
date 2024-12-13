@@ -16,7 +16,7 @@ serverPort = 17535
 print(1)
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.bind(("127.0.0.1", 6809))
+client.bind(("127.0.0.1", 4242))
 print(2)
 
 
