@@ -981,27 +981,27 @@ def main():
     #     ["PTH DCT GRICE DCT STIRA", 8000, "EGPH_APP"],
     # # PH every  mins
     # stdArrival(masterCallsign, controllerSock, "EGPH", 75, [  # KK arrivals
-    #     ["ABEVI DCT INPIP", 26000, "STC_E_CTR"],
-    #     ["ABEVI DCT INPIP", 26000, "STC_E_CTR"],
-    #     ["ABEVI DCT INPIP", 26000, "STC_E_CTR"],  # !
-    #     ["DIGBI DCT AGPED", 26000, "STC_E_CTR"],
-    #     ["BLACA DCT TUNSO", 17000, "STC_E_CTR"]
+    #     ["ABEVI DCT INPIP", 26000, "STC_CTR"],
+    #     ["ABEVI DCT INPIP", 26000, "STC_CTR"],
+    #     ["ABEVI DCT INPIP", 26000, "STC_CTR"],  # !
+    #     ["DIGBI DCT AGPED", 26000, "STC_CTR"],
+    #     ["BLACA DCT TUNSO", 17000, "STC_CTR"]
     # ])
     # # PF every 3 mins
     # stdArrival(masterCallsign, controllerSock, "EGPF", 75, [  # KK arrivals
-    #     ["NELSA DCT RIBEL", 26000, "STC_E_CTR"],
-    #     ["NELSA DCT RIBEL", 26000, "STC_E_CTR"],
-    #     ["NELSA DCT RIBEL", 26000, "STC_E_CTR"],  # !
-    #     ["DIGBI DCT AGPED", 26000, "STC_E_CTR"],
-    #     ["BLACA DCT GIRVA", 17000, "STC_E_CTR"]
+    #     ["NELSA DCT RIBEL", 26000, "STC_CTR"],
+    #     ["NELSA DCT RIBEL", 26000, "STC_CTR"],
+    #     ["NELSA DCT RIBEL", 26000, "STC_CTR"],  # !
+    #     ["DIGBI DCT AGPED", 26000, "STC_CTR"],
+    #     ["BLACA DCT GIRVA", 17000, "STC_CTR"]
     # ])
     # # PK every 3 mins
     # stdArrival(masterCallsign, controllerSock, "EGPK", 75, [  # KK arrivals
-    #     ["NELSA DCT RIBEL", 26000, "STC_E_CTR"],
-    #     ["NELSA DCT RIBEL", 26000, "STC_E_CTR"],
-    #     ["NELSA DCT RIBEL", 26000, "STC_E_CTR"],  # !
-    #     ["NATEB Y96 TLA DCT TRN", 26000, "STC_E_CTR"],
-    #     ["IPSET DCT BLACA", 10000, "STC_E_CTR"]
+    #     ["NELSA DCT RIBEL", 26000, "STC_CTR"],
+    #     ["NELSA DCT RIBEL", 26000, "STC_CTR"],
+    #     ["NELSA DCT RIBEL", 26000, "STC_CTR"],  # !
+    #     ["NATEB Y96 TLA DCT TRN", 26000, "STC_CTR"],
+    #     ["IPSET DCT BLACA", 10000, "STC_CTR"]
     # ])
 
     # Departures
@@ -1654,7 +1654,7 @@ def main():
         ["TLA6C/24 TLA Y96 NATEB N97 ROKAN M982 TOPPA", "EHAM"]
     ])
 
-    stdDeparture(masterCallsign, controllerSock, "EGPF", 180, [  # Pf
+    stdDeparture(masterCallsign, controllerSock, "EGPF", 200, [  # Pf
         ["NORBO1H/23 NORBO T256 DCS L612 LAKEY", "EGCC"],
         ["NORBO1H/23 NORBO T256 DCS L612 LAKEY", "EGGP"],
         ["GOSAM1C/24 GOSAM P600 FENIK L612 CALDA DCT POL", "EGNM"],
@@ -1663,35 +1663,38 @@ def main():
         ["NORB01H/23 NORBO Y96 NATEB N97 ROKAN M982 TOPPA", "EHAM"]
     ])
 
-    stdDeparture(masterCallsign, controllerSock, "EGPK", 180, [  # Pk
+    stdDeparture(masterCallsign, controllerSock, "EGPK", 260, [  # Pk
         ["LUCCO1K/30 LUCCO Z248 OSMEG T256 DCS UL612 LAKEY NUGRA", "EGLL"],
         ["TRN2K/30 TRN P600 BLACA P620 NIMAT", "EIDW"]
     ])
 
-    stdTransit(masterCallsign, controllerSock, 260, [
+    stdTransit(masterCallsign, controllerSock, 330, [ #descening overflights 
         ["BIKF", "EGNM", 26000, 38000, "BEBNI DCT DCS UN57 POL", "STC_W_CTR"],
         ["BIKF", "EGCC", 26000, 38000, "BEBNI DCT DCS UL612 LAKEY LAKEY1M", "STC_W_CTR"],
         ["BIKF", "EGGP", 26000, 38000, "BEBNI DCT DCS UL612 LAKEY LAKEY1M", "STC_W_CTR"],
     ], withMaster=True)
 
-    stdTransit(masterCallsign, controllerSock, 300, [
-        ["EIDW", "EGPF", 15000, 22000, "ROTEV P600 BLACA BLACA1G", "STC_W_CTR"],
-        ["EIDW", "EGPH", 17000, 22000, "ROTEV P600 TUNSO TUNSO1E", "STC_W_CTR"],
+    stdTransit(masterCallsign, controllerSock, 400, [ # crossing traffic into Galloway
+        ["EIDW", "EGPF", 15000, 22000, "ROTEV P600 BLACA BLACA1G", "STC_CTR"],
+        ["EIDW", "EGPH", 17000, 22000, "ROTEV P600 TUNSO TUNSO1E", "STC_CTR"],
     ], withMaster=True)
     
-    stdTransit(masterCallsign, controllerSock, 260, [
-        ["EGNM", "EGPH", 18000, 24000, "NELSA N601 INPIP", "STC_E_CTR"],
-        ["EGNM", "EGPH", 18000, 24000, "NELSA N601 RIBEL", "STC_E_CTR"],
-        ["EGNM", "BIKF", 25000, 38000, "NELSA N601 GRICE RUGID STN AKIVO 6112N 6215N 63N018W ASRUN", "STC_E_CTR"],
-        ["EGLL", "EGPH", 26000, 38000, "ABEVI DCT INPIP INPIP1E", "STC_E_CTR"],
-        ["EGLL", "EGPF", 26000, 38000, "NELSA DCT RIBEL RIBEL1G", "STC_E_CTR"],
-        ["EGLL", "EGPF", 26000, 38000, "NELSA DCT RIBEL RIBEL2P", "STC_E_CTR"]
+    stdTransit(masterCallsign, controllerSock, 260, [ # leeds climbers
+        ["EGNM", "EGPH", 18000, 24000, "POL DCT NELSA N601 INPIP", "STC_E_CTR"],
+        ["EGNM", "EGPH", 18000, 24000, "POL DCT NELSA N601 RIBEL", "STC_E_CTR"],
+        ["EGNM", "BIKF", 18000, 38000, "POL DCT NELSA N601 GRICE RUGID STN AKIVO 6112N 6215N 63N018W ASRUN", "STC_E_CTR"],
     ], withMaster=True)
 
-    stdTransit(masterCallsign, controllerSock, 300, [
-        ["EHAM", "EGPH", 26000, 38000, "NATEB DCT AGPED AGPED1E", "STC_E_CTR"],
-        ["EHAM", "EGPF", 26000, 38000, "NATEB DCT AGPED AGPED1G", "STC_E_CTR"],
-        ["EHAM", "EGPF", 26000, 38000, "NATEB DCT AGPED AGPED1G", "STC_E_CTR"],
+    stdTransit(masterCallsign, controllerSock, 220, [ # stream from the south
+        ["EGLL", "EGPH", 26000, 38000, "ABEVI DCT INPIP INPIP1E", "STC_CTR"],
+        ["EGLL", "EGPF", 26000, 38000, "NELSA DCT RIBEL RIBEL1G", "STC_CTR"],
+        ["EGLL", "EGPF", 26000, 38000, "NELSA DCT RIBEL RIBEL2P", "STC_CTR"]
+    ], withMaster=True)
+
+    stdTransit(masterCallsign, controllerSock, 220, [ # stream to merge
+        ["EHAM", "EGPH", 26000, 38000, "NATEB DCT AGPED AGPED1E", "STC_CTR"],
+        ["EHAM", "EGPF", 26000, 38000, "NATEB DCT AGPED AGPED1G", "STC_CTR"],
+        ["EHAM", "EGPF", 26000, 38000, "NATEB DCT AGPED AGPED1G", "STC_CTR"],
     ], withMaster=True)
 
     
