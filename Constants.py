@@ -12,7 +12,17 @@ RADAR_UPDATE_RATE = 5 / timeMultiplier  # seconds
 
 CCAMS_SQUAWKS = list(range(201,277)) + list(range(301,377)) + list(range(470,477)) + list(range(501,577)) + list(range(730,767)) + list(range(1070,1077)) + list(range(1140,1176)) + list(range(1410,1477)) + list(range(2001,2077)) + list(range(2150,2177)) + list(range(2201,2277)) + list(range(2701,2737)) + list(range(3201,3277)) + list(range(3370,3377)) + list(range(3401,3477)) + list(range(3510,3537)) + list(range(4215,4247)) + list(range(4430,4477)) + list(range(4701,4777)) + list(range(5013,5017)) + list(range(5201,5270)) + list(range(5401,5477)) + list(range(5660,5664)) + list(range(5565,5676)) + list(range(6201,6257)) + list(range(6301,6377)) + list(range(6460,6467)) + list(range(6470,6477)) + list(range(7014,7017)) + list(range(7020,7027)) + list(range(7201,7267)) + list(range(7270,7277)) + list(range(7301,7327)) + list(range(7501,7507)) + list(range(7536,7537)) + list(range(7570,7577)) + list(range(7601,7617)) + list(range(7620,7677)) + list(range(7701,7775)) + list(range(1250,1257)) + list(range(6001,6037))
 
+# ACTIVE_AERODROMES = ["EGLL", "EGKK", "EGLC", "EGSS", "EGGW"]
+# ACTIVE_RUNWAYS = {"EGLL": "27R", "EGKK": "26L", "EGLC": "27", "EGSS": "22", "EGGW": "25"}
+# ACTIVE_CONTROLLERS = ["LTC_EJ_CTR", "LTC_ER_CTR", "EGSS_APP", "LON_E_CTR", "LTC_E_CTR"]
+# MASTER_CONTROLLER = "EGNT_APP"
+# MASTER_CONTROLLER_FREQ = "24380"
 
+ACTIVE_AERODROMES = ["EGPH","EGPF","EGPK"]
+ACTIVE_RUNWAYS = {"EGPH" : "24" ,"EGPF" : "23" ,"EGPK" : "30"}
+ACTIVE_CONTROLLERS = ["STC_CTR", "STC_E_CTR", "STC_W_CTR"]
+MASTER_CONTROLLER = "SCO_D_CTR"
+MASTER_CONTROLLER_FREQ = "35855"
 
 # ACTIVE_AERODROMES = ["EGCC"]
 # ACTIVE_RUNWAYS = {"EGCC": "23R"}
@@ -20,11 +30,11 @@ CCAMS_SQUAWKS = list(range(201,277)) + list(range(301,377)) + list(range(470,477
 # MASTER_CONTROLLER = "LON_M_CTR"
 # MASTER_CONTROLLER_FREQ = "20025"
 
-ACTIVE_AERODROMES = ["EGSS","EGGW"]
-ACTIVE_RUNWAYS = {"EGSS": "22","EGGW":"25"}
-ACTIVE_CONTROLLERS = ["ESSEX_APP" ,"EGSS_APP","EGSS_F_APP","EGGW_APP","EGGW_APP"]
-MASTER_CONTROLLER = "LON_M_CTR"
-MASTER_CONTROLLER_FREQ = "20025"
+# ACTIVE_AERODROMES = ["EGSS","EGGW"]
+# ACTIVE_RUNWAYS = {"EGSS": "22","EGGW":"25"}
+# ACTIVE_CONTROLLERS = ["ESSEX_APP" ,"EGSS_APP","EGSS_F_APP","EGGW_APP","EGGW_APP"]
+# MASTER_CONTROLLER = "LON_M_CTR"
+# MASTER_CONTROLLER_FREQ = "20025"
 
 
 # ACTIVE_AERODROMES = ["EGLL"]

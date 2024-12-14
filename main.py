@@ -1100,19 +1100,19 @@ def main():
     # ])
 
     # #SS
-    stdArrival(masterCallsign, controllerSock, "EGSS", 85, [  # SS arrivals
-        ["BOMBO DCT BKY DCT BUSTA DCT LOREL", 8000, "ESSEX_APP"],
-        ["BKY DCT BUSTA DCT LOREL", 12000, "ESSEX_APP"],
-        ["LOFFO DCT ABBOT", 8000, "ESSEX_APP"],
-        ["CLN DCT ABBOT", 8000, "ESSEX_APP"],
-        ["LAPRA DCT ABBOT", 8000, "ESSEX_APP"]
-    ])
+    # stdArrival(masterCallsign, controllerSock, "EGSS", 85, [  # SS arrivals
+    #     ["BOMBO DCT BKY DCT BUSTA DCT LOREL", 8000, "ESSEX_APP"],
+    #     ["BKY DCT BUSTA DCT LOREL", 12000, "ESSEX_APP"],
+    #     ["LOFFO DCT ABBOT", 8000, "ESSEX_APP"],
+    #     ["CLN DCT ABBOT", 8000, "ESSEX_APP"],
+    #     ["LAPRA DCT ABBOT", 8000, "ESSEX_APP"]
+    # ])
 
-    stdArrival(masterCallsign, controllerSock, "EGGW", 85, [  # GW arrivals
-        ["WOBUN DCT EDCOX JUMZI DCT ZAGZO", 11000, "ESSEX_APP"],
-        ["LOFFO DCT ABBOT", 9000, "ESSEX_APP"],
-        ["CLN DCT ABBOT", 9000, "ESSEX_APP"],
-    ])
+    # stdArrival(masterCallsign, controllerSock, "EGGW", 85, [  # GW arrivals
+    #     ["WOBUN DCT EDCOX JUMZI DCT ZAGZO", 11000, "ESSEX_APP"],
+    #     ["LOFFO DCT ABBOT", 9000, "ESSEX_APP"],
+    #     ["CLN DCT ABBOT", 9000, "ESSEX_APP"],
+    # ])
 
 
     # TCN+TCE+SS+GW
@@ -1614,17 +1614,17 @@ def main():
     # ], withMaster=True)
 
     # stdTransit(masterCallsign, controllerSock, 240, [
-    #     ["EGCC", "EGLC", 22000, 36000, "TIXEX DCT ODVOD DCT ROPMU DCT NUDNA DCT INLIN DCT JACKO", "LTC_ER_CTR"],  # ER
+    #     ["EGCC", "EGLC", 22000, 36000, "TIXEX DCT ODVOD DCT ROPMU DCT NUDNA DCT INLIN DCT JACKO", "LTC_E_CTR"],  # ER
     # ], withMaster=True)
 
     # # deps
     # stdTransit(masterCallsign, controllerSock, 350, [
-    #     ["EGLL", "EHAM", 15000, 35000, "BPK DCT TOTRI DCT BRAIN M197 REDFA", "LTC_ER_CTR"],  # ER
+    #     ["EGLL", "EHAM", 15000, 35000, "BPK DCT TOTRI DCT BRAIN M197 REDFA", "LTC_E_CTR"],  # ER
     # ], withMaster=True)
 
-    # stdTransit(masterCallsign, controllerSock, 500, [
-    #     ["EGKK", "EHAM", 17000, 35000, "MANGO DCT GASBA M197 REDFA", "LTC_E_CTR"],  # ER
-    # ], withMaster=True)
+    # # stdTransit(masterCallsign, controllerSock, 500, [
+    # #     ["EGKK", "EHAM", 17000, 35000, "MANGO DCT GASBA M197 REDFA", "LTC_E_CTR"],  # ER
+    # # ], withMaster=True)
 
     # stdDeparture(masterCallsign, controllerSock, "EGSS", 180, [  # SS departures
     #     ["CLN2E/22 CLN P44 RATLO M197 REDFA", "EHAM"],
@@ -1644,6 +1644,57 @@ def main():
     #     ["ODUKU1A/27 ODUKU M84 CLN P44 RATLO M197 REDFA", "EHAM"],
     #     ["ODUKU1A/27 ODUKU M84 CLN DCT LEDBO M604 LARGA DCT INBOB", "ESSA"],
     # ])
+
+    # STMA
+    stdDeparture(masterCallsign, controllerSock, "EGPH", 180, [  # PH
+        ["GOSAM1C/24 GOSAM P600 FENIK L612 LAKEY", "EGCC"],
+        ["GOSAM1C/24 GOSAM P600 FENIK L612 LAKEY", "EGGP"],
+        ["GOSAM1C/24 GOSAM P600 FENIK L612 CALDA DCT POL", "EGNM"],
+        ["GOSAM1C/24 GOSAM P600 FENIK L612 ELBUS UL612 LAKEY DCT NUGRA", "EGLL"],
+        ["TLA6C/24 TLA Y96 NATEB N97 ROKAN M982 TOPPA", "EHAM"]
+    ])
+
+    stdDeparture(masterCallsign, controllerSock, "EGPF", 180, [  # Pf
+        ["NORBO1H/23 NORBO T256 DCS L612 LAKEY", "EGCC"],
+        ["NORBO1H/23 NORBO T256 DCS L612 LAKEY", "EGGP"],
+        ["GOSAM1C/24 GOSAM P600 FENIK L612 CALDA DCT POL", "EGNM"],
+        ["NORBO1H/23 NORBO T256 ROVLA UT256 DCS UL612 LAKEY NUGRA", "EGLL"],
+        ["NORB01H/23 NORBO L186 TRN P600 BLACA P620 NIMAT", "EIDW"],
+        ["NORB01H/23 NORBO Y96 NATEB N97 ROKAN M982 TOPPA", "EHAM"]
+    ])
+
+    stdDeparture(masterCallsign, controllerSock, "EGPK", 180, [  # Pk
+        ["LUCCO1K/30 LUCCO Z248 OSMEG T256 DCS UL612 LAKEY NUGRA", "EGLL"],
+        ["TRN2K/30 TRN P600 BLACA P620 NIMAT", "EIDW"]
+    ])
+
+    stdTransit(masterCallsign, controllerSock, 260, [
+        ["BIKF", "EGNM", 26000, 38000, "BEBNI DCT DCS UN57 POL", "STC_W_CTR"],
+        ["BIKF", "EGCC", 26000, 38000, "BEBNI DCT DCS UL612 LAKEY LAKEY1M", "STC_W_CTR"],
+        ["BIKF", "EGGP", 26000, 38000, "BEBNI DCT DCS UL612 LAKEY LAKEY1M", "STC_W_CTR"],
+    ], withMaster=True)
+
+    stdTransit(masterCallsign, controllerSock, 300, [
+        ["EIDW", "EGPF", 15000, 22000, "ROTEV P600 BLACA BLACA1G", "STC_W_CTR"],
+        ["EIDW", "EGPH", 17000, 22000, "ROTEV P600 TUNSO TUNSO1E", "STC_W_CTR"],
+    ], withMaster=True)
+    
+    stdTransit(masterCallsign, controllerSock, 260, [
+        ["EGNM", "EGPH", 18000, 24000, "NELSA N601 INPIP", "STC_E_CTR"],
+        ["EGNM", "EGPH", 18000, 24000, "NELSA N601 RIBEL", "STC_E_CTR"],
+        ["EGNM", "BIKF", 25000, 38000, "NELSA N601 GRICE RUGID STN AKIVO 6112N 6215N 63N018W ASRUN", "STC_E_CTR"],
+        ["EGLL", "EGPH", 26000, 38000, "ABEVI DCT INPIP INPIP1E", "STC_E_CTR"],
+        ["EGLL", "EGPF", 26000, 38000, "NELSA DCT RIBEL RIBEL1G", "STC_E_CTR"],
+        ["EGLL", "EGPF", 26000, 38000, "NELSA DCT RIBEL RIBEL2P", "STC_E_CTR"]
+    ], withMaster=True)
+
+    stdTransit(masterCallsign, controllerSock, 300, [
+        ["EHAM", "EGPH", 26000, 38000, "NATEB DCT AGPED AGPED1E", "STC_E_CTR"],
+        ["EHAM", "EGPF", 26000, 38000, "NATEB DCT AGPED AGPED1G", "STC_E_CTR"],
+        ["EHAM", "EGPF", 26000, 38000, "NATEB DCT AGPED AGPED1G", "STC_E_CTR"],
+    ], withMaster=True)
+
+    
 
     ## PC W
     # stdTransit(masterCallsign, controllerSock, 90, [
