@@ -186,7 +186,7 @@ INACTIVE_SECTORS = [
 
 # OTHER_CONTROLLERS = []
 OTHER_CONTROLLERS = [
-    ("EGCC_S_APP","18580"),
+    # ("EGCC_S_APP","18580"),
     # ("EGCC_N_APP", "35005"),
     # ("EGCC_F_APP", "21355"),
     # ("EGGP_APP", "19855"),
@@ -195,13 +195,13 @@ OTHER_CONTROLLERS = [
     # ("EGPK_APP", "29450"),
     # ("EGPD_APP", "19055"),
     # ("EGPE_APP", "22605"),
-    ("EGNT_APP", "24380"),
+    # ("EGNT_APP", "24380"),
     # ("EGPB_APP", "31300"),
     # ("EGKK_APP", "26825"),
     # ("EGLL_N_APP", "19730"),
     # ("ESSEX_APP", "20625"),
-    ("EGGD_APP", "25650"),
-    ("EGFF_APP", "25855"),
+    # ("EGGD_APP", "25650"),
+    # ("EGFF_APP", "25855"),
 
     ("BIRD_S1_CTR", "19700"),
     ("EURN_FSS", "33450"),
@@ -215,14 +215,14 @@ OTHER_CONTROLLERS = [
     ("LON_D_CTR", "34905"),
     # ("LON_NW_CTR", "35580"),
     # ("LON_NE_CTR", "28130"),
-    ("LON_S_CTR", "29430"),
+    # ("LON_S_CTR", "29430"),
 
     # ("LTC_E_CTR", "21230"),
-# #    ("LTC_M_CTR", "21030"),
-    ("LTC_NE_CTR", "18825"),
-    ("LTC_NW_CTR", "21280"),
-    ("LTC_SE_CTR", "20530"),
-    ("LTC_SW_CTR", "33180"),
+    # # ("LTC_M_CTR", "21030"),
+    # ("LTC_NE_CTR", "18825"),
+    # ("LTC_NW_CTR", "21280"),
+    # ("LTC_SE_CTR", "20530"),
+    # ("LTC_SW_CTR", "33180"),
 
     ("MAN_WU_CTR", "18780"),
     ("MAN_NE_CTR", "35715"),
