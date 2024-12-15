@@ -1,7 +1,7 @@
 import math
 import shelve
 import time
-
+import random
 from FlightPlan import FlightPlan
 from Route import Route
 import util
@@ -9,8 +9,8 @@ from sfparser import loadRunwayData
 import taxiCoordGen
 from PlaneMode import PlaneMode
 from globalVars import FIXES, GROUND_POINTS, STANDS, otherControllerSocks, planes, planeSocks, window
-from Constants import ACTIVE_AERODROMES, AUTO_ASSUME, DESCENT_RATE, HIGH_DESCENT_RATE, TURN_RATE, ACTIVE_CONTROLLERS
-import Constants
+from Constants import ACTIVE_AERODROMES, AUTO_ASSUME, DESCENT_RATE, HIGH_DESCENT_RATE, TURN_RATE, ACTIVE_CONTROLLERS, VREF_TABLE,AIRPORT_ELEVATIONS, AIRCRAFT_PERFORMACE, timeMultiplier
+from shapely.geometry import LineString
 
 class Plane:
     def __init__(self, callsign: str, squawk: int, altitude: int, heading: int, speed: float, lat: float, lon: float, vertSpeed: float, mode: PlaneMode, flightPlan: FlightPlan, currentlyWithData: tuple[str, str], firstController=None, stand=None):  # onGround?
@@ -40,8 +40,13 @@ class Plane:
         self.holdFix = None
         self.holdStartTime = None
 
+        self.aircraftType = self.flightPlan.aircraftType
+        self.vref = random.choice(list(VREF_TABLE[self.aircraftType]))
+        self.oldAlt, self.oldHead = None, None
+
         self.masterSocketHandleData: tuple[util.EsSocket, str] = None
         self.clearedILS = None
+        self.runwayHeading = None
 
         self.currentSector = util.whichSector(self.lat, self.lon, self.altitude)
 
@@ -61,7 +66,7 @@ class Plane:
         #         util.PausableTimer(11, controllerSock.esSend, args=["$CQ" + self.currentSector, "@94835", "IT", callsign])
 
     def calculatePosition(self):
-        deltaT = (time.time() - self.lastTime) * Constants.timeMultiplier
+        deltaT = (time.time() - self.lastTime) * timeMultiplier
         self.lastTime = time.time()
 
         tas = self.speed * (1 + (self.altitude / 1000) * 0.02)  # true airspeed
@@ -71,6 +76,16 @@ class Plane:
         
         # if self.altitude < 10000 and self.targetSpeed > 250:
         #     self.targetSpeed = 250
+        if self.altitude != self.targetAltitude:
+            sorted_alts = sorted(AIRCRAFT_PERFORMACE[self.aircraftType])
+            for alt in sorted_alts: # TODO optimise
+                if self.altitude < int(alt)*100:
+                    break
+            if self.targetAltitude > self.altitude: #climb
+                self.vertSpeed = int(AIRCRAFT_PERFORMACE[self.aircraftType][alt][-2])
+            elif self.targetAltitude < self.altitude: #desc
+                self.vertSpeed = int(AIRCRAFT_PERFORMACE[self.aircraftType][alt][-1]) * -1
+
 
         if self.dieOnReaching2K and self.altitude <= 2000:  # time to die
             index = planes.index(self)
@@ -127,8 +142,6 @@ class Plane:
             self.altitude += self.vertSpeed * (deltaT / 60)
             self.altitude = round(self.altitude, 0)
 
-        if self.altitude < 10000 and self.vertSpeed == HIGH_DESCENT_RATE:
-            self.vertSpeed = DESCENT_RATE
 
         if self.altitude < 11000 and self.targetAltitude < 10000 and self.targetSpeed > 250:
             self.targetSpeed = 250
@@ -151,23 +164,41 @@ class Plane:
             deltaLat, deltaLon = util.deltaLatLonCalc(self.lat, tas, self.heading, deltaT)
 
             distanceOut = util.haversine(self.lat, self.lon, self.clearedILS[1][0], self.clearedILS[1][1]) / 1.852  # nautical miles
-            requiredAltitude = math.tan(math.radians(3)) * distanceOut * 6076  # feet
+            requiredAltitude = (math.tan(math.radians(3)) * distanceOut * 6076) + AIRPORT_ELEVATIONS[self.flightPlan.destination]  # feet
 
             if self.speed > self.targetSpeed:
                 self.speed -= 1.5 * deltaT
                 self.speed = round(self.speed, 0)
 
             if distanceOut < 4:
-                if self.speed > 125:
+                if self.speed > self.vref:
                     self.speed -= 0.75 * deltaT
-                if self.speed < 125:
-                    self.speed = 125 
+                if self.speed < self.vref:
+                    self.speed = self.vref
                             
 
             if self.altitude > requiredAltitude:
                 if self.altitude - requiredAltitude > 1000:  # Joined ILS too high
-                    print("GOAROUND")  # TODO
-                self.altitude = requiredAltitude
+                    print("GOAROUND")
+                    self.mode = PlaneMode.HEADING
+                    self.clearedILS = None
+                    self.targetAltitude = 3000
+                    self.targetHeading = self.heading
+                    self.targetSpeed = 220
+                else:
+                    self.altitude = requiredAltitude
+            
+            if self.targetHeading != self.oldHead:
+                self.mode = PlaneMode.HEADING
+                self.clearedILS = None
+                self.targetAltitude = 3000
+                self.targetSpeed = 220
+            if self.targetAltitude != self.oldAlt: # manual g/a
+                self.mode = PlaneMode.HEADING
+                self.clearedILS = None
+                self.targetHeading = self.heading
+                self.targetSpeed = 220
+            
 
             self.lat += deltaLat
             self.lat = round(self.lat, 5)
@@ -224,6 +255,12 @@ class Plane:
                         elif self.holdFix == "MIRSI":
                             self.heading = 61
                             self.turnDir = "R"
+                        elif self.holdFix == "TARTN":
+                            self.heading = 15
+                            self.turnDir = "L"
+                        elif self.holdFix == "STIRA":
+                            self.heading = 233
+                            self.turnDir = "R"
                         else:
                             self.heading = 307
                             self.turnDir = "R"
@@ -249,18 +286,54 @@ class Plane:
                 self.heading = (self.heading + 360) % 360
 
             deltaLat, deltaLon = util.deltaLatLonCalc(self.lat, tas, self.heading, deltaT)
-
+            snap = False
             if self.clearedILS is not None:
                 hdgToRunway = util.headingFromTo((self.lat, self.lon), self.clearedILS[1])
                 newHdgToRunway = util.headingFromTo((self.lat + deltaLat, self.lon + deltaLon), self.clearedILS[1])
-                if (hdgToRunway < self.clearedILS[0] < newHdgToRunway) or (hdgToRunway > self.clearedILS[0] > newHdgToRunway):
-                    self.mode = PlaneMode.ILS
-                    self.heading = self.clearedILS[0]
+                angleDiff = (self.runwayHeading - self.heading)%360
+                print(f"{self.callsign}, angle diff {angleDiff}")
+                if angleDiff >180:
+                    angleDiff-=360
+                angleToTurn = abs(angleDiff)
+                timeToTurn = angleToTurn / TURN_RATE
+                if self.speed != self.targetSpeed:
+                    distanceToTurn = self.targetSpeed * (timeToTurn / 3600) # overshoot rather than undershoot
+                else:
+                    distanceToTurn = self.speed * (timeToTurn / 3600)
+                print(distanceToTurn)
+                headingLine = LineString([(self.lat,self.lon),util.pbd(self.lat,self.lon,self.heading,100)])
+                runwayLine = LineString([self.clearedILS[1],util.pbd(self.clearedILS[1][0],self.clearedILS[1][1], (self.runwayHeading+180)%360,100)])
+                if headingLine.intersects(runwayLine):
+                    intersection_point = headingLine.intersection(runwayLine)
+                    distToRun = util.haversine(self.lat,self.lon,intersection_point.y,intersection_point.x)/1.852
+                    if distanceToTurn < distToRun:
+                        disToMove = util.haversine(self.lat,self.lon,self.lat+deltaLat,self.lon+deltaLon)
+                        if distToRun - disToMove < distanceToTurn:
+                            if abs(angleDiff) > 20:
+                                if angleDiff > 0:
+                                    self.targetHeading = (self.runwayHeading + 20)%360
+                                else:
+                                    self.targetHeading = (self.runwayHeading - 20)%360
+                            self.targetHeading = self.runwayHeading
 
-            self.lat += deltaLat
-            self.lat = round(self.lat, 5)
-            self.lon += deltaLon
-            self.lon = round(self.lon, 5)
+                if (hdgToRunway < self.runwayHeading < newHdgToRunway) or (hdgToRunway > self.runwayHeading > newHdgToRunway):
+                    new_dist_to_runway = abs(util.haversine(self.lat+deltaLat, self.lon+deltaLon, self.clearedILS[1][0],self.clearedILS[1][1]))  / 1.852 # in NM
+                    itx_lat,itx_lon = util.pbd(self.clearedILS[1][0],self.clearedILS[1][1], (self.runwayHeading+180)%360,new_dist_to_runway)
+                    diff = abs(util.haversine(self.lat+deltaLat, self.lon+deltaLon,itx_lat,itx_lon)) / 1.852
+                    new_dist_to_runway -= diff
+
+                    self.lat,self.lon = util.pbd(self.clearedILS[1][0],self.clearedILS[1][1], (self.runwayHeading+180)%360,new_dist_to_runway)
+                    self.mode = PlaneMode.ILS
+                    self.heading = self.runwayHeading
+                    self.oldAlt = self.targetAltitude
+                    self.oldHead = self.targetHeading
+                    snap = True
+
+            if not snap:
+                self.lat += deltaLat
+                self.lat = round(self.lat, 5)
+                self.lon += deltaLon
+                self.lon = round(self.lon, 5)
 
             nextSector = util.whichSector(self.lat, self.lon, self.altitude)
             # if AUTO_ASSUME:
@@ -452,6 +525,12 @@ class Plane:
                 self.turnDir = "R"
             elif self.holdFix == "MIRSI":
                 self.heading = 61
+                self.turnDir = "R"
+            elif self.holdFix == "TARTN":
+                self.heading = 15
+                self.turnDir = "L"
+            elif self.holdFix == "STIRA":
+                self.heading = 233
                 self.turnDir = "R"
             else:
                 print("Hold fix not found", self.holdFix)

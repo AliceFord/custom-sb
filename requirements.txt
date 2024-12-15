@@ -1,2 +1,11 @@
-PyQt6==6.6.1
-PyQt6_sip==13.6.0
+keyboard==0.13.5
+numpy==2.0.1
+pocketsphinx==5.0.3
+pygad==3.3.1
+pynput==1.7.7
+PyQt6==6.7.1
+PyQt6_sip==13.8.0
+pyttsx3==2.90
+regex==2024.7.24
+Requests==2.32.3
+Shapely==2.0.5

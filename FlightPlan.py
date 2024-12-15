@@ -23,5 +23,5 @@ class FlightPlan:
         return FlightPlan(flightPlan.flightRules, flightPlan.aircraftType, flightPlan.enrouteSpeed, flightPlan.departure, flightPlan.offBlockTime, flightPlan.enrouteTime, flightPlan.cruiseAltitude, flightPlan.destination, Route.duplicate(flightPlan.route, flightPlan.departure, flightPlan.destination))
 
     @staticmethod
-    def arrivalPlan(dest: str, route: Route):
-        return FlightPlan("I", "A20N", 250, "EDDF", 1130, 1130, 36000, dest, Route(route, "KJFK", dest))
+    def arrivalPlan(dest: str, route: Route, ac_type: str):
+        return FlightPlan("I", ac_type, 250, "EDDF", 1130, 1130, 36000, dest, Route(route, "KJFK", dest))

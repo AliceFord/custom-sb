@@ -188,6 +188,7 @@ def loadRunwayData(icao) -> dict[str, list[str, tuple[float, float]]]:
     with open(rf"data\Airports\{icao}\Runway.txt", "r") as f:
         lines = f.read().split("\n")
 
+
     runwayData = {}
 
     for line in lines:
