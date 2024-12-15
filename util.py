@@ -45,6 +45,9 @@ def squawkGen():
     allocatedSquawks.append(squawk)
     return squawk
 
+def lerpBetweenCoords(start: tuple[float, float], end: tuple[float, float], t: float):
+    return (start[0] + t * (end[0] - start[0]), start[1] + t * (end[1] - start[1]))
+
 
 def headingFromTo(fromCoord: tuple[float, float], toCoord: tuple[float, float]) -> int:
     return (math.degrees(math.atan2(toCoord[1] - fromCoord[1], (1 / math.cos(math.radians(fromCoord[0]))) * (toCoord[0] - fromCoord[0]))) + 360) % 360

@@ -342,6 +342,8 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
 
     if method == "ARR":
         plane = Plane.requestFromFix(callsign, *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
+    elif method == "TR2":
+        plane = Plane.requestBeforeFix(callsign, *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
     elif method == "OVF":
         plane = Plane.requestFromFix(callsign, *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
     elif method == "DEP":
@@ -358,6 +360,7 @@ def spawnEveryNSeconds(nSeconds, masterCallsign, controllerSock, method, *args, 
         plane = Plane.requestFromGroundPoint(callsign, *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
     elif method == "STD":
         plane = Plane.requestFromStand(callsign, *args, **kwargs, flightPlan=FlightPlan.duplicate(fp), squawk=util.squawkGen())
+    
     kwargs["flightPlan"] = fp
     planes.append(plane)
     sock = util.PlaneSocket.StartPlane(plane, masterCallsign, controllerSock)
@@ -652,6 +655,22 @@ def stdTransit(masterCallsign, controllerSock, delay, data, withMaster=True):
 
     util.PausableTimer(random.uniform(0, delay) * (1/Constants.timeMultiplier), spawnRandomEveryNSeconds, args=(delay, 0, parsedData))
 
+def stdTransit2(masterCallsign, controllerSock, delay, data, withMaster=True):
+    parsedData = []
+    for currentData in data:
+        depAd, arrAd, inLvl, filedLvl, route, ctrl = currentData
+        spd = 250
+        if inLvl > 30000:
+            spd = 450
+        elif inLvl > 10000:
+            spd = 350
+
+        if withMaster:
+            parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "TR2", "args": [route.split(" ")[0], route.split(" ")[2]], "kwargs": {"speed": spd, "altitude": inLvl, "flightPlan": FlightPlan("I", "B738", 250, depAd, 1130, 1130, filedLvl, arrAd, Route(route, depAd, arrAd)), "currentlyWithData": (masterCallsign, route.split(" ")[0]), "firstController": ctrl}})
+        else:
+            parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "TR2", "args": [route.split(" ")[0], route.split(" ")[2]], "kwargs": {"speed": spd, "altitude": inLvl, "flightPlan": FlightPlan("I", "B738", 250, depAd, 1130, 1130, filedLvl, arrAd, Route(route, depAd, arrAd)), "firstController": ctrl}})
+
+    util.PausableTimer(random.uniform(0, delay) * (1/Constants.timeMultiplier), spawnRandomEveryNSeconds, args=(delay, 0, parsedData))
 
 def stdOverflight(masterCallsign, controllerSock, delay, data, withMaster=True):
     parsedData = []
@@ -1520,67 +1539,71 @@ def main():
 
     ## TCE
     # arrivals:
-    stdTransit(masterCallsign, controllerSock, 300, [
-        ["EHAM", "EGKK", 26000, 36000, "LUMEN DCT BULAM DCT SUNUP DCT TEBRA TEBRA2G", "LON_E_CTR"],
-        ["EKYT", "EGKK", 26000, 36000, "BUKUT DCT BARMI BARMI1G", "LON_E_CTR"],
-    ], withMaster=True)
-
-    stdTransit(masterCallsign, controllerSock, 240, [
-        ["EHAM", "EGSS", 26000, 36000, "IDRID DCT NOGRO DCT RINIS RINIS1A", "LON_E_CTR"],
-        ["EBBR", "EGSS", 26000, 36000, "KEGIT DCT SASKI DCT TOSVA TOSVA1A", "LON_E_CTR"],
-        ["EKYT", "EGSS", 26000, 36000, "TOLSA DCT KUBAX DCT BARMI BARMI2A", "LON_E_CTR"],
-    ], withMaster=True)
-
-    # stdTransit(masterCallsign, controllerSock, 120, [
-    #     ["EHAM", "EGGW", 26000, 36000, "IDRID DCT NOGRO DCT RINIS RINIS1N", "LON_E_CTR"],
-    #     ["EBBR", "EGGW", 26000, 36000, "KEGIT DCT SASKI DCT TOSVA TOSVA1N", "LON_E_CTR"],
-    #     ["EKYT", "EGGW", 26000, 36000, "TOLSA DCT KUBAX DCT BARMI BARMI1N", "LON_E_CTR"],
+    # stdTransit(masterCallsign, controllerSock, 300, [
+    #     ["EHAM", "EGKK", 26000, 36000, "LUMEN DCT BULAM DCT SUNUP DCT TEBRA TEBRA2G", "LON_E_CTR"],
+    #     ["EKYT", "EGKK", 26000, 36000, "BUKUT DCT BARMI BARMI1G", "LON_E_CTR"],
     # ], withMaster=True)
 
-    stdTransit(masterCallsign, controllerSock, 400, [
-        ["EHAM", "EGLC", 26000, 36000, "GALSO DCT AMRIV DCT MOMIC DCT SUMUM SUMUM1C", "LON_E_CTR"],
-        ["EBBR", "EGLC", 26000, 36000, "LUMEN DCT BULAM DCT INLOD DCT SUMUM SUMUM1C", "LON_E_CTR"],
-    ], withMaster=True)
-
-    stdTransit(masterCallsign, controllerSock, 240, [
-        ["EBBR", "EGLL", 29000, 36000, "ABNED DCT IBNOS DCT LOGAN LOGAN2H", "LON_E_CTR"],
-    ], withMaster=True)
-
-    stdTransit(masterCallsign, controllerSock, 350, [
-        ["EHAM", "EGLL", 30000, 36000, "BUKUT DCT BARMI BARMI1H", "LON_E_CTR"],
-    ], withMaster=True)
-
-    stdTransit(masterCallsign, controllerSock, 240, [
-        ["EGCC", "EGLC", 22000, 36000, "TIXEX DCT ODVOD DCT ROPMU DCT NUDNA DCT INLIN DCT JACKO", "LTC_ER_CTR"],  # ER
-    ], withMaster=True)
-
-    # deps
-    stdTransit(masterCallsign, controllerSock, 350, [
-        ["EGLL", "EHAM", 15000, 35000, "BPK DCT TOTRI DCT BRAIN M197 REDFA", "LTC_ER_CTR"],  # ER
-    ], withMaster=True)
-
-    # stdTransit(masterCallsign, controllerSock, 500, [
-    #     ["EGKK", "EHAM", 17000, 35000, "MANGO DCT GASBA M197 REDFA", "LTC_E_CTR"],  # ER
+    # stdTransit(masterCallsign, controllerSock, 240, [
+    #     ["EHAM", "EGSS", 26000, 36000, "IDRID DCT NOGRO DCT RINIS RINIS1A", "LON_E_CTR"],
+    #     ["EBBR", "EGSS", 26000, 36000, "KEGIT DCT SASKI DCT TOSVA TOSVA1A", "LON_E_CTR"],
+    #     ["EKYT", "EGSS", 26000, 36000, "TOLSA DCT KUBAX DCT BARMI BARMI2A", "LON_E_CTR"],
     # ], withMaster=True)
 
-    stdDeparture(masterCallsign, controllerSock, "EGSS", 180, [  # SS departures
-        ["CLN2E/22 CLN P44 RATLO M197 REDFA", "EHAM"],
-        ["CLN2E/22 CLN P44 SOMVA", "EDDF"],
-        ["CLN2E/22 CLN DCT LEDBO M604 LARGA DCT INBOB", "ESSA"],
-        ["CLN2E/22 CLN M84 KONAN", "EBBR"]
-    ])
+    # # stdTransit(masterCallsign, controllerSock, 120, [
+    # #     ["EHAM", "EGGW", 26000, 36000, "IDRID DCT NOGRO DCT RINIS RINIS1N", "LON_E_CTR"],
+    # #     ["EBBR", "EGGW", 26000, 36000, "KEGIT DCT SASKI DCT TOSVA TOSVA1N", "LON_E_CTR"],
+    # #     ["EKYT", "EGGW", 26000, 36000, "TOLSA DCT KUBAX DCT BARMI BARMI1N", "LON_E_CTR"],
+    # # ], withMaster=True)
 
-    stdDeparture(masterCallsign, controllerSock, "EGGW", 180, [  # GW departures
-        ["MATCH3Y/25 MATCH Q295 BRAIN M197 REDFA", "EHAM"],
-        ["MATCH3Y/25 MATCH Q295 SOMVA", "ESSA"],
-        ["MATCH3Y/25 MATCH Q295 PAAVO M604 LARGA DCT INBOB", "ESSA"],
-        ["MATCH3Y/25 MATCH Q295 BRAIN P44 DAGGA M85 ITVIP Q70 VABIK", "EBBR"],
-    ])
+    # stdTransit(masterCallsign, controllerSock, 400, [
+    #     ["EHAM", "EGLC", 26000, 36000, "GALSO DCT AMRIV DCT MOMIC DCT SUMUM SUMUM1C", "LON_E_CTR"],
+    #     ["EBBR", "EGLC", 26000, 36000, "LUMEN DCT BULAM DCT INLOD DCT SUMUM SUMUM1C", "LON_E_CTR"],
+    # ], withMaster=True)
 
-    stdDeparture(masterCallsign, controllerSock, "EGLC", 400, [  # LC departures
-        ["ODUKU1A/27 ODUKU M84 CLN P44 RATLO M197 REDFA", "EHAM"],
-        ["ODUKU1A/27 ODUKU M84 CLN DCT LEDBO M604 LARGA DCT INBOB", "ESSA"],
-    ])
+    # stdTransit(masterCallsign, controllerSock, 240, [
+    #     ["EBBR", "EGLL", 29000, 36000, "ABNED DCT IBNOS DCT LOGAN LOGAN2H", "LON_E_CTR"],
+    # ], withMaster=True)
+
+    # stdTransit(masterCallsign, controllerSock, 350, [
+    #     ["EHAM", "EGLL", 30000, 36000, "BUKUT DCT BARMI BARMI1H", "LON_E_CTR"],
+    # ], withMaster=True)
+
+    # stdTransit(masterCallsign, controllerSock, 240, [
+    #     ["EGCC", "EGLC", 22000, 36000, "TIXEX DCT ODVOD DCT ROPMU DCT NUDNA DCT INLIN DCT JACKO", "LTC_ER_CTR"],  # ER
+    # ], withMaster=True)
+
+    # # deps
+    # stdTransit(masterCallsign, controllerSock, 350, [
+    #     ["EGLL", "EHAM", 15000, 35000, "BPK DCT TOTRI DCT BRAIN M197 REDFA", "LTC_ER_CTR"],  # ER
+    # ], withMaster=True)
+
+    # # stdTransit(masterCallsign, controllerSock, 500, [
+    # #     ["EGKK", "EHAM", 17000, 35000, "MANGO DCT GASBA M197 REDFA", "LTC_E_CTR"],  # ER
+    # # ], withMaster=True)
+
+    # stdDeparture(masterCallsign, controllerSock, "EGSS", 180, [  # SS departures
+    #     ["CLN2E/22 CLN P44 RATLO M197 REDFA", "EHAM"],
+    #     ["CLN2E/22 CLN P44 SOMVA", "EDDF"],
+    #     ["CLN2E/22 CLN DCT LEDBO M604 LARGA DCT INBOB", "ESSA"],
+    #     ["CLN2E/22 CLN M84 KONAN", "EBBR"]
+    # ])
+
+    # stdDeparture(masterCallsign, controllerSock, "EGGW", 180, [  # GW departures
+    #     ["MATCH3Y/25 MATCH Q295 BRAIN M197 REDFA", "EHAM"],
+    #     ["MATCH3Y/25 MATCH Q295 SOMVA", "ESSA"],
+    #     ["MATCH3Y/25 MATCH Q295 PAAVO M604 LARGA DCT INBOB", "ESSA"],
+    #     ["MATCH3Y/25 MATCH Q295 BRAIN P44 DAGGA M85 ITVIP Q70 VABIK", "EBBR"],
+    # ])
+
+    # stdDeparture(masterCallsign, controllerSock, "EGLC", 400, [  # LC departures
+    #     ["ODUKU1A/27 ODUKU M84 CLN P44 RATLO M197 REDFA", "EHAM"],
+    #     ["ODUKU1A/27 ODUKU M84 CLN DCT LEDBO M604 LARGA DCT INBOB", "ESSA"],
+    # ])
+
+    stdTransit2(masterCallsign, controllerSock, 5, [
+        ["EGLL", "EHAM", 15000, 35000, "BPK DCT TOTRI DCT BRAIN M197 REDFA", "LTC_E_CTR"],
+    ], withMaster=True)
 
     ## PC W
     # stdTransit(masterCallsign, controllerSock, 90, [
