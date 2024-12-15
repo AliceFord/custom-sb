@@ -557,6 +557,18 @@ class Plane:
             coords = (51.15487, -0.16454)
         
         return cls(callsign, squawk, altitude, heading, speed, coords[0], coords[1], vertSpeed, PlaneMode.FLIGHTPLAN, flightPlan, currentlyWithData, firstController=firstController)
+    
+    @classmethod
+    def requestBeforeFix(cls, callsign: str, fix1: str, fix2: str, squawk: int = 1234, altitude: int = 10000, heading: int = 0, speed: float = 0, vertSpeed: float = 0, flightPlan: FlightPlan = FlightPlan("I", "B738", 250, ACTIVE_AERODROMES[0], 1130, 1130, 36000, "EDDF", Route("MIMFO Y312 DVR L9 KONAN L607 KOK UL607 SPI T180 UNOKO", ACTIVE_AERODROMES[0])), currentlyWithData: str = None, firstController: str = None):
+        try:
+            coords1 = FIXES[fix1]
+            coords2 = FIXES[fix2]
+            coords = util.lerpBetweenCoords(coords1, coords2, -20 / (util.haversine(coords1[0], coords1[1], coords2[0], coords2[1]) / 1.852))
+        except KeyError:
+            print("Fix not found", fix1, fix2)
+            coords = (51.15487, -0.16454)
+                
+        return cls(callsign, squawk, altitude, heading, speed, coords[0], coords[1], vertSpeed, PlaneMode.FLIGHTPLAN, flightPlan, currentlyWithData, firstController=firstController)
 
     @classmethod
     def requestFromGroundPoint(cls, callsign: str, groundPoint: str, squawk: int = 1234, flightPlan: FlightPlan = FlightPlan("I", "B738", 250, ACTIVE_AERODROMES[0], 1130, 1130, 36000, "EDDF", Route("MIMFO Y312 DVR L9 KONAN L607 KOK UL607 SPI T180 UNOKO", ACTIVE_AERODROMES[0]))):

@@ -9,14 +9,15 @@ import socket
 # sock.listen(5)
 
 serverIP = "5.tcp.eu.ngrok.io"
-serverPort = 17535
+
+serverPort = 15725
 
 # serverIP = input("Enter the server IP: ")
 # serverPort = int(input("Enter the server port: "))
 print(1)
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.bind(("127.0.0.1", 4242))
+client.bind(("127.0.0.1", 6809))
 print(2)
 
 
