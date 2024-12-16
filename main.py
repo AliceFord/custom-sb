@@ -1598,137 +1598,41 @@ def main():
     # stdTransit(masterCallsign, controllerSock, 75, [
     #     ["EGKK", "EGCC", 8000, 36000, "TNT DCT DAYNE", "EGCC_S_APP"]
     # ], withMaster=True)
-
-
-    ## TCE
-    # arrivals:
-    # stdTransit(masterCallsign, controllerSock, 300, [
-    #     ["EHAM", "EGKK", 26000, 36000, "LUMEN DCT BULAM DCT SUNUP DCT TEBRA TEBRA2G", "LON_E_CTR"],
-    #     ["EKYT", "EGKK", 26000, 36000, "BUKUT DCT BARMI BARMI1G", "LON_E_CTR"],
-    # ], withMaster=True)
-    
-    # stdTransit(masterCallsign, controllerSock, 240, [
-    #     ["EHAM", "EGSS", 26000, 36000, "IDRID DCT NOGRO DCT RINIS RINIS1A", "LON_E_CTR"],
-    #     ["EBBR", "EGSS", 26000, 36000, "KEGIT DCT SASKI DCT TOSVA TOSVA1A", "LON_E_CTR"],
-    #     ["EKYT", "EGSS", 26000, 36000, "TOLSA DCT KUBAX DCT BARMI BARMI2A", "LON_E_CTR"],
-    # ], withMaster=True)
-
-    # stdTransit(masterCallsign, controllerSock, 240, [
-    #     ["EHAM", "EGSS", 26000, 36000, "IDRID DCT NOGRO DCT RINIS RINIS1A", "LON_E_CTR"],
-    #     ["EBBR", "EGSS", 26000, 36000, "KEGIT DCT SASKI DCT TOSVA TOSVA1A", "LON_E_CTR"],
-    #     ["EKYT", "EGSS", 26000, 36000, "TOLSA DCT KUBAX DCT BARMI BARMI2A", "LON_E_CTR"],
-    # ], withMaster=True)
-
-    # # stdTransit(masterCallsign, controllerSock, 120, [
-    # #     ["EHAM", "EGGW", 26000, 36000, "IDRID DCT NOGRO DCT RINIS RINIS1N", "LON_E_CTR"],
-    # #     ["EBBR", "EGGW", 26000, 36000, "KEGIT DCT SASKI DCT TOSVA TOSVA1N", "LON_E_CTR"],
-    # #     ["EKYT", "EGGW", 26000, 36000, "TOLSA DCT KUBAX DCT BARMI BARMI1N", "LON_E_CTR"],
-    # # ], withMaster=True)
-
-    # stdTransit(masterCallsign, controllerSock, 400, [
-    #     ["EHAM", "EGLC", 26000, 36000, "GALSO DCT AMRIV DCT MOMIC DCT SUMUM SUMUM1C", "LON_E_CTR"],
-    #     ["EBBR", "EGLC", 26000, 36000, "LUMEN DCT BULAM DCT INLOD DCT SUMUM SUMUM1C", "LON_E_CTR"],
-    # ], withMaster=True)
-
-    # stdTransit(masterCallsign, controllerSock, 240, [
-    #     ["EBBR", "EGLL", 29000, 36000, "ABNED DCT IBNOS DCT LOGAN LOGAN2H", "LON_E_CTR"],
-    # ], withMaster=True)
-
-    # stdTransit(masterCallsign, controllerSock, 350, [
-    #     ["EHAM", "EGLL", 30000, 36000, "BUKUT DCT BARMI BARMI1H", "LON_E_CTR"],
-    # ], withMaster=True)
-
-    # stdTransit(masterCallsign, controllerSock, 240, [
-    #     ["EGCC", "EGLC", 22000, 36000, "TIXEX DCT ODVOD DCT ROPMU DCT NUDNA DCT INLIN DCT JACKO", "LTC_ER_CTR"],  # ER
-    # ], withMaster=True)
-
-    # # deps
-    # stdTransit(masterCallsign, controllerSock, 350, [
-    #     ["EGLL", "EHAM", 15000, 35000, "BPK DCT TOTRI DCT BRAIN M197 REDFA", "LTC_ER_CTR"],  # ER
-    # ], withMaster=True)
-
-    # # stdTransit(masterCallsign, controllerSock, 500, [
-    # #     ["EGKK", "EHAM", 17000, 35000, "MANGO DCT GASBA M197 REDFA", "LTC_E_CTR"],  # ER
-    # # ], withMaster=True)
-
-    # stdDeparture(masterCallsign, controllerSock, "EGSS", 180, [  # SS departures
-    #     ["CLN2E/22 CLN P44 RATLO M197 REDFA", "EHAM"],
-    #     ["CLN2E/22 CLN P44 SOMVA", "EDDF"],
-    #     ["CLN2E/22 CLN DCT LEDBO M604 LARGA DCT INBOB", "ESSA"],
-    #     ["CLN2E/22 CLN M84 KONAN", "EBBR"]
-    # ])
-
-    # stdDeparture(masterCallsign, controllerSock, "EGGW", 180, [  # GW departures
-    #     ["MATCH3Y/25 MATCH Q295 BRAIN M197 REDFA", "EHAM"],
-    #     ["MATCH3Y/25 MATCH Q295 SOMVA", "ESSA"],
-    #     ["MATCH3Y/25 MATCH Q295 PAAVO M604 LARGA DCT INBOB", "ESSA"],
-    #     ["MATCH3Y/25 MATCH Q295 BRAIN P44 DAGGA M85 ITVIP Q70 VABIK", "EBBR"],
-    # ])
-
-    # stdDeparture(masterCallsign, controllerSock, "EGLC", 400, [  # LC departures
-    #     ["ODUKU1A/27 ODUKU M84 CLN P44 RATLO M197 REDFA", "EHAM"],
-    #     ["ODUKU1A/27 ODUKU M84 CLN DCT LEDBO M604 LARGA DCT INBOB", "ESSA"],
-    # ])
     
     # stdTransit2(masterCallsign, controllerSock, 5, [
     #     ["EGLL", "EHAM", 15000, 35000, "BPK DCT TOTRI DCT BRAIN M197 REDFA", "LTC_E_CTR"],
     # ], withMaster=True)
 
-    # STMA
-    stdDeparture(masterCallsign, controllerSock, "EGPH", 180, [  # PH
-        ["GOSAM1C/24 GOSAM P600 FENIK L612 LAKEY", "EGCC"],
-        ["GOSAM1C/24 GOSAM P600 FENIK L612 LAKEY", "EGGP"],
-        ["GOSAM1C/24 GOSAM P600 FENIK L612 CALDA DCT POL", "EGNM"],
-        ["GOSAM1C/24 GOSAM P600 FENIK L612 ELBUS UL612 LAKEY DCT NUGRA", "EGLL"],
-        ["TLA6C/24 TLA Y96 NATEB N97 ROKAN M982 TOPPA", "EHAM"],
-        ["TLA6C/24 TLA Y96 NATEB N97 ROKAN M982 TOPPA", "EHAM"],
-    ])
 
-    stdDeparture(masterCallsign, controllerSock, "EGPF", 200, [  # Pf
-        ["NORBO1H/23 NORBO T256 DCS L612 LAKEY", "EGCC"],
-        ["NORBO1H/23 NORBO T256 DCS L612 LAKEY", "EGGP"],
-        ["GOSAM1C/24 GOSAM P600 FENIK L612 CALDA DCT POL", "EGNM"],
-        ["NORBO1H/23 NORBO T256 ROVLA UT256 DCS UL612 LAKEY NUGRA", "EGLL"],
-        ["NORBO1H/23 NORBO L186 TRN P600 BLACA P620 NIMAT", "EIDW"],
-        ["NORBO1H/23 NORBO Y96 NATEB N97 ROKAN M982 TOPPA", "EHAM"],
-        ["NORBO1H/23 NORBO Y96 NATEB N97 ROKAN M982 TOPPA", "EHAM"],
-    ])
 
-    stdDeparture(masterCallsign, controllerSock, "EGPK", 260, [  # Pk
-        ["LUCCO1K/30 LUCCO Z248 OSMEG T256 DCS UL612 LAKEY NUGRA", "EGLL"],
-        ["TRN2K/30 TRN P600 BLACA P620 NIMAT", "EIDW"]
-    ])
+    with open(f"profiles/ScTMA.json") as f:
+        data = json.load(f)
 
-    stdTransit(masterCallsign, controllerSock, 330, [ #descening overflights 
-        ["BIKF", "EGNM", 26000, 38000, "BEBNI DCT DCS UN57 POL", "STC_W_CTR"],
-        ["BIKF", "EGCC", 26000, 38000, "BEBNI DCT DCS UL612 LAKEY LAKEY1M", "STC_W_CTR"],
-        ["BIKF", "EGGP", 26000, 38000, "BEBNI DCT DCS UL612 LAKEY LAKEY1M", "STC_W_CTR"],
-    ], withMaster=True)
+    if "stdDepartures" in data.keys():
+        for stdDep in data["stdDepartures"]:
+            print(*list(map(lambda x: [x["route"], x["arriving"]], stdDep["routes"])))
+            stdDeparture(masterCallsign, controllerSock, stdDep["departing"], stdDep["interval"], [
+                *list(map(lambda x: [x["route"], x["arriving"]], stdDep["routes"]))
+            ])
 
-    stdTransit(masterCallsign, controllerSock, 400, [ # crossing traffic into Galloway
-        ["EIDW", "EGPF", 15000, 22000, "ROTEV P600 BLACA BLACA1G", "STC_CTR"],
-        ["EIDW", "EGPH", 17000, 22000, "ROTEV P600 TUNSO TUNSO1E", "STC_CTR"],
-    ], withMaster=True)
-    
-    stdTransit(masterCallsign, controllerSock, 260, [ # leeds climbers
-        ["EGNM", "EGPH", 18000, 24000, "POL DCT NELSA N601 INPIP", "STC_E_CTR"],
-        ["EGNM", "EGPH", 18000, 24000, "POL DCT NELSA N601 RIBEL", "STC_E_CTR"],
-        ["EGNM", "BIKF", 18000, 38000, "POL DCT NELSA N601 GRICE RUGID STN AKIVO 6112N 6215N 63N018W ASRUN", "STC_E_CTR"],
-    ], withMaster=True)
+    if "stdTransits" in data.keys():
+        for stdTrn in data["stdTransits"]:
+            withMaster = True
+            try:
+                withMaster = stdTrn["withMaster"]
+            except KeyError:
+                pass
 
-    stdTransit(masterCallsign, controllerSock, 220, [ # stream from the south
-        ["EGLL", "EGPH", 26000, 38000, "ABEVI DCT INPIP INPIP1E", "STC_CTR"],
-        ["EGLL", "EGPF", 26000, 38000, "NELSA DCT RIBEL RIBEL1G", "STC_CTR"],
-        ["EGLL", "EGPF", 26000, 38000, "NELSA DCT RIBEL RIBEL2P", "STC_CTR"]
-    ], withMaster=True)
+            stdTransit(masterCallsign, controllerSock, stdTrn["interval"], [
+                *list(map(lambda x: [x["departing"], x["arriving"], x["currentLevel"], x["cruiseLevel"], x["route"], x["firstController"]], stdTrn["routes"]))
+            ], withMaster=withMaster)
 
-    stdTransit(masterCallsign, controllerSock, 220, [ # stream to merge
-        ["EHAM", "EGPH", 26000, 38000, "NATEB DCT AGPED AGPED1E", "STC_CTR"],
-        ["EHAM", "EGPF", 26000, 38000, "NATEB DCT AGPED AGPED1G", "STC_CTR"],
-        ["EHAM", "EGPF", 26000, 38000, "NATEB DCT AGPED AGPED1G", "STC_CTR"],
-    ], withMaster=True)
-
-    
+    if "stdArrivals" in data.keys():
+        for stdArr in data["stdArrivals"]:
+            stdDeparture(masterCallsign, controllerSock, stdArr["departing"], stdArr["interval"], [
+                *list(map(lambda x: [x["route"], x["level"], x["firstController"]], stdArr["routes"]))
+            ])
+        
 
     ## PC W
     # stdTransit(masterCallsign, controllerSock, 90, [
