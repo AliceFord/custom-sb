@@ -1680,7 +1680,7 @@ def main():
         ["GOSAM1C/24 GOSAM P600 FENIK L612 LAKEY", "EGGP"],
         ["GOSAM1C/24 GOSAM P600 FENIK L612 CALDA DCT POL", "EGNM"],
         ["GOSAM1C/24 GOSAM P600 FENIK L612 ELBUS UL612 LAKEY DCT NUGRA", "EGLL"],
-        ["GOSAM1C/24 GOSAM P600 BLACA P620 NIMAT", "EIDW"]
+        ["GOSAM1C/24 GOSAM P600 BLACA P620 NIMAT", "EIDW"],
         ["TLA6C/24 TLA Y96 NATEB N97 ROKAN M982 TOPPA", "EHAM"],
         ["TLA6C/24 TLA Y96 NATEB N97 ROKAN M982 TOPPA", "EHAM"],
     ])
@@ -1701,9 +1701,9 @@ def main():
     ])
 
     stdTransit(masterCallsign, controllerSock, 330, [ #descening overflights 
-        ["BIKF", "EGNM", 26000, 38000, "BEBNI DCT DCS UN57 POL", "STC_W_CTR"],
-        ["BIKF", "EGCC", 26000, 38000, "BEBNI DCT DCS UL612 LAKEY LAKEY1M", "STC_W_CTR"],
-        ["BIKF", "EGGP", 26000, 38000, "BEBNI DCT DCS UL612 LAKEY LAKEY1M", "STC_W_CTR"],
+        ["BIKF", "EGNM", 26000, 38000, "BEBNI DCT DCS UN57 POL", "STC_CTR"],
+        ["BIKF", "EGCC", 26000, 38000, "BEBNI DCT DCS UL612 LAKEY LAKEY1M", "STC_CTR"],
+        ["BIKF", "EGGP", 26000, 38000, "BEBNI DCT DCS UL612 LAKEY LAKEY1M", "STC_CTR"],
     ], withMaster=True)
 
     stdTransit(masterCallsign, controllerSock, 400, [ # crossing traffic into Galloway
@@ -1712,9 +1712,9 @@ def main():
     ], withMaster=True)
     
     stdTransit(masterCallsign, controllerSock, 260, [ # leeds climbers
-        ["EGNM", "EGPH", 18000, 24000, "POL DCT NELSA N601 INPIP", "STC_E_CTR"],
-        ["EGNM", "EGPH", 18000, 24000, "POL DCT NELSA N601 RIBEL", "STC_E_CTR"],
-        ["EGNM", "BIKF", 18000, 38000, "POL DCT NELSA N601 GRICE RUGID STN AKIVO 6112N 6215N 63N018W ASRUN", "STC_E_CTR"],
+        ["EGNM", "EGPH", 18000, 24000, "POL DCT NELSA N601 INPIP", "STC_CTR"],
+        ["EGNM", "EGPH", 18000, 24000, "POL DCT NELSA N601 RIBEL", "STC_CTR"],
+        ["EGNM", "BIKF", 18000, 38000, "POL DCT NELSA N601 GRICE RUGID STN AKIVO 6112N 6215N 63N018W ASRUN", "STC_CTR"],
     ], withMaster=True)
 
     stdTransit(masterCallsign, controllerSock, 220, [ # stream from the south
