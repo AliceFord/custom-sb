@@ -90,7 +90,7 @@ class Plane:
                 self.vertSpeed = int(AIRCRAFT_PERFORMACE[self.aircraftType][alt][-1]) * -1
                 self.vertMode = -1
         self.vertSpeed += 0.1 * self.vertSpeed
-        print(f"SYSTEM: {self.callsign} at {self.altitude} is {'climbing' if self.vertMode == 1 else 'descening'} with a vertical speed of {self.vertSpeed}")
+        #print(f"SYSTEM: {self.callsign} at {self.altitude} is {'climbing' if self.vertMode == 1 else 'descening'} with a vertical speed of {self.vertSpeed}")
             
 
 
