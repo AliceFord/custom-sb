@@ -163,7 +163,7 @@
                     "currentLevel": 22000,
                     "cruiseLevel": 38000,
                     "route": "LAM DCT HEMEL HEMEL1B",
-                    "firstController": "LTC_M_CTR"
+                    "firstController": "LTC_MW_CTR"
                 },
                 {
                     "departing": "EHAM",
@@ -171,7 +171,7 @@
                     "currentLevel": 22000,
                     "cruiseLevel": 38000,
                     "route": "LAM DCT HEMEL HEMEL1E",
-                    "firstController": "LTC_M_CTR"
+                    "firstController": "LTC_MW_CTR"
                 },
                 {
                     "departing": "EGKK",
@@ -179,7 +179,7 @@
                     "currentLevel": 18000,
                     "cruiseLevel": 38000,
                     "route": "ODUKU DCT LAM L10 BPK UN601 INPIP",
-                    "firstController": "LTC_M_CTR"
+                    "firstController": "LTC_MW_CTR"
                 }
             ]
         }
