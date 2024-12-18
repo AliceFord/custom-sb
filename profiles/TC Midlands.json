@@ -1,0 +1,187 @@
+{
+    "stdDepartures": [
+        {
+            "departing": "EGBB",
+            "interval": 180,
+            "routes": [
+                {
+                    "route": "COWLY2Y/15 COWLY DCT GWC UN859 SOPIL",
+                    "arriving": "LEPA"
+                },
+                {
+                    "route": "DTY2Y/15 DTY P166 BANTO P155 SIVDA P137 REDFA",
+                    "arriving": "EHAM"
+                }
+            ]
+        },
+        {
+            "departing": "EGNX",
+            "interval": 180,
+            "routes": [
+                {
+                    "route": "DTY3N/27 DTY M605 SILVA Q41 COWLY DCT GWC UN859 SOPIL",
+                    "arriving": "LEPA"
+                },
+                {
+                    "route": "DTY3N/27 DTY P166 BANTO P155 SIVDA P137 REDFA",
+                    "arriving": "EHAM"
+                }
+            ]
+        },
+        {
+            "departing": "EGLL",
+            "interval": 180,
+            "routes": [
+                {
+                    "route": "UMLAT1F/27R UMLAT T418 WELIN T420 TNT UN57 POL UN601 INPIP INPI1E",
+                    "arriving": "EGPH"
+                }
+            ]
+        },
+        {
+            "departing": "EGLC",
+            "interval": 180,
+            "routes": [
+                {
+                    "route": "BPK1A/27 BPK UN601 INPIP INPI1E",
+                    "arriving": "EGPH"
+                }
+            ]
+        },
+        {
+            "departing": "EGSS",
+            "interval": 180,
+            "routes": [
+                {
+                    "route": "UTAVA1R/22 UTAVA Q75 BUZAD T420 TNT UN57 POL UN601 INPIP INPI1E",
+                    "arriving": "EGPH"
+                }
+            ]
+        },
+        {
+            "departing": "EGGW",
+            "interval": 180,
+            "routes": [
+                {
+                    "route": "OLNEY2B/25 OLNEY T420 TNT UN57 POL UN601 INPIP INPI1E",
+                    "arriving": "EGPH"
+                }
+            ]
+        }
+    ],
+    "stdTransits": [
+        {
+            "interval": 400,
+            "routes": [
+                {
+                    "departing": "EIDW",
+                    "arriving": "EGLL",
+                    "currentLevel": 18000,
+                    "cruiseLevel": 32000,
+                    "route": "RETSI DCT FITBO FITBO1H",
+                    "firstController": "LTC_M_CTR"
+                }
+            ]
+        },
+        {
+            "interval": 200,
+            "routes": [
+                {
+                    "departing": "EGPH",
+                    "arriving": "EGHI",
+                    "currentLevel": 20000,
+                    "cruiseLevel": 37000,
+                    "route": "VIDOK DCT PEPUL Y322 BUGUP BUGUP1S",
+                    "firstController": "LTC_M_CTR"
+                },
+                {
+                    "departing": "EGPH",
+                    "arriving": "EGLF",
+                    "currentLevel": 20000,
+                    "cruiseLevel": 37000,
+                    "route": "VIDOK DCT PEPUL L151 KIDLI N859 CPT CPT1V",
+                    "firstController": "LTC_M_CTR"
+                },
+                {
+                    "departing": "EGPH",
+                    "arriving": "EGKK",
+                    "currentLevel": 20000,
+                    "cruiseLevel": 37000,
+                    "route": "PEPUL DCT DISIT DISIT1G",
+                    "firstController": "LTC_M_CTR"
+                }
+            ]
+        },
+        {
+            "interval": 200,
+            "routes": [
+                {
+                    "departing": "EGPH",
+                    "arriving": "EGLL",
+                    "currentLevel": 20000,
+                    "cruiseLevel": 37000,
+                    "route": "HON DCT TOBID DTC SOPIT DCT WCO DCT BNN",
+                    "firstController": "LTC_M_CTR"
+                }
+            ]
+        },
+        {
+            "interval": 200,
+            "routes": [
+                {
+                    "departing": "EGPH",
+                    "arriving": "EGSS",
+                    "currentLevel": 20000,
+                    "cruiseLevel": 37000,
+                    "route": "ADMEX DCT ROGBI DCT FINMA DTC BOMBO DCT BKY DCT BUSTA DCT LOREL",
+                    "firstController": "LTC_M_CTR"
+                },
+                {
+                    "departing": "EGPH",
+                    "arriving": "EGGW",
+                    "currentLevel": 20000,
+                    "cruiseLevel": 37000,
+                    "route": "ADMEX DCT ROGBI DCT FINMA DCT WOBUN DCT EDCOX DCT JUMZI DCT ZAGZO",
+                    "firstController": "LTC_M_CTR"
+                },
+                {
+                    "departing": "EGPH",
+                    "arriving": "EGMC",
+                    "currentLevel": 20000,
+                    "cruiseLevel": 37000,
+                    "route": "ADMEX DCT ROGBI DCT FINMA DTC BOMBO DCT BKY DCT BRAIN DCT MAYLA",
+                    "firstController": "LTC_M_CTR"
+                }
+            ]
+        },
+        {
+            "interval": 200,
+            "routes": [
+                {
+                    "departing": "EHAM",
+                    "arriving": "EGBB",
+                    "currentLevel": 22000,
+                    "cruiseLevel": 38000,
+                    "route": "LAM DCT HEMEL HEMEL1B",
+                    "firstController": "LTC_MW_CTR"
+                },
+                {
+                    "departing": "EHAM",
+                    "arriving": "EGNX",
+                    "currentLevel": 22000,
+                    "cruiseLevel": 38000,
+                    "route": "LAM DCT HEMEL HEMEL1E",
+                    "firstController": "LTC_MW_CTR"
+                },
+                {
+                    "departing": "EGKK",
+                    "arriving": "EGPH",
+                    "currentLevel": 18000,
+                    "cruiseLevel": 38000,
+                    "route": "ODUKU DCT LAM L10 BPK UN601 INPIP",
+                    "firstController": "LTC_MW_CTR"
+                }
+            ]
+        }
+    ]
+}

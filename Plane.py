@@ -43,6 +43,7 @@ class Plane:
         self.aircraftType = self.flightPlan.aircraftType
         self.vref = random.choice(list(VREF_TABLE[self.aircraftType]))
         self.oldAlt, self.oldHead = None, None
+        self.vertMode = 0 # -1 : desc, 0 : lvl, 1 : climb
 
         self.masterSocketHandleData: tuple[util.EsSocket, str] = None
         self.clearedILS = None
@@ -66,6 +67,7 @@ class Plane:
         
         # if self.altitude < 10000 and self.targetSpeed > 250:
         #     self.targetSpeed = 250
+        self.vertMode = 0
         if self.altitude != self.targetAltitude:
             sorted_alts = sorted(AIRCRAFT_PERFORMACE[self.aircraftType])
             for alt in sorted_alts: # TODO optimise
@@ -73,8 +75,13 @@ class Plane:
                     break
             if self.targetAltitude > self.altitude: #climb
                 self.vertSpeed = int(AIRCRAFT_PERFORMACE[self.aircraftType][alt][-2])
+                self.vertMode = 1
             elif self.targetAltitude < self.altitude: #desc
                 self.vertSpeed = int(AIRCRAFT_PERFORMACE[self.aircraftType][alt][-1]) * -1
+                self.vertMode = -1
+        self.vertSpeed += 0.1 * self.vertSpeed
+        #print(f"SYSTEM: {self.callsign} at {self.altitude} is {'climbing' if self.vertMode == 1 else 'descening'} with a vertical speed of {self.vertSpeed}")
+            
 
 
         if self.dieOnReaching2K and self.altitude <= 2000:  # time to die
@@ -117,13 +124,19 @@ class Plane:
                 self.altitude = round(self.altitude, 0)
             elif 1.5 * deltaT > abs(self.targetSpeed - self.speed):  # otherwise, speed logic
                 self.speed = self.targetSpeed
-            elif self.targetSpeed > self.speed:
+            elif self.targetSpeed > self.speed: # too slow
                 self.speed += 1.5 * deltaT  # 0.5kts / sec
-                self.altitude += (self.vertSpeed * (deltaT / 60)) / 2  # 1/2 climb rate
+                if self.vertMode == -1:
+                    self.altitude += min(1000,(self.vertSpeed * (deltaT / 60)) * 2)  # 2x climb rate
+                elif self.vertMode == 1:
+                    self.altitude += min(1000,(self.vertSpeed * (deltaT / 60)) / 2)  # 1/2 climb rate
                 self.altitude = round(self.altitude, 0)
-            elif self.targetSpeed < self.speed:
+            elif self.targetSpeed < self.speed: # too fast
                 self.speed -= 1.5 * deltaT
-                self.altitude += (self.vertSpeed * (deltaT / 60)) / 2  # 1/2 climb rate
+                if self.vertMode == -1:
+                    self.altitude += min(1000,(self.vertSpeed * (deltaT / 60)) / 2)  # 1/2 climb rate
+                elif self.vertMode == 1:
+                    self.altitude += min(1000,(self.vertSpeed * (deltaT / 60)) * 2)  # 2x climb rate
                 self.altitude = round(self.altitude, 0)
 
             self.speed = round(self.speed, 0)
