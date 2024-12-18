@@ -56,16 +56,6 @@ class Plane:
         self.dieOnReaching2K = False
         self.lvlCoords = None
 
-        # if AUTO_ASSUME:
-        #     if self.mode == PlaneMode.FLIGHTPLAN or self.mode == PlaneMode.HEADING:  # take aircraft
-        #         index = util.otherControllerIndex(self.currentSector)
-        #         if index is None:
-        #             return
-        #         controllerSock = otherControllerSocks[index]
-        #         # 10 second delay 
-
-        #         util.PausableTimer(11, controllerSock.esSend, args=["$CQ" + self.currentSector, "@94835", "IT", callsign])
-
     def calculatePosition(self):
         deltaT = (time.time() - self.lastTime) * timeMultiplier
         self.lastTime = time.time()
@@ -104,7 +94,7 @@ class Plane:
             return
         
         if self.lvlCoords is not None and self.mode == PlaneMode.FLIGHTPLAN:
-            approxDistToLevel = util.haversine(self.lat, self.lon, self.lvlCoords[0], self.lvlCoords[1]) / 1.852  # nautical miles
+            approxDistToLevel = util.haversineNM(self.lat, self.lon, self.lvlCoords[0], self.lvlCoords[1])
             if approxDistToLevel < 1:
                 self.lvlCoords = None
                 self.altitude = self.targetAltitude
@@ -159,7 +149,7 @@ class Plane:
         if self.altitude < 11000 and self.targetAltitude < 10000 and self.targetSpeed > 250:
             self.targetSpeed = 250
 
-        if 10000 <= self.altitude <= 10500 and self.targetAltitude >= 10000 and self.targetSpeed <= 350:
+        if 10000 < self.altitude <= 10500 and self.targetAltitude >= 10000 and self.targetSpeed <= 350:
             self.targetSpeed = 350
 
         if self.vertSpeed > 0 and self.altitude >= self.targetAltitude:
@@ -176,7 +166,7 @@ class Plane:
         if self.mode == PlaneMode.ILS:
             deltaLat, deltaLon = util.deltaLatLonCalc(self.lat, tas, self.heading, deltaT)
 
-            distanceOut = util.haversine(self.lat, self.lon, self.clearedILS[1][0], self.clearedILS[1][1]) / 1.852  # nautical miles
+            distanceOut = util.haversineNM(self.lat, self.lon, self.clearedILS[1][0], self.clearedILS[1][1])
             requiredAltitude = (math.tan(math.radians(3)) * distanceOut * 6076) + AIRPORT_ELEVATIONS[self.flightPlan.destination]  # feet
 
             if self.speed > self.targetSpeed:
@@ -219,12 +209,6 @@ class Plane:
             self.lon = round(self.lon, 5)
         elif self.mode == PlaneMode.HEADING:
             if self.holdStartTime is not None:
-                # JUST ORBIT LOGIC:
-                # if self.turnDir == "L":
-                #     self.heading -= TURN_RATE * deltaT
-                # else:
-                #     self.heading += TURN_RATE * deltaT
-                # self.targetHeading = self.heading
                 if self.heading != self.targetHeading:
                     self.holdStartTime = time.time()
 
@@ -303,10 +287,10 @@ class Plane:
             if self.clearedILS is not None:
                 hdgToRunway = util.headingFromTo((self.lat, self.lon), self.clearedILS[1])
                 newHdgToRunway = util.headingFromTo((self.lat + deltaLat, self.lon + deltaLon), self.clearedILS[1])
-                angleDiff = (self.runwayHeading - self.heading)%360
+                angleDiff = (self.runwayHeading - self.heading) % 360
                 print(f"{self.callsign}, angle diff {angleDiff}")
                 if angleDiff >180:
-                    angleDiff-=360
+                    angleDiff -= 360
                 angleToTurn = abs(angleDiff)
                 timeToTurn = angleToTurn / TURN_RATE
                 if self.speed != self.targetSpeed:
@@ -314,28 +298,28 @@ class Plane:
                 else:
                     distanceToTurn = self.speed * (timeToTurn / 3600)
                 print(distanceToTurn)
-                headingLine = LineString([(self.lat,self.lon),util.pbd(self.lat,self.lon,self.heading,100)])
-                runwayLine = LineString([self.clearedILS[1],util.pbd(self.clearedILS[1][0],self.clearedILS[1][1], (self.runwayHeading+180)%360,100)])
+                headingLine = LineString([(self.lat, self.lon), util.pbd(self.lat, self.lon, self.heading, 100)])
+                runwayLine = LineString([self.clearedILS[1], util.pbd(self.clearedILS[1][0],self.clearedILS[1][1], (self.runwayHeading + 180) % 360, 100)])
                 if headingLine.intersects(runwayLine):
                     intersection_point = headingLine.intersection(runwayLine)
-                    distToRun = util.haversine(self.lat,self.lon,intersection_point.y,intersection_point.x)/1.852
+                    distToRun = util.haversineNM(self.lat, self.lon, intersection_point.y, intersection_point.x)
                     if distanceToTurn < distToRun:
-                        disToMove = util.haversine(self.lat,self.lon,self.lat+deltaLat,self.lon+deltaLon)
+                        disToMove = util.haversine(self.lat, self.lon, self.lat + deltaLat, self.lon + deltaLon)
                         if distToRun - disToMove < distanceToTurn:
                             if abs(angleDiff) > 20:
                                 if angleDiff > 0:
-                                    self.targetHeading = (self.runwayHeading + 20)%360
+                                    self.targetHeading = (self.runwayHeading + 20) % 360
                                 else:
-                                    self.targetHeading = (self.runwayHeading - 20)%360
+                                    self.targetHeading = (self.runwayHeading - 20) % 360
                             self.targetHeading = self.runwayHeading
 
                 if (hdgToRunway < self.runwayHeading < newHdgToRunway) or (hdgToRunway > self.runwayHeading > newHdgToRunway):
-                    new_dist_to_runway = abs(util.haversine(self.lat+deltaLat, self.lon+deltaLon, self.clearedILS[1][0],self.clearedILS[1][1]))  / 1.852 # in NM
-                    itx_lat,itx_lon = util.pbd(self.clearedILS[1][0],self.clearedILS[1][1], (self.runwayHeading+180)%360,new_dist_to_runway)
-                    diff = abs(util.haversine(self.lat+deltaLat, self.lon+deltaLon,itx_lat,itx_lon)) / 1.852
+                    new_dist_to_runway = abs(util.haversineNM(self.lat + deltaLat, self.lon + deltaLon, self.clearedILS[1][0], self.clearedILS[1][1]))
+                    itx_lat, itx_lon = util.pbd(self.clearedILS[1][0], self.clearedILS[1][1], (self.runwayHeading + 180) % 360, new_dist_to_runway)
+                    diff = abs(util.haversineNM(self.lat+deltaLat, self.lon + deltaLon, itx_lat, itx_lon))
                     new_dist_to_runway -= diff
 
-                    self.lat,self.lon = util.pbd(self.clearedILS[1][0],self.clearedILS[1][1], (self.runwayHeading+180)%360,new_dist_to_runway)
+                    self.lat,self.lon = util.pbd(self.clearedILS[1][0],self.clearedILS[1][1], (self.runwayHeading + 180) % 360, new_dist_to_runway)
                     self.mode = PlaneMode.ILS
                     self.heading = self.runwayHeading
                     self.oldAlt = self.targetAltitude
@@ -348,25 +332,13 @@ class Plane:
                 self.lon += deltaLon
                 self.lon = round(self.lon, 5)
 
-            nextSector = util.whichSector(self.lat, self.lon, self.altitude)
-            # if AUTO_ASSUME:
-            #     if nextSector != self.currentSector and nextSector is not None:
-            #         index = util.otherControllerIndex(self.currentSector)
-            #         if index is not None:
-            #             controllerSock = otherControllerSocks[index]
-            #             if nextSector not in ACTIVE_CONTROLLERS:
-            #                 util.PausableTimer(11, controllerSock.esSend, args=["$CQ" + nextSector, "@94835", "IT", self.callsign])
-            #             else:  # pass em over
-            #                 util.PausableTimer(5, controllerSock.esSend, args=["$HO" + self.currentSector, ACTIVE_CONTROLLERS[0], self.callsign])
-                        
-            #             self.currentSector = nextSector
         elif self.mode == PlaneMode.FLIGHTPLAN:
             distanceToTravel = tas * (deltaT / 3600)
             try:
                 nextFixCoords = FIXES[self.flightPlan.route.fixes[0]]
             except IndexError:
                 self.mode = PlaneMode.HEADING
-            distanceToFix = util.haversine(self.lat, self.lon, nextFixCoords[0], nextFixCoords[1]) / 1.852  # nautical miles
+            distanceToFix = util.haversineNM(self.lat, self.lon, nextFixCoords[0], nextFixCoords[1])
 
             if self.currentlyWithData is not None:  # if we're on close to release point, hand off
                 if self.currentlyWithData[1] == self.flightPlan.route.fixes[0] and distanceToFix <= 20:
@@ -424,19 +396,6 @@ class Plane:
                 self.lat = round(self.lat, 5)
                 self.lon += deltaLon
                 self.lon = round(self.lon, 5)
-
-                nextSector = util.whichSector(self.lat, self.lon, self.altitude)
-                # if AUTO_ASSUME:
-                #     if nextSector != self.currentSector and nextSector is not None:
-                #         index = util.otherControllerIndex(self.currentSector)
-                #         if index is not None:
-                #             controllerSock = otherControllerSocks[index]
-                #             if nextSector not in ACTIVE_CONTROLLERS:
-                #                 util.PausableTimer(11, controllerSock.esSend, args=["$CQ" + nextSector, "@94835", "IT", self.callsign])
-                #             else:
-                #                 util.PausableTimer(5, controllerSock.esSend, args=["$HO" + self.currentSector, ACTIVE_CONTROLLERS[0], self.callsign])
-                            
-                #             self.currentSector = nextSector
         elif self.mode == PlaneMode.GROUND_STATIONARY:
             pass
         elif self.mode == PlaneMode.GROUND_TAXI:
@@ -459,7 +418,7 @@ class Plane:
 
             distanceToTravel = self.speed * (deltaT / 3600)
             while distanceToTravel > 0:
-                distanceToNext = util.haversine(self.lat, self.lon, self.groundRoute[0][0], self.groundRoute[0][1]) / 1.852
+                distanceToNext = util.haversineNM(self.lat, self.lon, self.groundRoute[0][0], self.groundRoute[0][1])
                 if distanceToNext <= distanceToTravel:
                     deltaT *= 1 - (distanceToNext / distanceToTravel)  # so later lerp is still correct
 
@@ -576,7 +535,7 @@ class Plane:
         try:
             coords1 = FIXES[fix1]
             coords2 = FIXES[fix2]
-            coords = util.lerpBetweenCoords(coords1, coords2, -20 / (util.haversine(coords1[0], coords1[1], coords2[0], coords2[1]) / 1.852))
+            coords = util.lerpBetweenCoords(coords1, coords2, -20 / util.haversineNM(coords1[0], coords1[1], coords2[0], coords2[1]))
         except KeyError:
             print("Fix not found", fix1, fix2)
             coords = (51.15487, -0.16454)

@@ -43,8 +43,6 @@ class Route:
             except KeyError:
                 pass
 
-        
-
         prevWpt = None
         prevRoute = None
 

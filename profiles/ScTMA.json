@@ -1,0 +1,70 @@
+{
+    "stdDepartures": [
+        {
+            "departing": "EGPH",
+            "interval": 180,
+            "routes": [
+                {"route": "GOSAM1C/24 GOSAM P600 FENIK L612 LAKEY", "arriving": "EGCC"},
+                {"route": "GOSAM1C/24 GOSAM P600 FENIK L612 LAKEY", "arriving": "EGGP"},
+                {"route": "GOSAM1C/24 GOSAM P600 FENIK L612 CALDA DCT POL", "arriving": "EGNM"},
+                {"route": "GOSAM1C/24 GOSAM P600 FENIK L612 ELBUS UL612 LAKEY DCT NUGRA", "arriving": "EGLL"},
+                {"route": "TLA6C/24 TLA Y96 NATEB N97 ROKAN M982 TOPPA", "arriving": "EHAM"},
+                {"route": "TLA6C/24 TLA Y96 NATEB N97 ROKAN M982 TOPPA", "arriving": "EHAM"}
+            ]
+        },
+        {
+            "departing": "EGPF",
+            "interval": 200,
+            "routes": [
+                {"route": "NORBO1H/23 NORBO T256 DCS L612 LAKEY", "arriving": "EGCC"},
+                {"route": "NORBO1H/23 NORBO T256 DCS L612 LAKEY", "arriving": "EGGP"},
+                {"route": "GOSAM1C/24 GOSAM P600 FENIK L612 CALDA DCT POL", "arriving": "EGNM"},
+                {"route": "NORBO1H/23 NORBO T256 ROVLA UT256 DCS UL612 LAKEY NUGRA", "arriving": "EGLL"},
+                {"route": "NORBO1H/23 NORBO L186 TRN P600 BLACA P620 NIMAT", "arriving": "EIDW"},
+                {"route": "NORBO1H/23 NORBO Y96 NATEB N97 ROKAN M982 TOPPA", "arriving": "EHAM"},
+                {"route": "NORBO1H/23 NORBO Y96 NATEB N97 ROKAN M982 TOPPA", "arriving": "EHAM"}
+            ]
+        },
+        {
+            "departing": "EGPK",
+            "interval": 260,
+            "routes": [
+                {"route": "LUCCO1K/30 LUCCO Z248 OSMEG T256 DCS UL612 LAKEY NUGRA", "arriving": "EGLL"},
+                {"route": "TRN2K/30 TRN P600 BLACA P620 NIMAT", "arriving": "EIDW"}
+            ]
+        }
+    ],
+    "stdTransits": [
+        {
+            "interval": 330,
+            "routes": [
+                {"departing": "BIKF", "arriving": "EGNM", "currentLevel": 26000, "cruiseLevel": 38000, "route": "BEBNI DCT DCS UN57 POL", "firstController": "STC_W_CTR"},
+                {"departing": "BIKF", "arriving": "EGCC", "currentLevel": 26000, "cruiseLevel": 38000, "route": "BEBNI DCT DCS UL612 LAKEY LAKEY1M", "firstController": "STC_W_CTR"},
+                {"departing": "BIKF", "arriving": "EGGP", "currentLevel": 26000, "cruiseLevel": 38000, "route": "BEBNI DCT DCS UL612 LAKEY LAKEY1L", "firstController": "STC_W_CTR"}
+            ]
+        },
+        {
+            "interval": 400,
+            "routes": [
+                {"departing": "EIDW", "arriving": "EGPF", "currentLevel": 15000, "cruiseLevel": 22000, "route": "ROTEV P600 BLACA BLACA1G", "firstController": "STC_W_CTR"},
+                {"departing": "EIDW", "arriving": "EGPH", "currentLevel": 17000, "cruiseLevel": 22000, "route": "ROTEV P600 TUNSO TUNSO1E", "firstController": "STC_W_CTR"}
+            ]
+        },
+        {
+            "interval": 260,
+            "routes": [
+                {"departing": "EGLL", "arriving": "EGPH", "currentLevel": 26000, "cruiseLevel": 38000, "route": "ABEVI DCT INPIP INPIP1E", "firstController": "STC_E_CTR"},
+                {"departing": "EGLL", "arriving": "EGPF", "currentLevel": 26000, "cruiseLevel": 38000, "route": "NELSA DCT RIBEL RIBEL1G", "firstController": "STC_E_CTR"},
+                {"departing": "EGLL", "arriving": "EGPF", "currentLevel": 26000, "cruiseLevel": 38000, "route": "NELSA DCT RIBEL RIBEL2P", "firstController": "STC_E_CTR"}
+            ]
+        },
+        {
+            "interval": 220,
+            "routes": [
+                {"departing": "EHAM", "arriving": "EGPH", "currentLevel": 26000, "cruiseLevel": 38000, "route": "NATEB DCT AGPED AGPED1E", "firstController": "STC_E_CTR"},
+                {"departing": "EHAM", "arriving": "EGPF", "currentLevel": 26000, "cruiseLevel": 38000, "route": "NATEB DCT AGPED AGPED1G", "firstController": "STC_E_CTR"},
+                {"departing": "EHAM", "arriving": "EGPF", "currentLevel": 26000, "cruiseLevel": 38000, "route": "NATEB DCT AGPED AGPED1G", "firstController": "STC_E_CTR"}
+            ]
+        }
+    ]
+}

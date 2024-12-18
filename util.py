@@ -25,6 +25,9 @@ def haversine(lat1, lon1, lat2, lon2):  # from https://rosettacode.org/wiki/Have
 
     return R * c
 
+def haversineNM(lat1, lon1, lat2, lon2):
+    return haversine(lat1, lon1, lat2, lon2) / 1.852
+
 
 def callsignGen(dest,planes,attempts=5):
     """
@@ -39,7 +42,7 @@ def callsignGen(dest,planes,attempts=5):
             callsign += random.choice(list(FLEET.keys()))
         ac_type = random.choice(FLEET[callsign])
         callsign += random.choice(string.digits[1:]) 
-        callsign += random.choice(string.digits) if random.random() < 0.5 else ""
+        callsign += random.choice(string.digits) if random.random() < 0.8 else ""
         callsign += random.choice(string.ascii_uppercase) if random.random() < 0.5 else ""
         callsign += random.choice(string.ascii_uppercase) if random.random() < 0.5 else ""
 
@@ -188,7 +191,6 @@ class PlaneSocket(EsSocket):
         if plane.currentlyWithData is not None:
             PausableTimer(1, masterSock.esSend, args=["$CQ" + plane.currentlyWithData[0], "@94835", "IT", plane.callsign])  # Controller takes plane
             PausableTimer(1, masterSock.esSend, args=["$CQ" + plane.currentlyWithData[0], "@94835", "TA", plane.callsign, plane.altitude])  # Temp alt for arrivals
-            # masterSock.sendall(b'$CQ' + plane.currentlyWithData[0].encode("UTF-8") + b':@94835:IT:' + plane.callsign.encode("UTF-8") + b'\r\n')
 
         PausableTimer(1, masterSock.esSend, args=["$CQ" + masterCallsign, "@94835", "BC", plane.callsign, plane.squawk])  # Assign squawk
 
