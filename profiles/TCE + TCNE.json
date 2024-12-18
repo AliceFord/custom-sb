@@ -1,0 +1,90 @@
+{
+    "stdDepartures": [
+        {
+            "departing": "EGSS",
+            "interval": 180,
+            "routes": [
+                {"route": "CLN2E/22 CLN P44 RATLO M197 REDFA", "arriving": "EHAM"},
+                {"route": "CLN2E/22 CLN P44 SOMVA", "arriving": "EDDF"},
+                {"route": "CLN2E/22 CLN DCT LEDBO M604 LARGA DCT INBOB", "arriving": "ESSA"},
+                {"route": "CLN2E/22 CLN M84 KONAN", "arriving": "EBBR"}
+            ]
+        },
+        {
+            "departing": "EGGW",
+            "interval": 180,
+            "routes": [
+                {"route": "MATCH3Y/25 MATCH Q295 BRAIN M197 REDFA", "arriving": "EHAM"},
+                {"route": "MATCH3Y/25 MATCH Q295 SOMVA", "arriving": "ESSA"},
+                {"route": "MATCH3Y/25 MATCH Q295 PAAVO M604 LARGA DCT INBOB", "arriving": "ESSA"},
+                {"route": "MATCH3Y/25 MATCH Q295 BRAIN P44 DAGGA M85 ITVIP Q70 VABIK", "arriving": "EBBR"}
+            ]
+        },
+        {
+            "departing": "EGLC",
+            "interval": 400,
+            "routes": [
+                {"route": "ODUKU1A/27 ODUKU M84 CLN P44 RATLO M197 REDFA", "arriving": "EHAM"},
+                {"route": "ODUKU1A/27 ODUKU M84 CLN DCT LEDBO M604 LARGA DCT INBOB", "arriving": "ESSA"}
+            ]
+        },
+        {
+            "departing": "EGLL",
+            "interval": 200,
+            "routes": [
+                {"route": "BPK7F/27R BPK Q295 BRAIN M197 REDFA", "arriving": "EHAM"}
+            ]
+        }
+    ],
+    "stdTransits": [
+        {
+            "interval": 300,
+            "routes": [
+                {"departing": "EHAM", "arriving": "EGKK", "currentLevel": 26000, "cruiseLevel": 38000, "route": "LUMEN DCT BULAM DCT SUNUP DCT TEBRA TEBRA2G", "firstController": "LON_E_CTR"},
+                {"departing": "EKYT", "arriving": "EGKK", "currentLevel": 26000, "cruiseLevel": 38000, "route": "BUKUT DCT BARMI BARMI1G", "firstController": "LON_E_CTR"}
+            ]
+        },
+        {
+            "interval": 240,
+            "routes": [
+                {"departing": "EHAM", "arriving": "EGSS", "currentLevel": 26000, "cruiseLevel": 36000, "route": "IDRID DCT NOGRO DCT RINIS RINIS1A", "firstController": "LON_E_CTR"},
+                {"departing": "EBBR", "arriving": "EGSS", "currentLevel": 26000, "cruiseLevel": 36000, "route": "KEGIT DCT SASKI DCT TOSVA TOSVA1A", "firstController": "LON_E_CTR"},
+                {"departing": "EKYT", "arriving": "EGSS", "currentLevel": 26000, "cruiseLevel": 36000, "route": "TOLSA DCT KUBAX DCT BARMI BARMI2A", "firstController": "LON_E_CTR"}
+            ]
+        },
+        {
+            "interval": 240,
+            "routes": [
+                {"departing": "EHAM", "arriving": "EGGW", "currentLevel": 25000, "cruiseLevel": 36000, "route": "IDRID DCT NOGRO DCT RINIS RINIS1N", "firstController": "LON_E_CTR"},
+                {"departing": "EBBR", "arriving": "EGGW", "currentLevel": 25000, "cruiseLevel": 36000, "route": "SUMUM DCT TOSVA TOSVA1N", "firstController": "LON_E_CTR"}
+            ]
+        },
+        {
+            "interval": 400,
+            "routes": [
+                {"departing": "EHAM", "arriving": "EGLC", "currentLevel": 26000, "cruiseLevel": 36000, "route": "GALSO DCT AMRIV DCT MOMIC DCT SUMUM SUMUM1C", "firstController": "LON_E_CTR"},
+                {"departing": "EBBR", "arriving": "EGLC", "currentLevel": 26000, "cruiseLevel": 36000, "route": "LUMEN DCT BULAM DCT INLOD DCT SUMUM SUMUM1C", "firstController": "LON_E_CTR"}
+            ]
+        },
+        {
+            "interval": 180,
+            "routes": [
+                {"departing": "EBBR", "arriving": "EGLL", "currentLevel": 29000, "cruiseLevel": 36000, "route": "ABNED DCT IBNOS DCT LOGAN LOGAN2H", "firstController": "LON_E_CTR"},
+                {"departing": "EBBR", "arriving": "EGLL", "currentLevel": 29000, "cruiseLevel": 36000, "route": "NOGRO DCT LUSOR DCT RINIS DCT LOGAN LOGAN2H", "firstController": "LON_E_CTR"},
+                {"departing": "EBBR", "arriving": "EGLL", "currentLevel": 29000, "cruiseLevel": 36000, "route": "SASKI DCT INLOD DCT LOGAN LOGAN2H", "firstController": "LON_E_CTR"}
+            ]
+        },
+        {
+            "interval": 350,
+            "routes": [
+                {"departing": "EHAM", "arriving": "EGLL", "currentLevel": 30000, "cruiseLevel": 36000, "route": "BUKUT DCT BARMI BARMI1H", "firstController": "LON_E_CTR"}
+            ]
+        },
+        {
+            "interval": 240,
+            "routes": [
+                {"departing": "EGCC", "arriving": "EGLC", "currentLevel": 22000, "cruiseLevel": 36000, "route": "TIXEX DCT ODVOD DCT ROPMU DCT NUDNA DCT INLIN DCT JACKO", "firstController": "LTC_ER_CTR"}
+            ]
+        }
+    ]
+}
