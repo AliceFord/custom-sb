@@ -120,7 +120,7 @@
                     "arriving": "EGLL",
                     "currentLevel": 20000,
                     "cruiseLevel": 37000,
-                    "route": "MAPLE DCT TOBID DTC SOPIT DCT WCO DCT BNN",
+                    "route": "HON DCT TOBID DTC SOPIT DCT WCO DCT BNN",
                     "firstController": "LTC_M_CTR"
                 }
             ]
