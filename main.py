@@ -16,8 +16,8 @@ from sfparser import loadRunwayData, loadStarAndFixData
 from FlightPlan import FlightPlan
 from Plane import Plane
 from PlaneMode import PlaneMode
-from globalVars import FIXES, planes, planeSocks, window, otherControllerSocks, messagesToSpeak, currentSpeakingAC, saveNow
-from Constants import ACTIVE_CONTROLLERS, ACTIVE_RUNWAYS, HIGH_DESCENT_RATE, KILL_ALL_ON_HANDOFF, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, OTHER_CONTROLLERS, RADAR_UPDATE_RATE, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE, TRANSITION_LEVEL, AIRCRAFT_PERFORMACE,VREF_TABLE
+from globalVars import FIXES, planes, planeSocks, otherControllerSocks, messagesToSpeak, currentSpeakingAC, saveNow
+from Constants import ACTIVE_CONTROLLERS, ACTIVE_RUNWAYS, HIGH_DESCENT_RATE, KILL_ALL_ON_HANDOFF, MASTER_CONTROLLER, MASTER_CONTROLLER_FREQ, OTHER_CONTROLLERS, RADAR_UPDATE_RATE, TAXI_SPEED, PUSH_SPEED, CLIMB_RATE, DESCENT_RATE, TRANSITION_LEVEL, AIRCRAFT_PERFORMACE
 import Constants
 import util
 import taxiCoordGen
@@ -42,16 +42,10 @@ class CommandErrorException(Exception):
 
 
 def parseCommand(command: str = None):
-    global planes, window, currentSpeakingAC
+    global planes, currentSpeakingAC
     # See command spec
 
-    if command is None:
-        text: str = window.commandEntry.text()
-
-        window.commandEntry.setText("")
-        window.errorLabel.setText("")
-    else:
-        text = command
+    text = command
     callsign = text.split(" ")[0]
 
     if callsign == "tm":  # time multiplier
@@ -91,20 +85,20 @@ def parseCommand(command: str = None):
                 plane.targetAltitude = int(text.split(" ")[2]) * 100
                 plane.vertSpeed = DESCENT_RATE
 
-                if plane.targetAltitude >= TRANSITION_LEVEL:
-                    messagesToSpeak.append(f"Descend flight level {' '.join(list(str(plane.targetAltitude // 100)))}")
-                else:
-                    messagesToSpeak.append(f"Descend altitude {' '.join(list(str(plane.targetAltitude // 100)))}")
+                # if plane.targetAltitude >= TRANSITION_LEVEL:
+                #     messagesToSpeak.append(f"Descend flight level {' '.join(list(str(plane.targetAltitude // 100)))}")
+                # else:
+                #     messagesToSpeak.append(f"Descend altitude {' '.join(list(str(plane.targetAltitude // 100)))}")
             case "c":
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Cannot climb while on the ground")
                 plane.targetAltitude = int(text.split(" ")[2]) * 100
                 plane.vertSpeed = CLIMB_RATE
 
-                if plane.targetAltitude >= TRANSITION_LEVEL:
-                    messagesToSpeak.append(f"Climb flight level {' '.join(list(str(plane.targetAltitude // 100)))}")
-                else:
-                    messagesToSpeak.append(f"Climb altitude {' '.join(list(str(plane.targetAltitude // 100)))}")
+                # if plane.targetAltitude >= TRANSITION_LEVEL:
+                #     messagesToSpeak.append(f"Climb flight level {' '.join(list(str(plane.targetAltitude // 100)))}")
+                # else:
+                #     messagesToSpeak.append(f"Climb altitude {' '.join(list(str(plane.targetAltitude // 100)))}")
             case "tl":
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Cannot change heading while on the ground")
@@ -115,7 +109,7 @@ def parseCommand(command: str = None):
                 plane.turnDir = "L"
                 # plane.heading = int(text.split(" ")[2])
 
-                messagesToSpeak.append(f"Turn left heading {' '.join(list(str(plane.targetHeading).zfill(3)))}")
+                # messagesToSpeak.append(f"Turn left heading {' '.join(list(str(plane.targetHeading).zfill(3)))}")
             case "tr":
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Cannot change heading while on the ground")
@@ -125,7 +119,7 @@ def parseCommand(command: str = None):
                 plane.targetHeading = int(text.split(" ")[2]) % 360
                 plane.turnDir = "R"
 
-                messagesToSpeak.append(f"Turn right heading {' '.join(list(str(plane.targetHeading).zfill(3)))}")
+                # messagesToSpeak.append(f"Turn right heading {' '.join(list(str(plane.targetHeading).zfill(3)))}")
             case "r":
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Cannot change heading while on the ground")
@@ -136,7 +130,7 @@ def parseCommand(command: str = None):
                 plane.targetHeading = plane.targetHeading % 360
                 plane.turnDir = "R"
 
-                messagesToSpeak.append(f"Turn right by {int(text.split(' ')[2]) % 360} degrees")
+                # messagesToSpeak.append(f"Turn right by {int(text.split(' ')[2]) % 360} degrees")
             case "l":
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Cannot change heading while on the ground")
@@ -147,13 +141,13 @@ def parseCommand(command: str = None):
                 plane.targetHeading = plane.targetHeading % 360
                 plane.turnDir = "L"
 
-                messagesToSpeak.append(f"Turn left by {int(text.split(' ')[2]) % 360} degrees")
+                # messagesToSpeak.append(f"Turn left by {int(text.split(' ')[2]) % 360} degrees")
             case "sp":
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Ground speed is fixed")
                 plane.targetSpeed = int(text.split(" ")[2])
 
-                messagesToSpeak.append(f"Speed {' '.join(list(str(plane.targetSpeed)))}")
+                # messagesToSpeak.append(f"Speed {' '.join(list(str(plane.targetSpeed)))}")
             case "rond":
                 if plane.mode == PlaneMode.FLIGHTPLAN:
                     raise CommandErrorException("Already following a flightplan")
@@ -172,7 +166,7 @@ def parseCommand(command: str = None):
 
                 plane.mode = PlaneMode.FLIGHTPLAN
 
-                messagesToSpeak.append(f"Resume own navigation direct {text.split(' ')[2]}")
+                # messagesToSpeak.append(f"Resume own navigation direct {text.split(' ')[2]}")
             case "pd":
                 if plane.mode == PlaneMode.HEADING:
                     raise CommandErrorException("Currently on headings")
@@ -191,17 +185,17 @@ def parseCommand(command: str = None):
 
                 # plane.flightPlan.route.initial = True
 
-                messagesToSpeak.append(f"Proceed direct {text.split(' ')[2]}")
+                # messagesToSpeak.append(f"Proceed direct {text.split(' ')[2]}")
             case "sq":
                 plane.squawk = int(text.split(" ")[2])
 
-                messagesToSpeak.append(f"Squawk {list(' '.join(str(plane.squawk).zfill(4)))}")
+                # messagesToSpeak.append(f"Squawk {list(' '.join(str(plane.squawk).zfill(4)))}")
             case "hold":
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Cannot enter hold while on the ground")
                 plane.holdFix = text.split(" ")[2]
 
-                messagesToSpeak.append(f"Hold at {text.split(' ')[2]}")
+                # messagesToSpeak.append(f"Hold at {text.split(' ')[2]}")
             case "star":
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Cannot assign STAR while on the ground")
@@ -209,7 +203,7 @@ def parseCommand(command: str = None):
                 FIXES.update(extraFixes)
                 plane.flightPlan.route.fixes.extend(starData[text.split(" ")[2]][ACTIVE_RUNWAYS[plane.flightPlan.destination]].split(" "))
 
-                messagesToSpeak.append(f"{text.split(' ')[2]} arrival")
+                # messagesToSpeak.append(f"{text.split(' ')[2]} arrival")
             case "ils":
                 if plane.mode in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Cannot assign ILS approach while on the ground")
@@ -228,7 +222,7 @@ def parseCommand(command: str = None):
                     plane.clearedILS = runwayData[ACTIVE_RUNWAYS[plane.flightPlan.destination]]
                     plane.runwayHeading = util.headingFromTo(plane.clearedILS[1], recip[1])
 
-                    messagesToSpeak.append(f"Cleared ILS runway {ACTIVE_RUNWAYS[plane.flightPlan.destination]}")
+                    # messagesToSpeak.append(f"Cleared ILS runway {ACTIVE_RUNWAYS[plane.flightPlan.destination]}")
 
                 except FileNotFoundError:
                     print("F")
@@ -240,15 +234,13 @@ def parseCommand(command: str = None):
                 lvlFix = text.split(" ")[2]
                 plane.lvlCoords = FIXES[lvlFix]
 
-                messagesToSpeak.append(f"Be level {lvlFix}")
+                # messagesToSpeak.append(f"Be level {lvlFix}")
             case "ho":  # BIN EM
-                # if text.split(" ")[2] == "KKT":  # TODO: choose airport
                 index = planes.index(plane)
                 planes.remove(plane)
                 sock = planeSocks.pop(index)
                 sock.esSend("#DP" + plane.callsign, "SERVER")
                 sock.close()
-                # window.aircraftTable.removeRow(index)
             case "hoai":
                 plane.mode = PlaneMode.HEADING
                 plane.targetAltitude = plane.altitude
@@ -304,10 +296,7 @@ def parseCommand(command: str = None):
             case _:
                 raise CommandErrorException("Unknown Command")
     except CommandErrorException as e:
-        # window.errorLabel.setText(e.message)
         print(e.message)
-
-    messagesToSpeak = []
 
 
 # PLANE SPAWNING
@@ -398,7 +387,7 @@ def positionLoop(controllerSock: util.ControllerSocket):
 
 
 def messageMonitor(controllerSock: util.ControllerSocket) -> None:
-    global window, saveNow  # PAUSING WON'T WORK ATM
+    global saveNow
     # t = threading.Timer(RADAR_UPDATE_RATE, messageMonitor, args=[controllerSock])  # regular timer as should never be paused
     # t.daemon = True
     # t.start()
@@ -440,7 +429,7 @@ def messageMonitor(controllerSock: util.ControllerSocket) -> None:
                         star = star.split("/")[0]
                         
                         parseCommand(f"{cs} star {star}")
-                elif (m := re.match(r'^\$CQ' + contr + r':@94835:SC:(.*?):H([0-9]+)$', message)):
+                elif (m := re.match(r'^\$CQ' + contr + r':@94835:SC:(.*?):H([0-9]+)$', message)):  # heading
                     cs = m.group(1)
                     tgtHdg = int(m.group(2))
 
@@ -667,14 +656,14 @@ def keyboardHandler():
         
 
 def main():
-    global planes, planeSocks, window, ACTIVE_RUNWAYS, ACTIVE_CONTROLLERS, saveNow
+    global planes, planeSocks, ACTIVE_RUNWAYS, saveNow, ACTIVE_CONTROLLERS, OTHER_CONTROLLERS
     # SETUP PLANES
 
     masterCallsign = MASTER_CONTROLLER
 
     # shelving savestates\2024-06-04_21-05-55.242111.bak
     # with shelve.open("savestates/2024-06-25_20-30-19.355626") as f:
-    # with shelve.open("savestates/2024-08-31_20-03-53.658155") as f:
+    # with shelve.open("savestates/2024-06-04_21-05-55.242111") as f:
     #     for plane in f.values():
     #         plane.lastTime = time.time()
     #         planes.append(plane)
@@ -773,10 +762,6 @@ def main():
 
     controllerSock: util.ControllerSocket = util.ControllerSocket.StartController(masterCallsign)
     controllerSock.setblocking(False)
-
-    for controller in OTHER_CONTROLLERS:
-        otherControllerSocks.append(util.ControllerSocket.StartController(controller[0]))
-        otherControllerSocks[-1].setblocking(False)
 
     for plane in planes:
         planeSocks.append(util.PlaneSocket.StartPlane(plane, masterCallsign, controllerSock))
@@ -1548,6 +1533,18 @@ def main():
     with open(f"profiles/ScTMA.json") as f:
         data = json.load(f)
 
+    if "otherControllers" in data.keys():
+        OTHER_CONTROLLERS = []
+        for controller in data["otherControllers"]:
+            OTHER_CONTROLLERS.append(controller)
+
+    if "activeControllers" in data.keys():
+        ACTIVE_CONTROLLERS = data["activeControllers"]
+
+    if "activeAirports" in data.keys():
+        ACTIVE_RUNWAYS = data["activeAirports"]
+            
+
     if "stdDepartures" in data.keys():
         for stdDep in data["stdDepartures"]:
             stdDeparture(masterCallsign, controllerSock, stdDep["departing"], stdDep["interval"], [
@@ -1571,6 +1568,10 @@ def main():
             stdDeparture(masterCallsign, controllerSock, stdArr["departing"], stdArr["interval"], [
                 *list(map(lambda x: [x["route"], x["level"], x["firstController"]], stdArr["routes"]))
             ])
+
+    for controller in OTHER_CONTROLLERS:
+        otherControllerSocks.append(util.ControllerSocket.StartController(controller[0]))
+        otherControllerSocks[-1].setblocking(False)
         
 
     ## PC W

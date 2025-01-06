@@ -43,7 +43,7 @@ class ControllerHandler:
             self.lon = message[10]
             self.range = message[11]
 
-            self.sock.sendall(esConvert("#TMserver", self.callsign, "Vatsim UK FSD Server"))
+            self.sock.sendall(esConvert("#TMserver", self.callsign, "Alice Ford's FSD Server"))
 
             return 0
 

@@ -14,7 +14,7 @@
         },
         {
             "departing": "EGPF",
-            "interval": 200,
+            "interval": 160,
             "routes": [
                 {"route": "NORBO1H/23 NORBO T256 DCS L612 LAKEY", "arriving": "EGCC"},
                 {"route": "NORBO1H/23 NORBO T256 DCS L612 LAKEY", "arriving": "EGGP"},
@@ -27,7 +27,7 @@
         },
         {
             "departing": "EGPK",
-            "interval": 260,
+            "interval": 160,
             "routes": [
                 {"route": "LUCCO1K/30 LUCCO Z248 OSMEG T256 DCS UL612 LAKEY NUGRA", "arriving": "EGLL"},
                 {"route": "TRN2K/30 TRN P600 BLACA P620 NIMAT", "arriving": "EIDW"}
@@ -36,7 +36,7 @@
     ],
     "stdTransits": [
         {
-            "interval": 330,
+            "interval": 400,
             "routes": [
                 {"departing": "BIKF", "arriving": "EGNM", "currentLevel": 26000, "cruiseLevel": 38000, "route": "BEBNI DCT DCS UN57 POL", "firstController": "STC_W_CTR"},
                 {"departing": "BIKF", "arriving": "EGCC", "currentLevel": 26000, "cruiseLevel": 38000, "route": "BEBNI DCT DCS UL612 LAKEY LAKEY1M", "firstController": "STC_W_CTR"},
@@ -44,18 +44,18 @@
             ]
         },
         {
-            "interval": 400,
+            "interval": 320,
             "routes": [
                 {"departing": "EIDW", "arriving": "EGPF", "currentLevel": 15000, "cruiseLevel": 22000, "route": "ROTEV P600 BLACA BLACA1G", "firstController": "STC_W_CTR"},
                 {"departing": "EIDW", "arriving": "EGPH", "currentLevel": 17000, "cruiseLevel": 22000, "route": "ROTEV P600 TUNSO TUNSO1E", "firstController": "STC_W_CTR"}
             ]
         },
         {
-            "interval": 260,
+            "interval": 180,
             "routes": [
                 {"departing": "EGLL", "arriving": "EGPH", "currentLevel": 26000, "cruiseLevel": 38000, "route": "ABEVI DCT INPIP INPIP1E", "firstController": "STC_E_CTR"},
                 {"departing": "EGLL", "arriving": "EGPF", "currentLevel": 26000, "cruiseLevel": 38000, "route": "NELSA DCT RIBEL RIBEL1G", "firstController": "STC_E_CTR"},
-                {"departing": "EGLL", "arriving": "EGPF", "currentLevel": 26000, "cruiseLevel": 38000, "route": "NELSA DCT RIBEL RIBEL2P", "firstController": "STC_E_CTR"}
+                {"departing": "EGLL", "arriving": "EGPK", "currentLevel": 26000, "cruiseLevel": 38000, "route": "NELSA DCT RIBEL RIBEL2P", "firstController": "STC_E_CTR"}
             ]
         },
         {
@@ -66,5 +66,8 @@
                 {"departing": "EHAM", "arriving": "EGPF", "currentLevel": 26000, "cruiseLevel": 38000, "route": "NATEB DCT AGPED AGPED1G", "firstController": "STC_E_CTR"}
             ]
         }
-    ]
+    ],
+    "activeControllers": ["STC_CTR", "STC_E_CTR", "STC_W_CTR", "EGPF_APP", "EGPH_APP", "EGPK_APP"],
+    "otherControllers": [["SCO_D_CTR", "35855"], ["STC_A_CTR", "23775"]],
+    "activeAirports": [{"EGPH" : "24", "EGPF" : "23", "EGPK" : "30"}]
 }

@@ -10,7 +10,7 @@ import socket
 
 serverIP = "7.tcp.eu.ngrok.io"
 
-serverPort = 19847
+serverPort = 13119
 
 # serverIP = input("Enter the server IP: ")
 # serverPort = int(input("Enter the server port: "))
