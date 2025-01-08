@@ -43,7 +43,7 @@ def getData(fromCache=False, n=1):
         with open(f"rwcache/{n}.json") as f:
             data = json.load(f)
     else:
-        data = json.loads(requests.get("https://api.adsb.lol/v2/lat/51.45/lon/-0.46/dist/35").text)  # 75
+        data = json.loads(requests.get("https://api.adsb.lol/v2/lat/51.0/lon/-0.16/dist/35").text)  # 75
 
     outData = []
     for ac in data["ac"]:
