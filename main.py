@@ -674,7 +674,7 @@ def main():
 
     # shelving savestates\2024-06-04_21-05-55.242111.bak
     # with shelve.open("savestates/2024-06-25_20-30-19.355626") as f:
-    # with shelve.open("savestates/2024-08-31_20-03-53.658155") as f:
+    # with shelve.open("savestates/2025-01-06_18-37-56.631000") as f:
     #     for plane in f.values():
     #         plane.lastTime = time.time()
     #         planes.append(plane)
@@ -722,7 +722,7 @@ def main():
     # llHoldFixes = ["BIG", "OCK", "BNN", "LAM"]
 
     # for holdFix in llHoldFixes:
-    #     for alt in range(8000, 10000 + 1 * 1000, 1000):
+    #     for alt in range(8000, 11000 + 1 * 1000, 1000):
     #         cs,ac = util.callsignGen("EGLL",[plane.callsign for plane in planes])
     #         plane = Plane.requestFromFix(cs, holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGLL", holdFix,ac), currentlyWithData=(masterCallsign, holdFix))
     #         plane.holdFix = holdFix
@@ -813,10 +813,10 @@ def main():
     #     ["ODVIK DCT BIG", 11000, "EGLL_N_APP"],
     # HEATHROW INT
     # stdArrival(masterCallsign, controllerSock, "EGLL", 85, [
-    #     ["NOVMA DCT OCK", 11000, "EGLL_S_APP"],
-    #     ["ODVIK DCT BIG", 11000, "EGLL_S_APP"],
-    #     ["BRAIN DCT LAM", 11000, "EGLL_N_APP"],
-    #     ["COWLY DCT BNN", 11000, "EGLL_N_APP"],
+    #     ["NOVMA DCT OCK", 13000, "EGLL_S_APP"],
+    #     ["ODVIK DCT BIG", 13000, "EGLL_S_APP"],
+    #     ["BRAIN DCT LAM", 13000, "EGLL_N_APP"],
+    #     ["COWLY DCT BNN", 13000, "EGLL_N_APP"],
     # ])
 
 
@@ -1588,7 +1588,7 @@ def main():
     # ], withMaster=True)
 
 
-    with open(f"profiles/TC Midlands.json") as f:
+    with open(f"profiles/ScTMA.json") as f:
         data = json.load(f)
 
     if "stdDepartures" in data.keys():
