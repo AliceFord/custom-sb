@@ -159,6 +159,8 @@ def handle_client(conn: socket.socket, addr):
         except ConnectionResetError:
             print(f"[DISCONNECTED] {addr} disconnected.")
             connected = False
+        except UnicodeDecodeError:
+            print("POTATO")
 
     conn.close()
     if controllerPilotType == "controller":

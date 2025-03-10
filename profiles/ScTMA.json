@@ -14,11 +14,10 @@
         },
         {
             "departing": "EGPF",
-            "interval": 200,
+            "interval": 180,
             "routes": [
                 {"route": "NORBO1H/23 NORBO T256 DCS L612 LAKEY", "arriving": "EGCC"},
                 {"route": "NORBO1H/23 NORBO T256 DCS L612 LAKEY", "arriving": "EGGP"},
-                {"route": "GOSAM1C/24 GOSAM P600 FENIK L612 CALDA DCT POL", "arriving": "EGNM"},
                 {"route": "NORBO1H/23 NORBO T256 ROVLA UT256 DCS UL612 LAKEY NUGRA", "arriving": "EGLL"},
                 {"route": "NORBO1H/23 NORBO L186 TRN P600 BLACA P620 NIMAT", "arriving": "EIDW"},
                 {"route": "NORBO1H/23 NORBO Y96 NATEB N97 ROKAN M982 TOPPA", "arriving": "EHAM"},

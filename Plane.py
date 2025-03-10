@@ -167,7 +167,11 @@ class Plane:
             deltaLat, deltaLon = util.deltaLatLonCalc(self.lat, tas, self.heading, deltaT)
 
             distanceOut = util.haversineNM(self.lat, self.lon, self.clearedILS[1][0], self.clearedILS[1][1])
-            requiredAltitude = (math.tan(math.radians(3)) * distanceOut * 6076) + AIRPORT_ELEVATIONS[self.flightPlan.destination]  # feet
+            try:
+                requiredAltitude = (math.tan(math.radians(3)) * distanceOut * 6076) + AIRPORT_ELEVATIONS[self.flightPlan.destination]  # feet
+            except KeyError:
+                print("ELEVATION FOR", self.flightPlan.destination, "NOT FOUND")
+                requiredAltitude = (math.tan(math.radians(3)) * distanceOut * 6076)
 
             if self.speed > self.targetSpeed:
                 self.speed -= 1.5 * deltaT

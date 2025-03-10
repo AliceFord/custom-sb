@@ -314,7 +314,7 @@ def parseCommand(command: str = None):
 
 def spawnRandomEveryNSeconds(nSeconds, variance, data):
     choice = random.choice(data)
-    util.PausableTimer(random.uniform(nSeconds * (1 - variance), nSeconds * (1 + variance)) * (1/Constants.timeMultiplier), spawnRandomEveryNSeconds, args=(nSeconds, variance, data))
+    util.PausableTimer(random.uniform(nSeconds * (1 - variance), nSeconds) * (1/Constants.timeMultiplier), spawnRandomEveryNSeconds, args=(nSeconds, variance, data))
     spawnEveryNSeconds(nSeconds, choice["masterCallsign"], choice["controllerSock"], choice["method"], *choice["args"], callsign=None, spawnOne=True, **choice["kwargs"])
 
 
@@ -594,7 +594,7 @@ def stdDeparture(masterCallsign, controllerSock, ad, delay, planLvlData):
         if not arrAd.startswith("EG"):
             cruiseLvl = 36000
         parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "DEP", "args": [ad], "kwargs": {"flightPlan": FlightPlan("I", "B738", 250, ad, 1130, 1130, cruiseLvl, arrAd, Route(route, ad))}})
-    util.PausableTimer(random.uniform(0, delay) * (1/Constants.timeMultiplier), spawnRandomEveryNSeconds, args=(delay, 0, parsedData))
+    util.PausableTimer(random.uniform(0, delay) * (1/Constants.timeMultiplier), spawnRandomEveryNSeconds, args=(delay, 0.3, parsedData))
 
 
 def stdTransit(masterCallsign, controllerSock, delay, data, withMaster=True):
@@ -612,7 +612,7 @@ def stdTransit(masterCallsign, controllerSock, delay, data, withMaster=True):
         else:
             parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": [route.split(" ")[0]], "kwargs": {"speed": spd, "altitude": inLvl, "flightPlan": FlightPlan("I", "B738", 250, depAd, 1130, 1130, filedLvl, arrAd, Route(route, depAd, arrAd)), "firstController": ctrl}})
 
-    util.PausableTimer(random.uniform(0, delay) * (1/Constants.timeMultiplier), spawnRandomEveryNSeconds, args=(delay, 0, parsedData))
+    util.PausableTimer(random.uniform(0, delay) * (1/Constants.timeMultiplier), spawnRandomEveryNSeconds, args=(delay, 0.5, parsedData))
 
 def stdTransit2(masterCallsign, controllerSock, delay, data, withMaster=True):
     parsedData = []
@@ -629,7 +629,7 @@ def stdTransit2(masterCallsign, controllerSock, delay, data, withMaster=True):
         else:
             parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "TR2", "args": [route.split(" ")[0], route.split(" ")[2]], "kwargs": {"speed": spd, "altitude": inLvl, "flightPlan": FlightPlan("I", "B738", 250, depAd, 1130, 1130, filedLvl, arrAd, Route(route, depAd, arrAd)), "firstController": ctrl}})
 
-    util.PausableTimer(random.uniform(0, delay) * (1/Constants.timeMultiplier), spawnRandomEveryNSeconds, args=(delay, 0, parsedData))
+    util.PausableTimer(random.uniform(0, delay) * (1/Constants.timeMultiplier), spawnRandomEveryNSeconds, args=(delay, 0.5, parsedData))
 
 def stdOverflight(masterCallsign, controllerSock, delay, data, withMaster=True):
     parsedData = []
@@ -646,7 +646,7 @@ def stdOverflight(masterCallsign, controllerSock, delay, data, withMaster=True):
         else:
             parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "OVF", "args": [route.split(" ")[0]], "kwargs": {"speed": spd, "altitude": inLvl, "flightPlan": FlightPlan("I", "B738", 250, depAd, 1130, 1130, filedLvl, arrAd, Route(route, depAd, arrAd)), "firstController": ctrl}})
 
-    util.PausableTimer(random.uniform(0, delay) * (1/Constants.timeMultiplier), spawnRandomEveryNSeconds, args=(delay, 0, parsedData))
+    util.PausableTimer(random.uniform(0, delay) * (1/Constants.timeMultiplier), spawnRandomEveryNSeconds, args=(delay, 0.5, parsedData))
 
 
 def keyboardHandler():
@@ -674,7 +674,7 @@ def main():
 
     # shelving savestates\2024-06-04_21-05-55.242111.bak
     # with shelve.open("savestates/2024-06-25_20-30-19.355626") as f:
-    # with shelve.open("savestates/2025-01-06_18-37-56.631000") as f:
+    # with shelve.open("savestates/2025-01-12_23-14-11.000778") as f:
     #     for plane in f.values():
     #         plane.lastTime = time.time()
     #         planes.append(plane)

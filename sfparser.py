@@ -53,6 +53,16 @@ def parseFixes(path=None):
                 except IndexError:
                     pass
 
+        irishPath = r"data/Airports/EGAA/Fixes.txt"
+
+        with open(irishPath, "r") as f:
+            irishPath = f.read().split("\n")
+            for line in irishPath:
+                try:
+                    lines.append(line)
+                except IndexError:
+                    pass
+
 
         ciczPath = r"data\Navaids\FIXES_CICZ.txt"
 

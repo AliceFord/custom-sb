@@ -1,0 +1,31 @@
+{
+    "stdDepartures": [
+        {
+            "departing": "EGNT",
+            "interval": 360,
+            "routes": [
+                {"route": "GIRLI1T/07 GIRLI DCT TILNI DCT UVAVU DCT POL", "arriving": "EIDW"},
+                {"route": "GIRLI1T/07 GIRLI DCT TILNI DCT UVAVU DCT POL", "arriving": "EIDW"},
+                {"route": "GIRLI1T/07 GIRLI DCT TILNI DCT UVAVU DCT POL", "arriving": "EIDW"},
+                {"route": "GIRLI1T/07 GIRLI DCT TILNI DCT UVAVU DCT POL", "arriving": "EIDW"},
+                {"route": "DIGBI DCT OTBUN DCT IPSAD", "arriving": "EGPH"},
+                {"route": "DIGBI DCT ALASO DCT RITSI", "arriving": "EGPD"}
+            ]
+        }
+    ],
+    "stdTransits": [
+        {
+            "interval": 240,
+            "routes": [
+                {"departing": "EGKK", "arriving": "EGNT", "currentLevel": 16000, "cruiseLevel": 30000, "route": "POL DCT GOKOV DCT IRKOR DCT XODRU DCT ETSES", "firstController": "EGNT_APP"}
+            ]
+        },
+        {
+            "interval": 1200,
+            "routes": [
+                {"departing": "EGPH", "arriving": "EGNT", "currentLevel": 12000, "cruiseLevel": 22000, "route": "IPSAD DCT OTBUN DCT NATEB", "firstController": "SCO_CTR"},
+                {"departing": "EGPD", "arriving": "EGNT", "currentLevel": 12000, "cruiseLevel": 22000, "route": "MADAD DCT RITSI DCT ALASO DCT NATEB", "firstController": "SCO_CTR"}
+            ]
+        }
+    ]
+}

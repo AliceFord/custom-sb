@@ -1,0 +1,36 @@
+{
+    "stdDepartures": [
+        {
+            "departing": "EGAA",
+            "interval": 100,
+            "routes": [
+                {"route": "VAGMO DCT NUMPI P620 NIMAT", "arriving": "EIDW"},
+                {"route": "VAGMO DCT LISBO L603 IOM L10 PENIL", "arriving": "EGCC"},
+                {"route": "VAGMO DCT BLACA P600 TUNSO", "arriving": "EGPH"}
+            ]
+        },
+        {
+            "departing": "EGAC",
+            "interval": 120,
+            "routes": [
+                {"route": "ABSUN DCT NUMPI P620 NIMAT", "arriving": "EIDW"},
+                {"route": "ABSUN DCT DUFFY L15 PEPOD Q38 MAKUX", "arriving": "EGCC"},
+                {"route": "ABSUN DCT MAGEE DCT BLACA P600 TUNSO", "arriving": "EGPH"}
+            ]
+        }
+    ],
+    "stdTransits": [
+        {
+            "interval": 90,
+            "routes": [
+                {"departing": "EGPH", "arriving": "EGAA", "currentLevel": 10000, "cruiseLevel": 30000, "route": "TUNSO DCT BLACA DCT BELZU", "firstController": "STC_A_CTR"},
+                {"departing": "EIDW", "arriving": "EGAA", "currentLevel": 14000, "cruiseLevel": 22000, "route": "NEVRI DCT ABSUN DCT BELZU", "firstController": "STC_A_CTR"},
+                {"departing": "EGCC", "arriving": "EGAA", "currentLevel": 10000, "cruiseLevel": 22000, "route": "IBTES DCT NELBO DCT BELZU", "firstController": "STC_A_CTR"},
+
+                {"departing": "EGPH", "arriving": "EGAC", "currentLevel": 10000, "cruiseLevel": 30000, "route": "TUNSO DCT BLACA DCT MAGEE", "firstController": "STC_A_CTR"},
+                {"departing": "EIDW", "arriving": "EGAC", "currentLevel": 14000, "cruiseLevel": 22000, "route": "NEVRI DCT ABSUN DCT MAGEE", "firstController": "STC_A_CTR"},
+                {"departing": "EGCC", "arriving": "EGAC", "currentLevel": 10000, "cruiseLevel": 22000, "route": "IBTES DCT NELBO DCT MAGEE", "firstController": "STC_A_CTR"}
+            ]
+        }
+    ]
+}

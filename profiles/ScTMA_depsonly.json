@@ -1,0 +1,31 @@
+{
+    "stdDepartures": [
+        {
+            "departing": "EGPH",
+            "interval": 180,
+            "routes": [
+                {"route": "GOSAM1C/24 GOSAM P600 FENIK L612 LAKEY", "arriving": "EGCC"},
+                {"route": "GOSAM1C/24 GOSAM P600 FENIK L612 LAKEY", "arriving": "EGGP"},
+                {"route": "GOSAM1C/24 GOSAM P600 FENIK L612 CALDA DCT POL", "arriving": "EGNM"},
+                {"route": "GOSAM1C/24 GOSAM P600 FENIK L612 ELBUS UL612 LAKEY DCT NUGRA", "arriving": "EGLL"}
+            ]
+        },
+        {
+            "departing": "EGPF",
+            "interval": 200,
+            "routes": [
+                {"route": "NORBO1H/23 NORBO T256 DCS L612 LAKEY", "arriving": "EGCC"},
+                {"route": "NORBO1H/23 NORBO T256 DCS L612 LAKEY", "arriving": "EGGP"},
+                {"route": "GOSAM1C/24 GOSAM P600 FENIK L612 CALDA DCT POL", "arriving": "EGNM"},
+                {"route": "NORBO1H/23 NORBO T256 ROVLA UT256 DCS UL612 LAKEY NUGRA", "arriving": "EGLL"}
+            ]
+        },
+        {
+            "departing": "EGPK",
+            "interval": 220,
+            "routes": [
+                {"route": "LUCCO1K/30 LUCCO Z248 OSMEG T256 DCS UL612 LAKEY NUGRA", "arriving": "EGLL"}
+            ]
+        }
+    ]
+}
