@@ -1,6 +1,7 @@
 import socket
 import threading
-from Constants import ACTIVE_CONTROLLERS
+import sys
+#from Constants import ACTIVE_CONTROLLERS
 
 PORT = 6809  # 6810 for internet connection
 
@@ -55,7 +56,7 @@ class ControllerHandler:
             return 1  # forward message to other controllers
 
         elif message[0].startswith("$CQ" + self.callsign):
-            print(message)
+            #print(message)
             if message[2] == "IP":
                 self.sock.sendall(esConvert("$CR" + self.server, self.callsign, "ATC", "Y", self.callsign))
                 return 0
@@ -132,6 +133,7 @@ def handle_client(conn: socket.socket, addr):
     while connected:
         try:
             messages = conn.recv(262144).decode("UTF-8")
+            print(messages)
             for message in messages.split("\r\n"):
                 if message == "":
                     continue
@@ -161,6 +163,8 @@ def handle_client(conn: socket.socket, addr):
             connected = False
         except UnicodeDecodeError:
             print("POTATO")
+        except:
+            print("HUGE POTATO")
 
     conn.close()
     if controllerPilotType == "controller":
@@ -170,12 +174,22 @@ def handle_client(conn: socket.socket, addr):
 
 
 def start():
+    server.settimeout(5)
     server.listen()
     print(f"[LISTENING] Server is listening on {SERVER}")
+    threads : list[threading.Thread] = []
     while True:
-        conn, addr = server.accept()
-        thread = threading.Thread(target=handle_client, args=(conn, addr))
-        thread.start()
+        try:
+            conn, addr = server.accept()
+            thread = threading.Thread(target=handle_client, args=(conn, addr))
+            threads.append(thread)
+            thread.start()
+        except socket.timeout:
+            pass
+        except Exception:
+            break
+    
+    sys.exit()
 
 
 print("[STARTING] server is starting...")

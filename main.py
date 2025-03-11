@@ -1747,6 +1747,7 @@ def main():
 
     k = 0
     while True:  # block forver
+        print(list(map(lambda x : x.callsign, planes)))
         positionLoop(controllerSock)
 
         k += 1
