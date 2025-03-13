@@ -1,0 +1,28 @@
+{
+    "stdDepartures": [
+        {
+            "departing": "EGSS",
+            "interval": 300,
+            "routes": [
+                {"route": "UTAVA1R/22 Q75 BUZAD T420 TNT UN57 POL UN601 INPIP", "arriving": "EGPH"}
+            ]
+        }
+    ],
+    "stdTransits": [
+        {
+            "interval": 90,
+            "routes": [
+                {"departing": "EHAM", "arriving": "EGSS", "currentLevel": 9000, "cruiseLevel": 30000, "route": "LOFFO DCT ABBOT", "firstController": "EGSS_APP"},
+                {"departing": "EIDW", "arriving": "EGSS", "currentLevel": 9000, "cruiseLevel": 22000, "route": "BOMBO DCT BKY DCT BUSTA DCT LOREL", "firstController": "EGSS_APP"}
+            ]
+        },
+        {
+            "interval": 90,
+            "routes": [
+                {"departing": "EHAM", "arriving": "EGGW", "currentLevel": 9000, "cruiseLevel": 30000, "route": "WOBUN DCT EDCOX DCT JUMZI DCT ZAGZO", "firstController": "EGGW_APP"},
+                {"departing": "EHAM", "arriving": "EGGW", "currentLevel": 9000, "cruiseLevel": 30000, "route": "WOBUN DCT EDCOX DCT JUMZI DCT ZAGZO", "firstController": "EGGW_APP"},
+                {"departing": "EIDW", "arriving": "EGGW", "currentLevel": 9000, "cruiseLevel": 22000, "route": "CLN DCT ABBOT", "firstController": "EGSS_APP"}
+            ]
+        }
+    ]
+}

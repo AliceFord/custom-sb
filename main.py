@@ -734,13 +734,20 @@ def main():
     #     for alt in range(7000, 9000 + 1 * 1000, 1000):
     #         callsign,ac_type = util.callsignGen("EGCC",[plane.callsign for plane in planes])
     #         plane = Plane.requestFromFix(callsign, holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGCC", holdFix), currentlyWithData=(masterCallsign, holdFix))
-    # llHoldFixes = ["ABBOT"]
+    
+    llHoldFixes = ["ABBOT"]
+    for holdFix in llHoldFixes:
+        for alt in range(7000, 8000 + 1 * 1000, 1000):
+            plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGSS", holdFix))
+            plane.holdFix = holdFix
+            planes.append(plane)
 
-    # for holdFix in llHoldFixes:
-    #     for alt in range(7000, 11000 + 1 * 1000, 1000):
-    #         plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGSS", holdFix))
-    #         plane.holdFix = holdFix
-    #         planes.append(plane)
+    llHoldFixes = ["ZAGZO"]
+    for holdFix in llHoldFixes:
+        for alt in range(7000, 8000 + 1 * 1000, 1000):
+            plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGGW", holdFix))
+            plane.holdFix = holdFix
+            planes.append(plane)
 
     # LC IN THE HOLD
 
@@ -1588,7 +1595,7 @@ def main():
     # ], withMaster=True)
 
 
-    with open(f"profiles/ScTMA.json") as f:
+    with open(f"profiles/ESSEX.json") as f:
         data = json.load(f)
 
     if "stdDepartures" in data.keys():

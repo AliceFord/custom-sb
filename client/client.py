@@ -8,9 +8,9 @@ import socket
 # sock.bind(("127.0.0.1", "12345"))
 # sock.listen(5)
 
-serverIP = "7.tcp.eu.ngrok.io"
+serverIP = "18.197.239.109"
 
-serverPort = 19847
+serverPort = 12932
 
 # serverIP = input("Enter the server IP: ")
 # serverPort = int(input("Enter the server port: "))
