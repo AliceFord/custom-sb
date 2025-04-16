@@ -1,0 +1,84 @@
+{
+    "version": 2,
+    "stdDepartures": [
+        {
+            "departing": "EGSS",
+            "interval": 120,
+            "routes": [
+                {"route": "CLN5S/04 CLN P44 RATLO M197 REDFA", "arriving": "EHAM"},
+                {"route": "UTAVA1S/04 UTAVA Q75 BUZAD T420 TNT UN57 POL UN601 INPIP", "arriving": "EGPH"},
+                {"route": "NUGBO1S/04 NUGBO M183 SILVA P86 SAWPE", "arriving": "EGFF"},
+                {"route": "DET2D/04 DET M604 LYD M189 WAFFU UM605", "arriving": "LFPG"}
+            ]
+        },
+        {
+            "departing": "EGGW",
+            "interval": 180,
+            "routes": [
+                {"route": "MATCH2C/07 MATCH Q295 BRAIN P44 DAGGA M85 ITVIP Q70 VABIK", "arriving": "EBBR"},
+                {"route": "OLNEY2C/07 OLNEY T420 TNT UN57 POL UN601 INPIP", "arriving": "EGPH"},
+                {"route": "RODNI1C/07 RODNI N27 ICTAM Q63 CPT DCT MID DCT", "arriving": "LFPG"}
+            ]
+        },
+        {
+            "departing": "EGLC",
+            "interval": 400,
+            "routes": [
+                {"route": "ODUKU1H/09 ODUKU M84 CLN DCT LEDBO M604 LARGA DCT INBOB", "arriving": "ESSA"},
+                {"route": "BPK1H/09 BPK UN601 INPIP", "arriving": "EGPH"},
+                {"route": "SOQQA1H/09 SOQQA M87 EKNIV DCT LARCK", "arriving": "EGKK"},
+                {"route": "SAXBI1H/09 SAXBI N27 HEN N84 DIDZA P86 SAWPE", "arriving": "EGFF"}
+            ]
+        },
+        {
+            "departing": "EGLL",
+            "interval": 150,
+            "routes": [
+                {"route": "BPK6J/09R BPK Q295 BRAIN M197 REDFA", "arriving": "EHAM"},
+                {"route": "ULTIB1J/09R ULTIB T420 TNT UN57 POL UN601 INPIP", "arriving": "EGPH"}
+            ]
+        }
+    ],
+    "stdTransits": [
+        {
+            "interval": 180,
+            "routes": [
+                {"departing": "EGPH", "arriving": "EGLL", "currentLevel": 15000, "cruiseLevel": 38000, "route": "TOBID DCT SOPIT DCT WCO DCT BNN", "firstController": "LTC_N_CTR"}
+            ]
+        },
+        {
+            "interval": 220,
+            "routes": [
+                {"departing": "EGPH", "arriving": "EGSS", "currentLevel": 15000, "cruiseLevel": 36000, "route": "ROGBI DCT FINMA DCT BOMBO DCT BKY DCT BUSTA DCT LOREL", "firstController": "LTC_N_CTR"},
+                {"departing": "EGPH", "arriving": "EGGW", "currentLevel": 15000, "cruiseLevel": 36000, "route": "ROGBI DCT FINMA DCT WOBUN DCT EDCOX DCT JUMZI DCT ZAGZO", "firstController": "LTC_N_CTR"}
+            ]
+        },
+
+        {
+            "interval": 180,
+            "routes": [
+                {"departing": "EHAM", "arriving": "EGLL", "currentLevel": 16000, "cruiseLevel": 38000, "route": "LOGAN DCT SABER DCT BRASO DCT WESUL DCT LAM", "firstController": "LTC_N_CTR"}
+            ]
+        },
+        {
+            "interval": 240,
+            "routes": [
+                {"departing": "EHAM", "arriving": "EGGW", "currentLevel": 14000, "cruiseLevel": 38000, "route": "MUCTE DCT OFJES DCT UDDIZ DCT COCCU DCT JUMZI DCT ZAGZO", "firstController": "LTC_N_CTR"}
+            ]
+        },
+        {
+            "interval": 240,
+            "routes": [
+                {"departing": "LFPG", "arriving": "EGSS", "currentLevel": 16000, "cruiseLevel": 38000, "route": "MOREZ DCT VATON DCT OZZOT DCT BPK DCT BKY DCT BUSTA DCT LOREL", "firstController": "LTC_N_CTR"},
+                {"departing": "LFPG", "arriving": "EGGW", "currentLevel": 16000, "cruiseLevel": 38000, "route": "MOREZ DCT VATON DCT OZZOT DCT BPK DCT ILLOC DCT OXDUF DCT COCCU DCT JUMZI DCT ZAGZO", "firstController": "LTC_N_CTR"}
+            ]
+        },
+
+        {
+            "interval": 300,
+            "routes": [
+                {"departing": "EGKK", "arriving": "EHAM", "currentLevel": 13000, "cruiseLevel": 38000, "route": "ODVIK DCT FRANE M604 GASBA M197 REDFA", "firstController": "LTC_N_CTR"}
+            ]
+        }
+    ]
+}

@@ -236,6 +236,28 @@ class PausableTimer(threading.Thread):
         except Exception as e:
             print(e)
 
+def tryElseNone(obj, key):
+    try:
+        return obj[key]
+    except KeyError:
+        return None
+    
+TOPDOWNS = {"LTC_NW_CTR": ["LTC_NW_CTR", "LTC_N_CTR"], "LTC_NE_CTR": ["LTC_NE_CTR", "LTC_N_CTR"]}
+
+def findOnlineTopdownController(controllerToFindTopdownFor, controllersOnline):
+    if controllersOnline is None:
+        return controllerToFindTopdownFor
+    try:
+        potentialControllers = TOPDOWNS[controllerToFindTopdownFor]
+    except KeyError:
+        return None
+    
+    for controller in potentialControllers:
+        if controller in controllersOnline:
+            return controller
+        
+    return None
+
 
 if __name__ == "__main__":
     print(whichSector(*sfCoordsToNormalCoords(*"N052.24.50.722:W001.15.26.594".split(":")), 5000))

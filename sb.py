@@ -1,7 +1,7 @@
 import socket
 import threading
 import sys
-#from Constants import ACTIVE_CONTROLLERS
+from Constants import ACTIVE_CONTROLLERS
 
 PORT = 6809  # 6810 for internet connection
 
@@ -127,18 +127,17 @@ def handle_client(conn: socket.socket, addr):
     global controllers, pilots
     print(f"[NEW CONNECTION] {addr} connected.")
     connected = True
-    mNum = 0
+    firstMessage = True
     messageHandler = None
     controllerPilotType = None
     while connected:
         try:
             messages = conn.recv(262144).decode("UTF-8")
-            print(messages)
             for message in messages.split("\r\n"):
                 if message == "":
                     continue
-                mNum += 1
-                if mNum == 1:
+                if firstMessage:
+                    firstMessage = False
                     if "AA" in message:  # Login controller
                         messageHandler = ControllerHandler(conn)
                         controllers.append(messageHandler)
@@ -155,7 +154,6 @@ def handle_client(conn: socket.socket, addr):
                             controller.sock.sendall(esConvert(message))
                 elif status == 2:
                     for controller in controllers:
-                        # if controller.callsign in ACTIVE_CONTROLLERS:
                         controller.sock.sendall(esConvert(message))
 
         except ConnectionResetError:
@@ -163,9 +161,11 @@ def handle_client(conn: socket.socket, addr):
             connected = False
         except UnicodeDecodeError:
             print("POTATO")
-        except:
+        except Exception as e:
             print("HUGE POTATO")
+            print(e)
 
+    conn.shutdown(socket.SHUT_RDWR)
     conn.close()
     if controllerPilotType == "controller":
         controllers.remove(messageHandler)
@@ -177,13 +177,10 @@ def start():
     server.settimeout(5)
     server.listen()
     print(f"[LISTENING] Server is listening on {SERVER}")
-    threads : list[threading.Thread] = []
     while True:
         try:
             conn, addr = server.accept()
-            thread = threading.Thread(target=handle_client, args=(conn, addr))
-            threads.append(thread)
-            thread.start()
+            threading.Thread(target=handle_client, args=(conn, addr), daemon=True).start()
         except socket.timeout:
             pass
         except Exception:

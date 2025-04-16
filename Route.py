@@ -11,6 +11,9 @@ class Route:
         self.fixes = []
         self.depAD = depAD
         self.arrAD = arrAD
+
+        self.starIntermediateRoute = None
+
         self.initialiseFixesFromRoute()
 
     def initialiseFixesFromRoute(self):
@@ -35,7 +38,17 @@ class Route:
 
         if self.arrAD is not None and self.arrAD.startswith("EG"):
             try:
-                if (m := re.match(r"([A-Z]{3,5}\d[A-Z])", fixAirways[-1])):
+                if (m := re.match(r"([A-Z]{3,5}\d[A-Z])/([A-Z]{3,5})", fixAirways[-1])):
+                    starData, extraFixes = loadStarAndFixData(self.arrAD)
+                    FIXES.update(extraFixes)
+                    newFixes = starData[m.group(1)][ACTIVE_RUNWAYS[self.arrAD]].split(" ")
+                    while (newFixes[0] != m.group(2)):
+                        newFixes.pop(0)
+                    
+                    self.fixes.extend(newFixes)
+                    self.starIntermediateRoute = m.group(1)[:-2] + " " + m.group(1)
+                    return
+                elif (m := re.match(r"([A-Z]{3,5}\d[A-Z])", fixAirways[-1])):
                     starData, extraFixes = loadStarAndFixData(self.arrAD)
                     FIXES.update(extraFixes)
                     addToEnd.extend(starData[m.group(1)][ACTIVE_RUNWAYS[self.arrAD]].split(" "))
@@ -96,7 +109,10 @@ class Route:
         self.fixes.pop(0)
 
     def __str__(self):
-        return self.route
+        if self.starIntermediateRoute is None:
+            return self.route
+        else:
+            return self.starIntermediateRoute
 
     @classmethod
     def duplicate(cls, route, depAD, arrAD=None):

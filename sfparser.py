@@ -289,4 +289,5 @@ def loadSectorData():
 
 
 if __name__ == "__main__":
-    print(loadRunwayData("EGBB"))
+    starData, extraFixes = loadStarAndFixData("EGLL")
+    print(starData["HON1H"]["09R"].split(" "))

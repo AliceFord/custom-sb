@@ -1,0 +1,31 @@
+{
+    "stdDepartures": [
+        {
+            "departing": "EGAA",
+            "interval": 100,
+            "routes": [
+                {"route": "VAGMO DCT NUMPI P620 NIMAT", "arriving": "EIDW"},
+                {"route": "VAGMO DCT LISBO L603 IOM L10 PENIL", "arriving": "EGCC"},
+                {"route": "VAGMO DCT BLACA P600 TUNSO", "arriving": "EGPH"}
+            ]
+        },
+        {
+            "departing": "EGAC",
+            "interval": 120,
+            "routes": [
+                {"route": "ABSUN DCT NUMPI P620 NIMAT", "arriving": "EIDW"},
+                {"route": "ABSUN DCT DUFFY L15 PEPOD Q38 MAKUX", "arriving": "EGCC"},
+                {"route": "ABSUN DCT MAGEE DCT BLACA P600 TUNSO", "arriving": "EGPH"}
+            ]
+        }
+    ],
+    "stdTransits": [
+        {
+            "interval": 90,
+            "routes": [
+                {"departing": "EGKK", "arriving": "EGNX", "currentLevel": 9999, "cruiseLevel": 10000, "route": "WELIN DCT PIGOT", "firstController": "EGNX_APP"},
+                {"departing": "EGPH", "arriving": "EGNX", "currentLevel": 8000, "cruiseLevel": 10000, "route": "XAPOS DCT ROKUP", "firstController": "EGNX_APP"}
+            ]
+        }
+    ]
+}

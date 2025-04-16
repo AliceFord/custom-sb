@@ -250,10 +250,13 @@ def parseCommand(command: str = None):
                 sock.close()
                 # window.aircraftTable.removeRow(index)
             case "hoai":
-                plane.mode = PlaneMode.HEADING
-                plane.targetAltitude = plane.altitude
-                plane.vertSpeed = 0
-                # plane.dieOnReaching2K = True
+                
+                if plane.altitude < 9000:
+                    plane.mode = PlaneMode.HEADING
+                    plane.targetAltitude = 100
+                    plane.vertSpeed = -2000
+                    
+                    plane.dieOnReaching2K = True
             case "taxi":
                 if plane.mode not in PlaneMode.GROUND_MODES:
                     raise CommandErrorException("Plane is not currently in a state to taxi")
@@ -600,17 +603,22 @@ def stdDeparture(masterCallsign, controllerSock, ad, delay, planLvlData):
 def stdTransit(masterCallsign, controllerSock, delay, data, withMaster=True):
     parsedData = []
     for currentData in data:
-        depAd, arrAd, inLvl, filedLvl, route, ctrl = currentData
+        depAd, arrAd, inLvl, filedLvl, route, ctrl, handoffPt = currentData
         spd = 250
         if inLvl > 30000:
             spd = 450
         elif inLvl > 10000:
             spd = 350
 
+        routeObject = Route(route, depAd, arrAd)
+
+        if handoffPt is None:
+            handoffPt = routeObject.fixes[1]
+
         if withMaster:
-            parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": [route.split(" ")[0]], "kwargs": {"speed": spd, "altitude": inLvl, "flightPlan": FlightPlan("I", "B738", 250, depAd, 1130, 1130, filedLvl, arrAd, Route(route, depAd, arrAd)), "currentlyWithData": (masterCallsign, route.split(" ")[2]), "firstController": ctrl}})
+            parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": [routeObject.fixes[0]], "kwargs": {"speed": spd, "altitude": inLvl, "flightPlan": FlightPlan("I", "B738", 250, depAd, 1130, 1130, filedLvl, arrAd, routeObject), "currentlyWithData": (masterCallsign, handoffPt), "firstController": ctrl}})
         else:
-            parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": [route.split(" ")[0]], "kwargs": {"speed": spd, "altitude": inLvl, "flightPlan": FlightPlan("I", "B738", 250, depAd, 1130, 1130, filedLvl, arrAd, Route(route, depAd, arrAd)), "firstController": ctrl}})
+            parsedData.append({"masterCallsign": masterCallsign, "controllerSock": controllerSock, "method": "ARR", "args": [routeObject.fixes[0]], "kwargs": {"speed": spd, "altitude": inLvl, "flightPlan": FlightPlan("I", "B738", 250, depAd, 1130, 1130, filedLvl, arrAd, routeObject), "firstController": ctrl}})
 
     util.PausableTimer(random.uniform(0, delay) * (1/Constants.timeMultiplier), spawnRandomEveryNSeconds, args=(delay, 0.5, parsedData))
 
@@ -674,7 +682,7 @@ def main():
 
     # shelving savestates\2024-06-04_21-05-55.242111.bak
     # with shelve.open("savestates/2024-06-25_20-30-19.355626") as f:
-    # with shelve.open("savestates/2025-01-12_23-14-11.000778") as f:
+    # with shelve.open("savestates/2025-04-08_15-36-55.196078") as f:
     #     for plane in f.values():
     #         plane.lastTime = time.time()
     #         planes.append(plane)
@@ -735,19 +743,19 @@ def main():
     #         callsign,ac_type = util.callsignGen("EGCC",[plane.callsign for plane in planes])
     #         plane = Plane.requestFromFix(callsign, holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGCC", holdFix), currentlyWithData=(masterCallsign, holdFix))
     
-    llHoldFixes = ["ABBOT"]
-    for holdFix in llHoldFixes:
-        for alt in range(7000, 8000 + 1 * 1000, 1000):
-            plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGSS", holdFix))
-            plane.holdFix = holdFix
-            planes.append(plane)
+    # llHoldFixes = ["ABBOT"]
+    # for holdFix in llHoldFixes:
+    #     for alt in range(7000, 8000 + 1 * 1000, 1000):
+    #         plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGSS", holdFix))
+    #         plane.holdFix = holdFix
+    #         planes.append(plane)
 
-    llHoldFixes = ["ZAGZO"]
-    for holdFix in llHoldFixes:
-        for alt in range(7000, 8000 + 1 * 1000, 1000):
-            plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGGW", holdFix))
-            plane.holdFix = holdFix
-            planes.append(plane)
+    # llHoldFixes = ["ZAGZO"]
+    # for holdFix in llHoldFixes:
+    #     for alt in range(7000, 8000 + 1 * 1000, 1000):
+    #         plane = Plane.requestFromFix(util.callsignGen(), holdFix, squawk=util.squawkGen(), speed=220, altitude=alt, flightPlan=FlightPlan.arrivalPlan("EGGW", holdFix))
+    #         plane.holdFix = holdFix
+    #         planes.append(plane)
 
     # LC IN THE HOLD
 
@@ -1595,12 +1603,26 @@ def main():
     # ], withMaster=True)
 
 
-    with open(f"profiles/ESSEX.json") as f:
+    MAJOR_COOK_MODIFIER = 1.5  # 2 = half the traffic (you're twice as cooked as you should be)
+
+    with open(f"profiles/TCN (easterlies) v2.json") as f:
         data = json.load(f)
+
+    version = 1
+    if "version" in data.keys():
+        version = data["version"] 
+
+    controllersOnline = None
+    if "online" in data.keys():
+        controllersOnline = data["online"] 
 
     if "stdDepartures" in data.keys():
         for stdDep in data["stdDepartures"]:
-            stdDeparture(masterCallsign, controllerSock, stdDep["departing"], stdDep["interval"], [
+            if "firstController" in stdDep.keys():
+                topDownController = util.findOnlineTopdownController(stdDep["firstController"], controllersOnline)
+                if topDownController is None:
+                    continue
+            stdDeparture(masterCallsign, controllerSock, stdDep["departing"], int(stdDep["interval"] * MAJOR_COOK_MODIFIER), [
                 *list(map(lambda x: [x["route"], x["arriving"]], stdDep["routes"]))
             ])
 
@@ -1613,13 +1635,20 @@ def main():
             except KeyError:
                 pass
 
-            stdTransit(masterCallsign, controllerSock, stdTrn["interval"], [
-                *list(map(lambda x: [x["departing"], x["arriving"], x["currentLevel"], x["cruiseLevel"], x["route"], x["firstController"]], stdTrn["routes"]))
-            ], withMaster=withMaster)
+            if "firstController" in stdTrn.keys():
+                topDownController = util.findOnlineTopdownController(stdTrn["firstController"], controllersOnline)
+                if topDownController is not None:
+                    stdTransit(masterCallsign, controllerSock, int(stdTrn["interval"] * MAJOR_COOK_MODIFIER), [
+                        *list(map(lambda x: [x["departing"], x["arriving"], x["currentLevel"], x["cruiseLevel"], x["route"], topDownController, util.tryElseNone(x, "handoffPoint")], stdTrn["routes"]))
+                    ], withMaster=withMaster)
+            else:
+                stdTransit(masterCallsign, controllerSock, int(stdTrn["interval"] * MAJOR_COOK_MODIFIER), [
+                    *list(map(lambda x: [x["departing"], x["arriving"], x["currentLevel"], x["cruiseLevel"], x["route"], util.findOnlineTopdownController(x["firstController"], controllersOnline), util.tryElseNone(x, "handoffPoint")], stdTrn["routes"]))
+                ], withMaster=withMaster)
 
     if "stdArrivals" in data.keys():
         for stdArr in data["stdArrivals"]:
-            stdDeparture(masterCallsign, controllerSock, stdArr["departing"], stdArr["interval"], [
+            stdDeparture(masterCallsign, controllerSock, stdArr["departing"], int(stdArr["interval"] * MAJOR_COOK_MODIFIER), [
                 *list(map(lambda x: [x["route"], x["level"], x["firstController"]], stdArr["routes"]))
             ])
         

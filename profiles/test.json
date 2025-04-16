@@ -1,0 +1,26 @@
+{
+    "version": 2,
+    "online": ["LTC_NW_CTR"],
+    "stdDepartures": [
+        {
+            "departing": "EGSS",
+            "interval": 1,
+            "routes": [
+                {"route": "CLN5S/04 CLN P44 RATLO M197 REDFA", "arriving": "EHAM"},
+                {"route": "UTAVA1S/04 UTAVA Q75 BUZAD T420 TNT UN57 POL UN601 INPIP", "arriving": "EGPH"},
+                {"route": "NUGBO1S/04 NUGBO M183 SILVA P86 SAWPE", "arriving": "EGFF"},
+                {"route": "DET2D/04 DET M604 LYD M189 WAFFU UM605", "arriving": "LFPG"}
+            ],
+            "firstController": "LTC_NE_CTR"
+        }
+    ],
+    "stdTransits": [
+        {
+            "interval": 10,
+            "routes": [
+                {"departing": "EGPH", "arriving": "EGLL", "currentLevel": 15000, "cruiseLevel": 38000, "route": "HON1H/TOBID"}
+            ],
+            "firstController": "LTC_NW_CTR"
+        }
+    ]
+}

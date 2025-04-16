@@ -49,11 +49,11 @@ CCAMS_SQUAWKS = list(range(201,277)) + list(range(301,377)) + list(range(470,477
 # MASTER_CONTROLLER = "LON_M_CTR"
 # MASTER_CONTROLLER_FREQ = "20025"
 
-ACTIVE_AERODROMES = ["EGSS","EGGW"]
-ACTIVE_RUNWAYS = {"EGSS": "22","EGGW":"25"}
-ACTIVE_CONTROLLERS = ["ESSEX_APP" ,"EGSS_APP","EGSS_F_APP","EGGW_APP","EGGW_APP"]
-MASTER_CONTROLLER = "LON_M_CTR"
-MASTER_CONTROLLER_FREQ = "20025"
+# ACTIVE_AERODROMES = ["EGSS","EGGW"]
+# ACTIVE_RUNWAYS = {"EGSS": "04","EGGW":"07"}
+# ACTIVE_CONTROLLERS = ["ESSEX_APP" ,"EGSS_APP","EGSS_F_APP","EGGW_APP","EGGW_APP"]
+# MASTER_CONTROLLER = "LON_M_CTR"
+# MASTER_CONTROLLER_FREQ = "20025"
 
 
 # ACTIVE_AERODROMES = ["EGLL"]
@@ -192,6 +192,12 @@ MASTER_CONTROLLER_FREQ = "20025"
 # MASTER_CONTROLLER = "MAN_SE_CTR"
 # MASTER_CONTROLLER_FREQ = "34430"
 
+# TC N (easterlies) profile
+ACTIVE_AERODROMES = ["EGSS", "EGGW", "EGLL", "EGKK", "EGLC"]
+ACTIVE_RUNWAYS = {"EGSS": "04","EGGW":"07", "EGLL": "09R", "EGKK": "08R", "EGLC": "09"}
+ACTIVE_CONTROLLERS = ["LTC_N_CTR" ,"LTC_NW_CTR","LTC_NE_CTR"]
+MASTER_CONTROLLER = "LON_CTR"
+MASTER_CONTROLLER_FREQ = "27830"
 
 INACTIVE_SECTORS = [
     # "LTC_E_CTR",
@@ -222,39 +228,40 @@ OTHER_CONTROLLERS = [
     # ("EGGD_APP", "25650"),
     # ("EGFF_APP", "25855"),
 
-    ("BIRD_S1_CTR", "19700"),
-    ("EURN_FSS", "33450"),
-    ("EKDK_CTR", "36485"),
-    ("EHAA_W_CTR", "25750"),
-    ("EISN_CTR", "34260"),
+    # ("BIRD_S1_CTR", "19700"),
+    # ("EURN_FSS", "33450"),
+    # ("EKDK_CTR", "36485"),
+    # ("EHAA_W_CTR", "25750"),
+    # ("EISN_CTR", "34260"),
 
     # ("LON_W_CTR", "26080"),
     # ("LON_E_CTR", "18480"),
-    ("LON_M_CTR", "20025"),
-    ("LON_D_CTR", "34905"),
+    # ("LON_M_CTR", "20025"),
+    # ("LON_D_CTR", "34905"),
     # ("LON_NW_CTR", "35580"),
     # ("LON_NE_CTR", "28130"),
     # ("LON_S_CTR", "29430"),
+    # ("LON_CTR", "27830"),
 
     # ("LTC_E_CTR", "21230"),
-    # # ("LTC_M_CTR", "21030"),
+    # ("LTC_M_CTR", "21030"),
     # ("LTC_NE_CTR", "18825"),
     # ("LTC_NW_CTR", "21280"),
     # ("LTC_SE_CTR", "20530"),
     # ("LTC_SW_CTR", "33180"),
 
-    ("MAN_WU_CTR", "18780"),
-    ("MAN_NE_CTR", "35715"),
-    ("MAN_SE_CTR", "34430"),
+    # ("MAN_WU_CTR", "18780"),
+    # ("MAN_NE_CTR", "35715"),
+    # ("MAN_SE_CTR", "34430"),
     # ("MAN_W_CTR", "28055"),
 
-    ("SCO_D_CTR", "35855"),
-    ("SCO_N_CTR", "29225"),
-    ("SCO_R_CTR", "29100"),
-    ("SCO_S_CTR", "34775"),
-    ("SCO_W_CTR", "32730"),
+    # ("SCO_D_CTR", "35855"),
+    # ("SCO_N_CTR", "29225"),
+    # ("SCO_R_CTR", "29100"),
+    # ("SCO_S_CTR", "34775"),
+    # ("SCO_W_CTR", "32730"),
 
-    ("STC_A_CTR", "23775"),
+    # ("STC_A_CTR", "23775"),
     # ("STC_W_CTR", "24825"),
     # ("STC_E_CTR", "30975")
 ]

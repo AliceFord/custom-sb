@@ -345,7 +345,7 @@ class Plane:
             distanceToFix = util.haversineNM(self.lat, self.lon, nextFixCoords[0], nextFixCoords[1])
 
             if self.currentlyWithData is not None:  # if we're on close to release point, hand off
-                if self.currentlyWithData[1] == self.flightPlan.route.fixes[0] and distanceToFix <= 20:
+                if self.currentlyWithData[1] == self.flightPlan.route.fixes[0] and distanceToFix <= 10:
                     self.currentlyWithData = None
                     if self.firstController is not None:
                         util.PausableTimer(11, self.masterSocketHandleData[0].esSend, args=["$HO" + self.masterSocketHandleData[1], self.firstController, self.callsign])

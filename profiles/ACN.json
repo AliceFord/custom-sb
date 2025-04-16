@@ -1,0 +1,52 @@
+{
+    "version": 2,
+    "online": ["LTC_NW_CTR (NOT STARTED PROFILE!!!)"],
+    "stdTransits": [
+        {
+            "interval": 180,
+            "routes": [
+                {"departing": "EGPH", "arriving": "EGLL", "currentLevel": 15000, "cruiseLevel": 38000, "route": "HON1H/TOBID"}
+            ],
+            "firstController": "LTC_NW_CTR"
+        },
+        {
+            "interval": 220,
+            "routes": [
+                {"departing": "EGPH", "arriving": "EGSS", "currentLevel": 15000, "cruiseLevel": 36000, "route": "LISTO1L/ROGBI"},
+                {"departing": "EGPH", "arriving": "EGGW", "currentLevel": 15000, "cruiseLevel": 36000, "route": "LISTO1N/ROGBI"}
+            ],
+            "firstController": "LTC_NW_CTR"
+        },
+
+        {
+            "interval": 180,
+            "routes": [
+                {"departing": "EHAM", "arriving": "EGLL", "currentLevel": 16000, "cruiseLevel": 38000, "route": "LOGAN2H/LOGAN"}
+            ],
+            "firstController": "LTC_NE_CTR"
+        },
+        {
+            "interval": 240,
+            "routes": [
+                {"departing": "EHAM", "arriving": "EGGW", "currentLevel": 14000, "cruiseLevel": 38000, "route": "RINIS1N/MUCTE"}
+            ],
+            "firstController": "LTC_NE_CTR"
+        },
+        {
+            "interval": 240,
+            "routes": [
+                {"departing": "LFPG", "arriving": "EGSS", "currentLevel": 16000, "cruiseLevel": 38000, "route": "TELTU1L/TELTU"},
+                {"departing": "LFPG", "arriving": "EGGW", "currentLevel": 16000, "cruiseLevel": 38000, "route": "TELTU1N/MOREZ"}
+            ],
+            "firstController": "LTC_NE_CTR"
+        },
+
+        {
+            "interval": 300,
+            "routes": [
+                {"departing": "EGKK", "arriving": "EHAM", "currentLevel": 13000, "cruiseLevel": 38000, "route": "ODVIK DCT FRANE M604 GASBA M197 REDFA"}
+            ],
+            "firstController": "LTC_NE_CTR"
+        }
+    ]
+}
