@@ -1,6 +1,6 @@
 {
     "version": 2,
-    "online": ["LTC_NE_CTR"],
+    "online": ["LTC_NE_CTR", "LTC_NW_CTR"],
     "stdDepartures": [
         {
             "departing": "EGSS",

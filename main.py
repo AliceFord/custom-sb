@@ -1603,7 +1603,7 @@ def main():
     # ], withMaster=True)
 
 
-    MAJOR_COOK_MODIFIER = 1.5  # 2 = half the traffic (you're twice as cooked as you should be)
+    MAJOR_COOK_MODIFIER = 1  # 2 = half the traffic (you're twice as cooked as you should be)
 
     with open(f"profiles/TCN (easterlies) v2.json") as f:
         data = json.load(f)
